@@ -1,0 +1,32 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>KNavi Config</title>
+    <link rel="stylesheet" type="text/css" href="options.css">
+    <script src="options.js" async></script>
+  </head>
+  <body>
+    <h1>KNavi Config</h1>
+    <form is="storage-form" autosync>
+      <table>
+        <tr class="config-row">
+          <th><label for="magic-key">Magic Key</label></th>
+          <td><input is="keydown-input" id="magic-key" name="magic-key" size="18" value="Space" noMod></td>
+        </tr>
+        <tr class="config-row">
+          <th><label for="hints">Hint Letters</label></th>
+          <td><input id="hints" name="hints" size="18" value="ASDFGHJKL"></td>
+        </tr>
+        <tr class="config-row">
+          <th><label for="_area">Setting Store</label></th>
+          <td>
+            <select is="area-select" id="_area" name="_area" area="chrome-local">
+              <option value="chrome-sync" selected>sync</option>
+              <option value="chrome-local">local</option>
+            </select>
+          </td>
+        </tr>
+      </table>
+    </form>
+  </body>
+</html>

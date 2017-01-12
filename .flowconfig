@@ -1,0 +1,16 @@
+# -*- coding:utf-8-unix; mode:toml; -*-
+[ignore]
+.*/examples/.*
+.*/docs/.*
+
+[include]
+
+[libs]
+decls/
+
+# no require when "flow check" but "flow check-contents" require to write explicitly
+# in flow 0.37.4
+flow-typed/
+
+[options]
+unsafe.enable_getters_and_setters=true

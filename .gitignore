@@ -1,0 +1,9 @@
+/build/
+/node_modules/
+
+.lock-wscript
+.wafpickle-N
+*.swp
+.DS_Store
+._*
+npm-debug.log
