@@ -345,6 +345,12 @@ function handleHitTarget(hitHint: ?Hint, options: DehintOptions) {
     console.debug("focus as an editable element");
     return;
   }
+  if (element.tagName === "BODY") {
+    const activeElement = document.activeElement;
+    activeElement.blur();
+    console.debug("blue an active element: ", activeElement);
+    return;
+  }
   simulateClick(element, options);
   console.debug("click");
 }
@@ -565,11 +571,20 @@ declare class HTMLAreaElement extends HTMLElement {
   shape: string;
 }
 
-// TODO too many targets
-// filter out near same action elements
 function listAllTarget(): Target[] {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
   const targets = [];
+  if (document.activeElement !== document.body) {
+    const rects = Array.from(document.body.getClientRects());
+    const r = rects[0];
+    if (r.height > window.innerHeight || r.width > window.innerWidth) {
+      targets.push({
+        element: document.body,
+        rects,
+        mightBeClickable: false
+      });
+    }
+  }
   for (const element of document.querySelectorAll("body /deep/ *")) {
     let isClickableElement = false;
     let mightBeClickable = false;
