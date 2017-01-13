@@ -351,8 +351,12 @@ function handleHitTarget(hitHint: ?Hint, options: DehintOptions) {
 
 function simulateClick(element: HTMLElement, options: DehintOptions) {
   for (const type of ["mouseover", "mousedown", "mouseup", "click"]) {
-    dispatchMouseEvent(type, element, options);
+    if (!dispatchMouseEvent(type, element, options)) {
+      console.debug("Canceled: ", type);
+      return false;
+    }
   }
+  return true;
 }
 
 declare class MouseEvent extends UIEvent {
@@ -372,18 +376,22 @@ declare interface MouseEventInit {
   buttons?: number;
   relatedTarget?: EventTarget;
   regison?: string;
+  bubbles?: boolean;
+  cancelable?: boolean;
 }
 
-function dispatchMouseEvent(type: MouseEventTypes, element: HTMLElement, options: DehintOptions) {
+/// Return false if canceled
+function dispatchMouseEvent(type: MouseEventTypes, element: HTMLElement, options: DehintOptions): boolean {
   const event = new MouseEvent(type, {
     button: 0,
     bubbles: true,
+    cancelable: true,
     ctrlKey: options.ctrlKey,
     shiftKey: options.shiftKey,
     altKey: options.altKey,
     metaKey: options.metaKey || options.ctrlKey,
   });
-  element.dispatchEvent(event);
+  return element.dispatchEvent(event);
 }
 
 function isScrollable(element: HTMLElement, style: any): boolean {
