@@ -29,6 +29,9 @@ $(ICONS): $(SRC)/icon.svg
 $(BUILD)/%: $(SRC)/%
 	cp -v $< $@
 
+node_modules:
+	npm install
+
 .PHONY: prod-build
 prod-build: clean $(BUILD) $(BUILD)/manifest.json $(STATICS) $(ICONS)
 	NODE_ENV=production $(BIN)/webpack

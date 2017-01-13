@@ -298,7 +298,7 @@ class HintsView {
       fitOverlay(win, overlay);
       activeOverlay.style.display = "none";
 
-      const o = generateHints(win, hinter.hints);
+      const o = generateHints(hinter.hints);
       wrapper = o.wrapper;
       hints = o.hints;
       container.appendChild(wrapper);
@@ -477,18 +477,17 @@ function fitOverlay(win: any, overlay: HTMLDivElement) {
   });
 }
 
-function generateHints(win: any, hintLetters: string): { wrapper: HTMLDivElement, hints: Hint[] } {
-  const targets = listAllTarget(win);
+function generateHints(hintLetters: string): { wrapper: HTMLDivElement, hints: Hint[] } {
+  const targets = listAllTarget();
   const hintTexts = generateHintTexts(targets.length, hintLetters);
-  const doc: Document = win.document;
-  const wrapper = doc.createElement("div");
+  const wrapper = document.createElement("div");
   wrapper.id = WRAPPER_ID;
   Object.assign(wrapper.style, {
     position: "static",
   });
   const hints = targets.map((target: Target, index: number) => {
     const text = hintTexts[index];
-    const elements = buildHintElements(win, target, text);
+    const elements = buildHintElements(target, text);
     elements.forEach((e) => wrapper.appendChild(e));
     return new Hint(text, elements, target);
   });
@@ -496,13 +495,12 @@ function generateHints(win: any, hintLetters: string): { wrapper: HTMLDivElement
   return { wrapper, hints };
 }
 
-function buildHintElements(win: any, target: Target, hintTexts: string): HTMLDivElement[] {
-  const doc: Document = win.document;
-  const xOffset = win.scrollX;
-  const yOffset = win.scrollY;
+function buildHintElements(target: Target, hintTexts: string): HTMLDivElement[] {
+  const xOffset = window.scrollX;
+  const yOffset = window.scrollY;
 
   return target.rects.map((rect) => {
-    const h = doc.createElement("div");
+    const h = document.createElement("div");
     h.textContent = hintTexts.toUpperCase();
     h.dataset["hint"] = hintTexts;
     const top = rect.top < 0 ? 0 : rect.top;
@@ -561,7 +559,7 @@ declare class HTMLAreaElement extends HTMLElement {
 
 // TODO too many targets
 // filter out near same action elements
-function listAllTarget(win: any): Target[] {
+function listAllTarget(): Target[] {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
   const targets = [];
   for (const element of document.querySelectorAll("body /deep/ *")) {
@@ -583,7 +581,7 @@ function listAllTarget(win: any): Target[] {
 
     if (!isClickableElement) continue;
 
-    const rects = getVisibleRects(win, element);
+    const rects = getVisibleRects(element);
     if (rects.length === 0) continue;
     targets.push({ element, rects, mightBeClickable });
   }
@@ -592,63 +590,62 @@ function listAllTarget(win: any): Target[] {
 }
 
 function distinctSimilarTarget(targets: Target[], mergers: Set<HTMLElement>): Target[] {
-  const newTargets = [];
   const targetMap: Map<Element, Target> = new Map((function* () {
     for (const t of targets) yield [t.element, t];
   })());
+
+  // Filter out if this target is a child of <a> or <button>
   for (let i = 0; i < targets.length; i++) {
     const target = targets[i];
-    if (!target.mightBeClickable) {
-      newTargets.push(target);
+    if (!target.mightBeClickable) continue;
+
+    const parentTarget = first(flatMap(traverseParent(target.element), (p) => {
+      const t = targetMap.get(p);
+      if (t == null) return [];
+      if (t.mergedBy) return [t.mergedBy];
+      if (["A", "BUTTON"].includes(t.element.tagName)) return [t];
+      return [];
+    }));
+    if (parentTarget) {
+      target.mergedBy = parentTarget;
+      console.debug("parent merging: target=%o, merger=%o", target.element, target.mergedBy.element);
+    }
+  }
+
+  // Filter out targets that is a *thin* wrapper contains only one HTMLElement child
+  for (let i = targets.length - 1; i >= 0; i--) {
+    const target = targets[i];
+    if (!target.mightBeClickable) continue;
+    if (target.mergedBy) continue;
+
+    const traverseThinWrapperChild = takeWhile(traverseFirstChild(target.element, true), (e) => {
+      const childNodes = filterOutBlankTextNode(e.childNodes).filter((c) => {
+        if (!(c instanceof HTMLElement)) return true;
+        return getVisibleRects(c).length >= 1;
+      });
+      return childNodes.length === 1 && (childNodes[0] instanceof HTMLElement);
+    });
+    const childTarget = first(flatMap(traverseThinWrapperChild, (c) => {
+      const t = targetMap.get(c.children[0]);
+      if (t == null) return [];
+      if (t.mergedBy) return [t.mergedBy];
+      return [t];
+    }));
+    if (childTarget) {
+      target.mergedBy = childTarget;
+      console.debug("child merging: target=%o, merger=%o", target.element, target.mergedBy.element);
       continue;
     }
-
-    // Traverse a similar target to descendants
-    let childGeneration = 1;
-    let children = target.element.children;
-    while (children.length === 1 && childGeneration < 4) {
-      const c = children[0];
-      if (mergers.has(c) && targetMap.has(c)) {
-        target.mergedBy = targetMap.get(c);
-        console.debug("merged by a child: target=%o, merger=%o", target, target.mergedBy);
-        break;
-      }
-      children = c.children;
-      childGeneration++;
-    }
-
-    // Traverse a similar target to ancestors
-    let parentGeneration = 1;
-    let parent = target.element.parentElement;
-    while (parent != null && parentGeneration < 4) {
-      if (targetMap.has(parent)) {
-        const parentTarget = targetMap.get(parent);
-        if (parentTarget == null) continue;
-        if (parentTarget.mergedBy) {
-          target.mergedBy = parentTarget.mergedBy;
-          console.debug("merged by a parent: target=%o, merger=%o", target, target.mergedBy);
-          break;
-        } else if (mergers.has((parent: any))) {
-          target.mergedBy = parentTarget;
-          console.debug("merged by a parent: target=%o, merger=%o", target, target.mergedBy);
-          break;
-        }
-      }
-      parent = parent.parentElement;
-      parentGeneration++;
-    }
-
-    newTargets.push(target);
   }
-  return newTargets;
+
+  return targets.filter((t) => t.mergedBy == null);
 }
 
 const RECT_POSITIONS = [[0.5, 0.5], [0.1, 0.1], [0.1, 0.9], [0.9, 0.1], [0.9, 0.9]];
 
-function getVisibleRects(win: any, elem: HTMLElement): Rect[] {
+function getVisibleRects(elem: HTMLElement): Rect[] {
   const innerWidth = window.innerWidth;
   const innerHeight = window.innerHeight;
-  const doc: Document = win.document;
   const rects = [];
   const clientRects = elem.tagName === "AREA"
         ? getAreaRects((elem: any)) // force cast
@@ -670,7 +667,7 @@ function getVisibleRects(win: any, elem: HTMLElement): Rect[] {
       const x = avg(left, right, xr);
       const y = avg(top,  bottom, yr);
 
-      let pointedElem = doc.elementFromPoint(x, y);
+      let pointedElem = document.elementFromPoint(x, y);
       if (pointedElem == null) continue;
 
       // Traverse into shadow DOMs
@@ -694,7 +691,8 @@ function getVisibleRects(win: any, elem: HTMLElement): Rect[] {
 }
 
 function getAreaRects(element: HTMLAreaElement): Rect[] {
-  const map = traverseParent(element, (e) => e.tagName === "MAP");
+  const map = first(filter(traverseParent(element),
+                           (e) => e.tagName === "MAP"));
   if (!(map instanceof HTMLMapElement)) return [];
 
   const img = document.querySelector(`body /deep/ img[usemap="#${map.name}"]`);
@@ -727,26 +725,61 @@ function getAreaRects(element: HTMLAreaElement): Rect[] {
   return [{ left, right, top, bottom, width: right - left, height: bottom - top }];
 }
 
-function traverseParent(element: ?Element, predicate: (e: Element) => boolean): ?Element {
-  if (!element) return null;
-  if (predicate(element)) return element;
-  return traverseParent(element.parentElement, predicate);
+function filterOutBlankTextNode(iter: Iterator<Node> | Iterable<Node>): Node[] {
+  return Array.from(filter(iter, (node) => !((node instanceof Text) && (/^\s*$/).test(node.textContent))));
+}
+
+function *traverseParent(element: Element, includeSelf?: boolean): Iterator<Element> {
+  let p = includeSelf ? element : element.parentElement;
+  while (p != null) {
+    yield p;
+    p = p.parentElement;
+  }
+}
+
+function *traverseFirstChild(element: HTMLElement, includeSelf?: boolean): Iterator<HTMLElement> {
+  let c: HTMLElement[] | HTMLCollection<HTMLElement> = includeSelf ? [element] : element.children;
+  while (c.length >= 1) {
+    yield c[0];
+    c = c[0].children;
+  }
+}
+
+function *takeWhile<T>(iter: Iterator<T> | Iterable<T>, p: (t: T) => boolean): Iterator<T> {
+  for (const e of iter) {
+    if (!p(e)) break;
+    yield e;
+  }
+}
+
+function first<T>(i: Iterator<T> | Iterable<T>): ?T {
+  for (const e of i) return e;
+  return null;
+}
+
+function head<T>(iter: Iterator<T> | Iterable<T>, n: number): Iterator<T> {
+  let i = 0;
+  return takeWhile(iter, () => i++ < n);
 }
 
 function avg(a: number, b: number, ratio: number): number {
   return a * ratio + b * (1 - ratio);
 }
 
-function* concat<T>(...i: Iterable<T>[]): Iterable<T> {
+function* concat<T>(...i: Array<Iterable<T> | Iterator<T>>): Iterator<T> {
   for (const ii of i) for (const e of ii) yield e;
 }
 
-function* filter<T>(i: Iterable<T>, p: (t: T) => boolean): Iterable<T> {
+function* filter<T>(i: Iterable<T> | Iterator<T>, p: (t: T) => boolean): Iterator<T> {
   for (const e of i) if (p(e)) yield e;
 }
 
 function* map<T, U>(i: Iterable<T>, m: (t: T) => U): Iterable<U> {
   for (const e of i) yield m(e);
+}
+
+function* flatMap<T, U>(i: Iterable<T> | Iterator<T>, m: (t: T) => Iterable<U> | Iterator<U>): Iterable<U> {
+  for (const e of i) for (const u of m(e)) yield u;
 }
 
 function* distinct<T>(i: Iterable<T>): Iterable<T> {
@@ -776,7 +809,7 @@ function generateHintTexts(num: number, hintLetters: string): string[] {
     i++;
   }
 
-  return texts;
+  return texts.sort();
 }
 
 main(window);
