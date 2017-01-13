@@ -608,33 +608,52 @@ function distinctSimilarTarget(targets: Target[], mergers: Set<HTMLElement>): Ta
     }));
     if (parentTarget) {
       target.mergedBy = parentTarget;
-      console.debug("parent merging: target=%o, merger=%o", target.element, target.mergedBy.element);
+      console.debug("filter out: a child of a parent <a>/<button>: target=%o", target.element);
     }
   }
 
-  // Filter out targets that is a *thin* wrapper contains only one HTMLElement child
+  // Filter out targets that is only one child for a parent target element.
+  for (let i = 0; i < targets.length; i++) {
+    const target = targets[i];
+    if (!target.mightBeClickable) continue;
+    if (target.mergedBy) continue;
+
+    const traverseThinParent = takeWhile(traverseParent(target.element), (e) => {
+      const childNodes = filterOutBlankTextNode(e.childNodes).filter((c) => {
+        if (!(c instanceof HTMLElement)) return true;
+        return getVisibleRects(c).length >= 1;
+      });
+      return childNodes.length === 1;
+    });
+    const parentTarget = first(flatMap(traverseThinParent, (p) => {
+      const t = targetMap.get(p);
+      if (t == null) return [];
+      if (t.mergedBy) return [t.mergedBy];
+      return [t];
+    }));
+    if (parentTarget) {
+      target.mergedBy = parentTarget;
+      console.debug("filter out: a child of a thin parent: target=%o", target.element);
+    }
+  }
+
+  // Filter out targets that contains only existing targets
   for (let i = targets.length - 1; i >= 0; i--) {
     const target = targets[i];
     if (!target.mightBeClickable) continue;
     if (target.mergedBy) continue;
 
-    const traverseThinWrapperChild = takeWhile(traverseFirstChild(target.element, true), (e) => {
-      const childNodes = filterOutBlankTextNode(e.childNodes).filter((c) => {
-        if (!(c instanceof HTMLElement)) return true;
-        return getVisibleRects(c).length >= 1;
-      });
-      return childNodes.length === 1 && (childNodes[0] instanceof HTMLElement);
-    });
-    const childTarget = first(flatMap(traverseThinWrapperChild, (c) => {
-      const t = targetMap.get(c.children[0]);
-      if (t == null) return [];
-      if (t.mergedBy) return [t.mergedBy];
-      return [t];
-    }));
-    if (childTarget) {
-      target.mergedBy = childTarget;
-      console.debug("child merging: target=%o, merger=%o", target.element, target.mergedBy.element);
-      continue;
+    const childNodes = Array.from(
+      filter(filter(target.element.childNodes,
+                    // filter out blank text nodes
+                    (n) => !((n instanceof Text) && (/^\s*$/).test(n.textContent))),
+             // filter out invisible element.
+             (n) => !((n instanceof HTMLElement) && getVisibleRects(n).length === 0)));
+
+    if (childNodes.every((c) => targetMap.has((c: any)))) {
+      const child = childNodes[0];
+      target.mergedBy = targetMap.get((child: any));
+      console.debug("filter out: only targets containing: target=%o", target.element);
     }
   }
 
