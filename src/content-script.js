@@ -546,7 +546,7 @@ declare type Target = {
   element: HTMLElement;
   rects: Rect[];
   mightBeClickable: boolean;
-  mergedBy?: Target;
+  filteredOutBy?: Target;
 };
 
 declare class HTMLMapElement extends HTMLElement {
@@ -586,10 +586,10 @@ function listAllTarget(): Target[] {
     targets.push({ element, rects, mightBeClickable });
   }
 
-  return distinctSimilarTarget(targets, selecteds);
+  return distinctSimilarTarget(targets);
 }
 
-function distinctSimilarTarget(targets: Target[], mergers: Set<HTMLElement>): Target[] {
+function distinctSimilarTarget(targets: Target[]): Target[] {
   const targetMap: Map<Element, Target> = new Map((function* () {
     for (const t of targets) yield [t.element, t];
   })());
@@ -602,12 +602,12 @@ function distinctSimilarTarget(targets: Target[], mergers: Set<HTMLElement>): Ta
     const parentTarget = first(flatMap(traverseParent(target.element), (p) => {
       const t = targetMap.get(p);
       if (t == null) return [];
-      if (t.mergedBy) return [t.mergedBy];
+      if (t.filteredOutBy) return [t.filteredOutBy];
       if (["A", "BUTTON"].includes(t.element.tagName)) return [t];
       return [];
     }));
     if (parentTarget) {
-      target.mergedBy = parentTarget;
+      target.filteredOutBy = parentTarget;
       console.debug("filter out: a child of a parent <a>/<button>: target=%o", target.element);
     }
   }
@@ -616,7 +616,7 @@ function distinctSimilarTarget(targets: Target[], mergers: Set<HTMLElement>): Ta
   for (let i = 0; i < targets.length; i++) {
     const target = targets[i];
     if (!target.mightBeClickable) continue;
-    if (target.mergedBy) continue;
+    if (target.filteredOutBy) continue;
 
     const traverseThinParent = takeWhile(traverseParent(target.element), (e) => {
       const childNodes = filterOutBlankTextNode(e.childNodes).filter((c) => {
@@ -628,11 +628,11 @@ function distinctSimilarTarget(targets: Target[], mergers: Set<HTMLElement>): Ta
     const parentTarget = first(flatMap(traverseThinParent, (p) => {
       const t = targetMap.get(p);
       if (t == null) return [];
-      if (t.mergedBy) return [t.mergedBy];
+      if (t.filteredOutBy) return [t.filteredOutBy];
       return [t];
     }));
     if (parentTarget) {
-      target.mergedBy = parentTarget;
+      target.filteredOutBy = parentTarget;
       console.debug("filter out: a child of a thin parent: target=%o", target.element);
     }
   }
@@ -641,7 +641,7 @@ function distinctSimilarTarget(targets: Target[], mergers: Set<HTMLElement>): Ta
   for (let i = targets.length - 1; i >= 0; i--) {
     const target = targets[i];
     if (!target.mightBeClickable) continue;
-    if (target.mergedBy) continue;
+    if (target.filteredOutBy) continue;
 
     const childNodes = Array.from(
       filter(filter(target.element.childNodes,
@@ -652,12 +652,12 @@ function distinctSimilarTarget(targets: Target[], mergers: Set<HTMLElement>): Ta
 
     if (childNodes.every((c) => targetMap.has((c: any)))) {
       const child = childNodes[0];
-      target.mergedBy = targetMap.get((child: any));
+      target.filteredOutBy = targetMap.get((child: any));
       console.debug("filter out: only targets containing: target=%o", target.element);
     }
   }
 
-  return targets.filter((t) => t.mergedBy == null);
+  return targets.filter((t) => t.filteredOutBy == null);
 }
 
 const RECT_POSITIONS = [[0.5, 0.5], [0.1, 0.1], [0.1, 0.9], [0.9, 0.1], [0.9, 0.9]];
