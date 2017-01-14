@@ -3,6 +3,10 @@
 import EventMatcher from "key-input-elements/lib/event-matcher";
 import { EventEmitter } from "./lib/event-emitter";
 import { config } from "./lib/config";
+import * as iters from "./lib/iters";
+import VisibleRects from "./lib/visible-rects";
+
+import type { Rect } from "./lib/visible-rects";
 
 const DEFAULT_MAGIC_KEY = "Space";
 const DEFAULT_HINTS = "ASDFGHJKL";
@@ -61,6 +65,8 @@ let blurEventMatcher: EventMatcher;
 let hinter: Hinter;
 let css: string;
 
+const visibleRects = new VisibleRects;
+
 async function main(window: any) {
   const configValues = await config.get();
   console.debug("config: ", configValues);
@@ -118,7 +124,7 @@ function setupEvents(window: any) {
   window.addEventListener("keyup", hookKeyup, true);
   window.addEventListener("keypress", hookKeypress, true);
 
-  new HintsView(window, hinter);
+  new HintsView(hinter);
 }
 
 function isEditable(elem: EventTarget) {
@@ -275,8 +281,7 @@ class Hint {
 }
 
 class HintsView {
-  constructor(win: any, hinter: Hinter) {
-    const doc: Document = win.document;
+  constructor(hinter: Hinter) {
     const container = document.createElement("div");
     container.id = CONTAINER_ID;
     Object.assign(container.style, {
@@ -289,7 +294,7 @@ class HintsView {
     const overlay = container.appendChild(document.createElement("div"));
     overlay.id = OVERLAY_ID;
     Object.assign(overlay.style, {
-      border: "0px", padding: "0px", margin: "0px",
+      padding: "0px", margin: "0px",
       display: "block",
       position: "absolute",
       zIndex: Z_INDEX_OFFSET.toString(),
@@ -298,7 +303,7 @@ class HintsView {
     const activeOverlay = container.appendChild(document.createElement("div"));
     activeOverlay.id = ACTIVE_OVERLAY_ID;
     Object.assign(activeOverlay.style, {
-      border: "0px", padding: "0px", margin: "0px",
+      padding: "0px", margin: "0px",
       display: "none",
       position: "absolute",
       zIndex: Z_INDEX_OFFSET.toString(),
@@ -309,30 +314,28 @@ class HintsView {
     let style: ?HTMLElement;
 
     hinter.onHinted.listen(() => {
-      chrome.runtime.sendMessage("init");
-
-      fitOverlay(win, overlay);
+      fitOverlay(overlay);
       activeOverlay.style.display = "none";
 
       const o = generateHints(hinter.hints);
       wrapper = o.wrapper;
       hints = o.hints;
+      style = generateStyle();
       container.appendChild(wrapper);
-      style = generateStyle(win);
       container.appendChild(style);
-      doc.body.insertBefore(container, doc.body.firstChild);
+      document.body.insertBefore(container, document.body.firstChild);
     });
     hinter.onHintHit.listen((inputs) => {
       if (hints == null) throw Error("Illegal state");
       highligtHints(hints, inputs.join(""));
-      moveOverlay(win, overlay, hints);
-      moveActiveOverlay(win, activeOverlay, hints);
+      moveOverlay(overlay, hints);
+      moveActiveOverlay(activeOverlay, hints);
     });
     hinter.onDehinted.listen((opts) => {
       if (wrapper == null || style == null || hints == null) throw Error("Illegal state");
       const hitHint = hints.find((h) => h.state === "hit");
       handleHitTarget(hitHint, opts);
-      doc.body.removeChild(container);
+      document.body.removeChild(container);
       container.removeChild(wrapper);
       container.removeChild(style);
       wrapper = null;
@@ -378,7 +381,9 @@ function handleHitTarget(hitHint: ?Hint, options: DehintOptions) {
 }
 
 function simulateClick(element: HTMLElement, options: DehintOptions) {
-  for (const type of ["mouseover", "mousedown", "mouseup", "click"]) {
+  dispatchMouseEvent("mouseover", element, options);
+
+  for (const type of ["mousedown", "mouseup", "click"]) {
     if (!dispatchMouseEvent(type, element, options)) {
       console.debug("Canceled: ", type);
       return false;
@@ -430,7 +435,7 @@ function isScrollable(element: HTMLElement, style: any): boolean {
   return false;
 }
 
-function moveActiveOverlay(win: any, activeOverlay: HTMLDivElement, hints: Hint[]) {
+function moveActiveOverlay(activeOverlay: HTMLDivElement, hints: Hint[]) {
   const hit = hints.find((h) => h.isHit());
   if (!hit) {
     activeOverlay.style.display = "none";
@@ -438,8 +443,8 @@ function moveActiveOverlay(win: any, activeOverlay: HTMLDivElement, hints: Hint[
   }
 
   const rect = hit.target.element.getBoundingClientRect();
-  const offsetY = win.scrollY;
-  const offsetX = win.scrollX;
+  const offsetY = window.scrollY;
+  const offsetX = window.scrollX;
 
   Object.assign(activeOverlay.style, {
     top: `${rect.top + offsetY}px`,
@@ -448,15 +453,13 @@ function moveActiveOverlay(win: any, activeOverlay: HTMLDivElement, hints: Hint[
     width: `${Math.round(rect.width)}px`,
     display: "block",
   });
-
-  console.log(hit.target.element, activeOverlay);
 }
 
-function moveOverlay(win: any, overlay: HTMLDivElement, hints: Hint[]) {
-  const scrollHeight = win.document.body.scrollHeight;
-  const scrollWidth = win.document.body.scrollWidth;
-  const offsetY = win.scrollY;
-  const offsetX = win.scrollX;
+function moveOverlay(overlay: HTMLDivElement, hints: Hint[]) {
+  const scrollHeight = document.body.scrollHeight;
+  const scrollWidth = document.body.scrollWidth;
+  const offsetY = window.scrollY;
+  const offsetX = window.scrollX;
   let hasHitOrCand = false;
   const rr = { top: scrollHeight, left: scrollWidth, bottom: 0, right: 0 };
   for (const hint of hints) {
@@ -487,11 +490,12 @@ function moveOverlay(win: any, overlay: HTMLDivElement, hints: Hint[]) {
     left: `${rr.left}px`,
     height: `${rr.bottom - rr.top}px`,
     width: `${rr.right - rr.left}px`,
+    display: "block",
   });
 }
 
-function generateStyle(win: any): HTMLElement {
-  const s = win.document.createElement("style");
+function generateStyle(): HTMLElement {
+  const s = document.createElement("style");
   (s: any).scoped = true;
   s.textContent = css;
   return s;
@@ -503,10 +507,10 @@ function highligtHints(hints: Hint[], inputs: string) {
   }
 }
 
-function fitOverlay(win: any, overlay: HTMLDivElement) {
+function fitOverlay(overlay: HTMLDivElement) {
   Object.assign(overlay.style, {
-    top: `${win.scrollY}px`,
-    left: `${win.scrollX}px`,
+    top: `${window.scrollY}px`,
+    left: `${window.scrollX}px`,
     width:  "100%",
     height: "100%",
     display: "block",
@@ -539,8 +543,8 @@ function buildHintElements(target: Target, hintTexts: string): HTMLDivElement[] 
     const h = document.createElement("div");
     h.textContent = hintTexts.toUpperCase();
     h.dataset["hint"] = hintTexts;
-    const top = rect.top < 0 ? 0 : rect.top;
-    const left = rect.left < 0 ? 0 : rect.left;
+    const top = Math.max(rect.top, 0);
+    const left = Math.max(rect.left, 0);
     Object.assign(h.style, {
       position: "absolute",
       top: Math.round(yOffset + top) + "px",
@@ -571,29 +575,12 @@ const HINTABLE_QUERY = [
   "[data-image-url]",
 ].map((s) => "body /deep/ " + s).join(",");
 
-declare interface Rect {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-  width: number;
-  height: number;
-}
-
 declare type Target = {
   element: HTMLElement;
   rects: Rect[];
   mightBeClickable: boolean;
   filteredOutBy?: Target;
 };
-
-declare class HTMLMapElement extends HTMLElement {
-  name: string;
-}
-declare class HTMLAreaElement extends HTMLElement {
-  coords: string;
-  shape: string;
-}
 
 function listAllTarget(): Target[] {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
@@ -628,7 +615,7 @@ function listAllTarget(): Target[] {
 
     if (!isClickableElement) continue;
 
-    const rects = getVisibleRects(element);
+    const rects = visibleRects.get(element);
     if (rects.length === 0) continue;
     targets.push({ element, rects, mightBeClickable });
   }
@@ -646,7 +633,7 @@ function distinctSimilarTarget(targets: Target[]): Target[] {
     const target = targets[i];
     if (!target.mightBeClickable) continue;
 
-    const parentTarget = first(flatMap(traverseParent(target.element), (p) => {
+    const parentTarget = iters.first(iters.flatMap(iters.traverseParent(target.element), (p) => {
       const t = targetMap.get(p);
       if (t == null) return [];
       if (t.filteredOutBy) return [t.filteredOutBy];
@@ -664,8 +651,7 @@ function distinctSimilarTarget(targets: Target[]): Target[] {
     if (n instanceof Text) return !(/^\s*$/).test(n.textContent);
     // filter out invisible element.
     if (n instanceof HTMLElement) {
-      if (targetMap.has(n)) return true;
-      if (getVisibleRects(n).length >= 1) return true;
+      if (visibleRects.get(n).length >= 1) return true;
       return false;
     }
     return true;
@@ -677,10 +663,10 @@ function distinctSimilarTarget(targets: Target[]): Target[] {
     if (!target.mightBeClickable) continue;
     if (target.filteredOutBy) continue;
 
-    const thinAncestors = takeWhile(traverseParent(target.element), (e) => {
-      return length(filter(e.childNodes, isVisibleNode)) === 1;
+    const thinAncestors = iters.takeWhile(iters.traverseParent(target.element), (e) => {
+      return iters.length(iters.filter(e.childNodes, isVisibleNode)) === 1;
     });
-    const parentTarget = first(flatMap(thinAncestors, (p) => {
+    const parentTarget = iters.first(iters.flatMap(thinAncestors, (p) => {
       const t = targetMap.get(p);
       if (t == null) return [];
       if (t.filteredOutBy) return [t.filteredOutBy];
@@ -698,7 +684,7 @@ function distinctSimilarTarget(targets: Target[]): Target[] {
     if (!target.mightBeClickable) continue;
     if (target.filteredOutBy) continue;
 
-    const childNodes = Array.from(filter(target.element.childNodes, isVisibleNode));
+    const childNodes = Array.from(iters.filter(target.element.childNodes, isVisibleNode));
     if (childNodes.every((c) => targetMap.has((c: any)))) {
       const child = childNodes[0];
       target.filteredOutBy = targetMap.get((child: any));
@@ -707,166 +693,6 @@ function distinctSimilarTarget(targets: Target[]): Target[] {
   }
 
   return targets.filter((t) => t.filteredOutBy == null);
-}
-
-const RECT_POSITIONS = [[0.5, 0.5], [0.1, 0.1], [0.1, 0.9], [0.9, 0.1], [0.9, 0.9]];
-
-function getVisibleRects(elem: HTMLElement): Rect[] {
-  const innerWidth = window.innerWidth;
-  const innerHeight = window.innerHeight;
-  const rects = [];
-  const clientRects = elem.tagName === "AREA"
-        ? getAreaRects((elem: any)) // force cast
-        : elem.getClientRects();
-  for (const r of clientRects) {
-    const { width, height, top, bottom, left, right } = r;
-
-    // too small rects
-    if (width <= 2 && height <= 2) continue;
-
-    // out of display
-    if (bottom <= 0 && top >= innerHeight &&
-        right <= 0  && left >= innerWidth) continue;
-
-    // is clickable element?
-    // Actualy `isHintable` needs this check only.
-    // However two former checks might be faster than this.
-    for (const [xr, yr] of RECT_POSITIONS) {
-      const x = avg(left, right, xr);
-      const y = avg(top,  bottom, yr);
-
-      let pointedElem = document.elementFromPoint(x, y);
-      if (pointedElem == null) continue;
-
-      // Traverse into shadow DOMs
-      while (pointedElem.shadowRoot) {
-        const elemInShadow = pointedElem.shadowRoot.elementFromPoint(x, y);
-        if (elemInShadow) {
-          pointedElem = elemInShadow;
-        } else {
-          break;
-        }
-      }
-
-      if (elem === pointedElem || elem.contains(pointedElem)) {
-        rects.push(r);
-        // break;
-        return [r]; // return only one rect
-      }
-    }
-  }
-  return rects;
-}
-
-function getAreaRects(element: HTMLAreaElement): Rect[] {
-  const map = first(filter(traverseParent(element),
-                           (e) => e.tagName === "MAP"));
-  if (!(map instanceof HTMLMapElement)) return [];
-
-  const img = document.querySelector(`body /deep/ img[usemap="#${map.name}"]`);
-  if (!img) return [];
-
-  const rect = img.getBoundingClientRect();
-
-  if (element.shape === "default") return [rect];
-
-  const coords = element.coords.split(",").map((c) => parseInt(c));
-  // filter out NaN
-  if (coords.some((c) => !(c >= 0))) return [];
-
-  if (element.shape === "circle") {
-    const [x, y, r] = coords;
-    const d = r / Math.sqrt(2);
-    const left  = x - d + rect.left;
-    const right = x + d + rect.left;
-    const top    = y - d + rect.top;
-    const bottom = y + d + rect.top;
-    return [{ left, right, top, bottom, width: right - left, height: bottom - top }];
-  }
-
-  // TODO poly support
-  const [x1, y1, x2, y2] = coords;
-  const left  = (x1 > x2 ? x2 : x1) + rect.left;
-  const right = (x1 < x2 ? x2 : x1) + rect.left;
-  const top    = (y1 > y2 ? y2 : y1) + rect.top;
-  const bottom = (y1 < y2 ? y2 : y1) + rect.top;
-  return [{ left, right, top, bottom, width: right - left, height: bottom - top }];
-}
-
-function filterOutBlankTextNode(iter: Iterator<Node> | Iterable<Node>): Node[] {
-  return Array.from(filter(iter, (node) => !((node instanceof Text) && (/^\s*$/).test(node.textContent))));
-}
-
-function *traverseParent(element: Element, includeSelf?: boolean): Iterator<Element> {
-  let p = includeSelf ? element : element.parentElement;
-  while (p != null) {
-    yield p;
-    p = p.parentElement;
-  }
-}
-
-function *traverseFirstChild(element: HTMLElement, includeSelf?: boolean): Iterator<HTMLElement> {
-  let c: HTMLElement[] | HTMLCollection<HTMLElement> = includeSelf ? [element] : element.children;
-  while (c.length >= 1) {
-    yield c[0];
-    c = c[0].children;
-  }
-}
-
-function *takeWhile<T>(iter: Iterator<T> | Iterable<T>, p: (t: T) => boolean): Iterator<T> {
-  for (const e of iter) {
-    if (!p(e)) break;
-    yield e;
-  }
-}
-
-function reduce<T, U>(i: Iterable<T> | Iterator<T>, m: (u: U, t: T) => U, initValue: U): U {
-  let u = initValue;
-  for (const e of i) u = m(u, e);
-  return u;
-}
-
-function length<T>(i: Iterable<T> | Iterator<T>): number {
-  return reduce(i, (n) => n++, 0);
-}
-
-function first<T>(i: Iterator<T> | Iterable<T>): ?T {
-  for (const e of i) return e;
-  return null;
-}
-
-function head<T>(iter: Iterator<T> | Iterable<T>, n: number): Iterator<T> {
-  let i = 0;
-  return takeWhile(iter, () => i++ < n);
-}
-
-function avg(a: number, b: number, ratio: number): number {
-  return a * ratio + b * (1 - ratio);
-}
-
-function* concat<T>(...i: Array<Iterable<T> | Iterator<T>>): Iterator<T> {
-  for (const ii of i) for (const e of ii) yield e;
-}
-
-function* filter<T>(i: Iterable<T> | Iterator<T>, p: (t: T) => boolean): Iterator<T> {
-  for (const e of i) if (p(e)) yield e;
-}
-
-function* map<T, U>(i: Iterable<T> | Iterator<T>, m: (t: T) => U): Iterable<U> {
-  for (const e of i) yield m(e);
-}
-
-function* flatMap<T, U>(i: Iterable<T> | Iterator<T>, m: (t: T) => Iterable<U> | Iterator<U>): Iterable<U> {
-  for (const e of i) for (const u of m(e)) yield u;
-}
-
-function distinct<T>(i: Iterable<T> | Iterator<T>): Iterable<T> {
-  const s = new Set();
-  return filter(i, (e) => {
-    if (s.has(e)) return false;
-    s.add(e);
-    return true;
-  });
 }
 
 function generateHintTexts(num: number, hintLetters: string): string[] {
