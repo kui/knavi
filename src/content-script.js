@@ -65,8 +65,6 @@ let blurEventMatcher: EventMatcher;
 let hinter: Hinter;
 let css: string;
 
-const visibleRects = new VisibleRects;
-
 async function main(window: any) {
   const configValues = await config.get();
   console.debug("config: ", configValues);
@@ -524,7 +522,8 @@ function fitOverlay(overlay: HTMLDivElement) {
 }
 
 function generateHints(hintLetters: string): { wrapper: HTMLDivElement, hints: Hint[] } {
-  const targets = listAllTarget();
+  const visibleRects = new VisibleRects;
+  const targets = listAllTarget(visibleRects);
   const hintTexts = generateHintTexts(targets.length, hintLetters);
   const wrapper = document.createElement("div");
   wrapper.id = WRAPPER_ID;
@@ -588,7 +587,7 @@ declare type Target = {
   filteredOutBy?: Target;
 };
 
-function listAllTarget(): Target[] {
+function listAllTarget(visibleRects: VisibleRects): Target[] {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
   const targets = [];
   if (document.activeElement !== document.body) {
@@ -626,13 +625,24 @@ function listAllTarget(): Target[] {
     targets.push({ element, rects, mightBeClickable });
   }
 
-  return distinctSimilarTarget(targets);
+  return distinctSimilarTarget(targets, visibleRects);
 }
 
-function distinctSimilarTarget(targets: Target[]): Target[] {
+function distinctSimilarTarget(targets: Target[], visibleRects: VisibleRects): Target[] {
   const targetMap: Map<Element, Target> = new Map((function* () {
     for (const t of targets) yield [t.element, t];
   })());
+
+  function isVisibleNode(node) {
+    // filter out blank text nodes
+    if (node instanceof Text) return !(/^\s*$/).test(node.textContent);
+    // filter out invisible element.
+    if (node instanceof HTMLElement) {
+      if (visibleRects.get(node).length >= 1) return true;
+      return false;
+    }
+    return true;
+  }
 
   // Filter out if this target is a child of <a> or <button>
   for (let i = 0; i < targets.length; i++) {
@@ -650,17 +660,6 @@ function distinctSimilarTarget(targets: Target[]): Target[] {
       target.filteredOutBy = parentTarget;
       console.debug("filter out: a child of a parent <a>/<button>: target=%o", target.element);
     }
-  }
-
-  function isVisibleNode(n) {
-    // filter out blank text nodes
-    if (n instanceof Text) return !(/^\s*$/).test(n.textContent);
-    // filter out invisible element.
-    if (n instanceof HTMLElement) {
-      if (visibleRects.get(n).length >= 1) return true;
-      return false;
-    }
-    return true;
   }
 
   // Filter out targets that is only one child for a parent target element.

@@ -130,6 +130,13 @@ function getAreaRects(element: HTMLAreaElement): Rect[] {
   return [{ left, right, top, bottom, width: right - left, height: bottom - top }];
 }
 
+// function getAnchorRects(element: HTMLAnchorElement): Rect[] {
+//   const childNodes = Array.from(filter(element.childNodes, (n) => isVisibleNode(n)));
+//   if (childNodes.length !== 1) return element.getClientRects();
+//   const child = childNodes[0];
+//   if (!(child.nodeName instanceof HTMLImageElement)) return element.getClientRects();
+// }
+
 function createRect(x1, y1, x2, y2): Rect {
   const top = Math.min(y1, y2);
   const bottom = Math.max(y1, y2);
@@ -137,13 +144,6 @@ function createRect(x1, y1, x2, y2): Rect {
   const right = Math.max(x1, x2);
   return { top, bottom, left, right, height: bottom - top, width: right - left };
 }
-
-// function getAnchorRects(element: HTMLAnchorElement): Rect[] {
-//   const childNodes = Array.from(filter(element.childNodes, (n) => isVisibleNode(n)));
-//   if (childNodes.length !== 1) return element.getClientRects();
-//   const child = childNodes[0];
-//   if (!(child.nodeName instanceof HTMLImageElement)) return element.getClientRects();
-// }
 
 const RECT_POSITIONS = [[0.5, 0.5], [0.1, 0.1], [0.1, 0.9], [0.9, 0.1], [0.9, 0.9]];
 
