@@ -523,7 +523,10 @@ function fitOverlay(overlay: HTMLDivElement) {
 
 function generateHints(hintLetters: string): { wrapper: HTMLDivElement, hints: Hint[] } {
   const visibleRects = new VisibleRects;
+  // Benchmark: this operation is most heavy.
+  console.time("list all target");
   const targets = listAllTarget(visibleRects);
+  console.timeEnd("list all target");
   const hintTexts = generateHintTexts(targets.length, hintLetters);
   const wrapper = document.createElement("div");
   wrapper.id = WRAPPER_ID;
