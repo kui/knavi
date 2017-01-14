@@ -1,5 +1,7 @@
 // @flow
 
+import * as utils from "./utils";
+
 declare type Callback<T> = (value: T) => void;
 
 export class EventEmitter<T> {
@@ -10,7 +12,10 @@ export class EventEmitter<T> {
   }
 
   async emit(value: T) {
-    this.listeners.forEach((l) => setTimeout(() => l.callback(value), 0));
+    await Promise.all(this.listeners.map(async (l) => {
+      await utils.nextTick();
+      l.callback(value);
+    }));
   }
 
   listen(callback: Callback<T>): EventListener<T> {

@@ -3,6 +3,7 @@ import se from "storage-element";
 import * as ki from "key-input-elements";
 import CodeMirror from "codemirror";
 import "codemirror/mode/css/css.js";
+import * as utils from "./lib/utils";
 
 se.register();
 ki.register();
@@ -38,17 +39,13 @@ async function initCodeMirror() {
 
   (async function() {
     while (true) {
-      await nextTick();
+      await utils.nextTick();
       if (value !== t.value) {
         value = t.value;
         cm.setValue(value);
       }
     }
   })();
-}
-
-function nextTick(): Promise<number> {
-  return new Promise((resolve) => requestAnimationFrame(resolve));
 }
 
 if (document.readyState === "loading") {

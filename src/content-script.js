@@ -4,6 +4,7 @@ import EventMatcher from "key-input-elements/lib/event-matcher";
 import { EventEmitter } from "./lib/event-emitter";
 import { config } from "./lib/config";
 import * as iters from "./lib/iters";
+import * as utils from "./lib/utils";
 import VisibleRects from "./lib/visible-rects";
 
 import type { Rect } from "./lib/visible-rects";
@@ -75,10 +76,14 @@ async function main(window: any) {
   hinter = new Hinter(document, configValues["hints"] || DEFAULT_HINTS);
   css = configValues["css"] || DEFAULT_STYLE;
 
+  // wait event setup untill document.body.firstChild is reachable.
+  while (!document.body.firstChild) await utils.nextTick();
+
   setupEvents(window);
 }
 
 function setupEvents(window: any) {
+  const blurEvents = new EventEmitter();
   function hookKeydown(event: KeyboardEvent) {
     if (hinter.status === HinterStatus.NO_HINT) {
       if (!isEditable(event.target) && hitEventMatcher.test(event)) {
@@ -92,6 +97,7 @@ function setupEvents(window: any) {
           event.preventDefault();
           event.stopPropagation();
           console.debug("blur", document.activeElement);
+          blurEvents.emit(document.activeElement);
           document.activeElement.blur();
           return;
         } else if (isInFrame()) {
@@ -102,6 +108,7 @@ function setupEvents(window: any) {
           return;
         }
       }
+      return;
     }
     if (hinter.status === HinterStatus.HINTING) {
       if (hinter.hitHint(event.key)) {
@@ -134,11 +141,13 @@ function setupEvents(window: any) {
   window.addEventListener("message", (e) => {
     if (e.data === BLUR_MESSAGE) {
       console.debug("blur request from a frame", e.source);
+      blurEvents.emit(document.activeElement);
       document.activeElement.blur();
     }
   });
 
   new HintsView(hinter);
+  new BlurView(blurEvents);
 }
 
 function isEditable(elem: EventTarget) {
@@ -742,6 +751,42 @@ function generateHintTexts(num: number, hintLetters: string): string[] {
   }
 
   return texts.sort();
+}
+
+class BlurView {
+  constructor(blurEvents: EventEmitter<HTMLElement>) {
+    const overlay = document.createElement("div");
+    Object.assign(overlay.style, {
+      position: "absolute",
+      display: "block",
+      zIndex: Z_INDEX_OFFSET.toString(),
+    });
+    overlay.addEventListener("AnimationEnd", () => {
+      console.debug("Blur animation end");
+      document.body.removeChild(overlay);
+    });
+
+    blurEvents.listen((element) => {
+      if (document.body.contains(overlay)) {
+        document.body.removeChild(overlay);
+      }
+      const rect = element.getBoundingClientRect();
+      Object.assign(overlay.style, {
+        top:  `${window.scrollY + rect.top}px`,
+        left: `${window.scrollX + rect.left}px`,
+        height: `${rect.height}px`,
+        width:  `${rect.width}px`,
+      });
+      document.body.insertBefore(overlay, document.body.firstChild);
+      // $FlowFixMe
+      overlay.animate([
+        { boxShadow: "0 0   0    0 rgba(128,128,128,0.15), 0 0   0    0 rgba(0,0,128,0.1)" },
+        { boxShadow: "0 0 3px 72px rgba(128,128,128,   0), 0 0 3px 80px rgba(0,0,128,  0)" },
+      ], {
+        duration: 300,
+      });
+    });
+  }
 }
 
 main(window);

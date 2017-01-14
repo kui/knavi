@@ -1,3 +1,5 @@
+// @flow
+
 import { config, local } from "./lib/config";
 
 const DEFAULT_STYLE = `/* base overlay */
