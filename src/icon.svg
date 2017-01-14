@@ -1,3 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg xmlns="http://www.w3.org/2000/svg"
      xmlns:xlink="http://www.w3.org/1999/xlink"
      viewBox="0 0 200 200">
@@ -7,17 +9,17 @@
     <rect rx="10" ry="10" width="100" height="100" fill="#333" />
   </symbol>
   <symbol id="keytops-row">
-    <use xlink:href="#keytop" x="0"  y="0" />
+    <use xlink:href="#keytop" x="0"   y="0" />
     <use xlink:href="#keytop" x="120" y="0" />
     <use xlink:href="#keytop" x="240" y="0" />
     <use xlink:href="#keytop" x="360" y="0" />
   </symbol>
   <symbol id="keytops">
-    <use  x="0"  y="0"   xlink:href="#keytops-row" />
-    <use  x="35" y="120" xlink:href="#keytops-row" />
+    <use x="0"  y="0"   xlink:href="#keytops-row" />
+    <use x="35" y="120" xlink:href="#keytops-row" />
+    <use x="90" y="240" xlink:href="#keytops-row" />
     <text x="188" y="185" font-family="Verdana" font-size="40"
                           font-weight="bold" fill="#eee">K</text>
-    <use  x="70" y="240" xlink:href="#keytops-row" />
   </symbol>
 
   <use xlink:href="#keytops" x="-123" y="-60" />

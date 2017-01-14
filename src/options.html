@@ -14,7 +14,8 @@
       <table class="config-table">
         <tr>
           <th><label for="magic-key">Magic Key</label></th>
-          <td><input is="keydown-input" id="magic-key" name="magic-key" value="Space" noMod></td>
+          <td><input is="keydown-input" id="magic-key" name="magic-key" value="Space"
+                     autocomplete="off" noMod></td>
         </tr>
         <tr>
           <th><label for="hints">Hint Letters</label></th>
@@ -28,7 +29,7 @@
         <tr>
           <th><label for="blur-key">Key</label></th>
           <td>
-            <input is="keydown-input" id="blur-key" name="blur-key" value="">
+            <input is="keydown-input" id="blur-key" name="blur-key" value="" autocomplete="off">
             <button class="js-clear-button"
                     data-target="#blur-key"
                     alt="Clear to disable"

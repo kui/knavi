@@ -1,16 +1,18 @@
 SRC = src
 BUILD = build
 JS = $(addprefix $(BUILD)/,content-script.js options.js background.js)
-SRC_STATICS = $(wildcard $(SRC)/*.html $(SRC)/*.css)
-STATICS = $(SRC_STATICS:$(SRC)/%=$(BUILD)/%)
+STATICS = $(patsubst $(SRC)/%, $(BUILD)/%, $(wildcard $(SRC)/*.html $(SRC)/*.css))
 ICONS = $(addprefix $(BUILD)/icon, $(addsuffix .png/, 16 48 128))
+PNG = $(patsubst $(SRC)/%.svg, $(BUILD)/%.png, $(wildcard $(SRC)/*.svg))
 BIN = node_modules/.bin
+
+FILES = $(BUILD) $(BUILD)/manifest.json $(BUILD)/codemirror.css $(STATICS) $(ICONS) $(PNG)
 
 .PHONY: all
 all: debug-build
 
 .PHONY: debug-build
-debug-build: $(BUILD) $(BUILD)/manifest.json $(STATICS) $(ICONS) $(JS)
+debug-build: node_modules $(FILES) $(JS)
 
 $(BUILD):
 	mkdir -v $(BUILD)
@@ -26,6 +28,12 @@ $(ICONS): $(SRC)/icon.svg
 		-resize `echo $@ | sed -nre 's/.*icon([0-9]+)\.png/\1/p'`x \
 		$@
 
+$(BUILD)/%.png: $(SRC)/%.svg
+	convert -verbose $< -resize 40x $@
+
+$(BUILD)/codemirror.css: node_modules
+	cp -v node_modules/codemirror/lib/codemirror.css $@
+
 $(BUILD)/%: $(SRC)/%
 	cp -v $< $@
 
@@ -33,7 +41,7 @@ node_modules:
 	npm install
 
 .PHONY: prod-build
-prod-build: clean $(BUILD) $(BUILD)/manifest.json $(STATICS) $(ICONS)
+prod-build: clean node_modules $(FILES)
 	NODE_ENV=production $(BIN)/webpack
 
 .PHONE: check

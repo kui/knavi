@@ -1,5 +1,5 @@
 body {
-  font-size: 100%
+  font-size: 100%;
 }
 h1 > img {
   width: 1em;
@@ -7,8 +7,16 @@ h1 > img {
 .config-table th {
   text-align: right;
 }
+input {
+  border: solid gray 1px;
+  padding: 2px;
+}
 input[is^="key"] {
   width: 12em;
+  background-image: url("keyboard-icon.png");
+  background-position: calc(100% - 2px) center;
+  background-repeat: no-repeat;
+  background-size: 1.1em;
 }
 textarea[name="css"] {
   width: 30em;
@@ -20,20 +28,21 @@ details {
 }
 summary {
   padding: 9px 3px;
+  cursor: pointer;
 }
 
 /* css editor */
 #cm-wrapper {
   overflow: hidden;
   resize: both;
-  border: 1px black solid;
+  border: 1px gray solid;
   width: 30em;
   height: 20em;
   padding: 0 10px 10px 0;
   background-color: #eee;
 }
 .CodeMirror {
-  border: #999 1px;
+  border: #aaa 1px;
   border-style: none solid solid none;
   width: 100%;
   height: 100%;
