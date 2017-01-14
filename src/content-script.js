@@ -552,6 +552,7 @@ const HINTABLE_QUERY = [
   "[contenteditable=true]",
   "[role=link]",
   "[role=button]",
+  "[data-image-url]",
 ].map((s) => "body /deep/ " + s).join(",");
 
 declare interface Rect {
