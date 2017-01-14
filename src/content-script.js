@@ -329,7 +329,7 @@ class HintsView {
 function handleHitTarget(hitHint: ?Hint, options: DehintOptions) {
   if (!hitHint) return;
 
-  console.debug("hit", hitHint);
+  console.log("hit", hitHint);
 
   const element = hitHint.target.element;
   const style = window.getComputedStyle(element);
@@ -337,22 +337,28 @@ function handleHitTarget(hitHint: ?Hint, options: DehintOptions) {
     // Make scrollable from your keyboard
     if (!element.hasAttribute("tabindex")) element.setAttribute("tabindex", "-1");
     element.focus();
-    console.debug("focus as an scrollable element");
+    console.log("focus as an scrollable element");
     return;
   }
   if (isEditable(element)) {
     element.focus();
-    console.debug("focus as an editable element");
+    console.log("focus as an editable element");
     return;
   }
   if (element.tagName === "BODY") {
     const activeElement = document.activeElement;
     activeElement.blur();
-    console.debug("blue an active element: ", activeElement);
+    console.log("blue an active element: ", activeElement);
     return;
   }
+  if (element.tagName === "IFRAME") {
+    element.focus();
+    console.log("focus as an iframe");
+    return;
+  }
+
   simulateClick(element, options);
-  console.debug("click");
+  console.log("click");
 }
 
 function simulateClick(element: HTMLElement, options: DehintOptions) {
@@ -537,6 +543,7 @@ const HINTABLE_QUERY = [
   "button:not([disabled])",
   "select:not([disabled])",
   "input:not([type=hidden]):not([disabled])",
+  "iframe",
   "[tabindex]",
   "[onclick]",
   "[onmousedown]",
@@ -654,8 +661,7 @@ function distinctSimilarTarget(targets: Target[]): Target[] {
     if (target.filteredOutBy) continue;
 
     const thinAncestors = takeWhile(traverseParent(target.element), (e) => {
-      const childNodes = Array.from(filter(e.childNodes, isVisibleNode));
-      return childNodes.length === 1;
+      return length(filter(e.childNodes, isVisibleNode)) === 1;
     });
     const parentTarget = first(flatMap(thinAncestors, (p) => {
       const t = targetMap.get(p);
