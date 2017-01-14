@@ -6,17 +6,7 @@ import { config } from "./lib/config";
 
 const DEFAULT_MAGIC_KEY = "Space";
 const DEFAULT_HINTS = "ASDFGHJKL";
-
-const OVERLAY_PADDING = 8;
-const CONTAINER_ID = "jp-k-ui-knavi";
-const OVERLAY_ID = "jp-k-ui-knavi-overlay";
-const ACTIVE_OVERLAY_ID = "jp-k-ui-knavi-active-overlay";
-const WRAPPER_ID = "jp-k-ui-knavi-wrapper";
-const Z_INDEX_OFFSET = 2147483640;
-const CANDIDATE_HINT_Z_INDEX = Z_INDEX_OFFSET + 1;
-const HIT_HINT_Z_INDEX = Z_INDEX_OFFSET + 2;
-
-let css = `
+const DEFAULT_STYLE = `
 #jp-k-ui-knavi-overlay {
   background-color: black;
   border: 1px solid white;
@@ -55,18 +45,30 @@ let css = `
   color: white;
   border: black solid 1px;
   font-weight: bold;
-}
-`;
+}`.replace(/(^|\n)\t+/g, "$1");
 
-let eventMatcher: EventMatcher;
+const OVERLAY_PADDING = 8;
+const CONTAINER_ID = "jp-k-ui-knavi";
+const OVERLAY_ID = "jp-k-ui-knavi-overlay";
+const ACTIVE_OVERLAY_ID = "jp-k-ui-knavi-active-overlay";
+const WRAPPER_ID = "jp-k-ui-knavi-wrapper";
+const Z_INDEX_OFFSET = 2147483640;
+const CANDIDATE_HINT_Z_INDEX = Z_INDEX_OFFSET + 1;
+const HIT_HINT_Z_INDEX = Z_INDEX_OFFSET + 2;
+
+let hitEventMatcher: EventMatcher;
+let blurEventMatcher: EventMatcher;
 let hinter: Hinter;
+let css: string;
 
 async function main(window: any) {
   const configValues = await config.get();
   console.debug("config: ", configValues);
 
-  eventMatcher = new EventMatcher(configValues["magic-key"] || DEFAULT_MAGIC_KEY);
+  hitEventMatcher = new EventMatcher(configValues["magic-key"] || DEFAULT_MAGIC_KEY);
+  blurEventMatcher = new EventMatcher(configValues["blur-key"] || "");
   hinter = new Hinter(document, configValues["hints"] || DEFAULT_HINTS);
+  css = configValues["css"] || DEFAULT_STYLE;
 
   setupEvents(window);
 }
@@ -74,10 +76,17 @@ async function main(window: any) {
 function setupEvents(window: any) {
   function hookKeydown(event: KeyboardEvent) {
     if (hinter.status === HinterStatus.NO_HINT) {
-      if (!isEditable(event.target) && eventMatcher.test(event)) {
+      if (!isEditable(event.target) && hitEventMatcher.test(event)) {
         event.preventDefault();
         event.stopPropagation();
         hinter.attachHints();
+        return;
+      }
+      if (blurEventMatcher.test(event) && isBlurable()) {
+        event.preventDefault();
+        event.stopPropagation();
+        console.debug("blur", document.activeElement);
+        document.activeElement.blur();
         return;
       }
       return;
@@ -92,7 +101,7 @@ function setupEvents(window: any) {
   }
   function hookKeyup(event: KeyboardEvent) {
     if (hinter.status === HinterStatus.HINTING &&
-        eventMatcher.testModInsensitive(event)) {
+        hitEventMatcher.testModInsensitive(event)) {
       event.preventDefault();
       event.stopPropagation();
       hinter.removeHints(event);
@@ -115,6 +124,10 @@ function setupEvents(window: any) {
 function isEditable(elem: EventTarget) {
   if (!(elem instanceof HTMLElement)) return false;
   return elem.selectionStart != null || elem.contentEditable === "true";
+}
+
+function isBlurable() {
+  return document.activeElement !== document.body;
 }
 
 //

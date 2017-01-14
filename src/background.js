@@ -1,7 +1,6 @@
 import { config, local } from "./lib/config";
 
-const DEFAULT_STYLE = `
-/* base overlay */
+const DEFAULT_STYLE = `/* base overlay */
 #jp-k-ui-knavi-overlay {
   background-color: black;
   border: 1px solid white;
@@ -43,7 +42,8 @@ const DEFAULT_STYLE = `
   color: white;
   border: black solid 1px;
   font-weight: bold;
-}`;
+}`.replace(/(^|\n)\t+/g, "$1");
+
 const DEFAULT_VALUES = new Map([
   ["magic-key", "Space"],
   ["hints", "ASDFGHJKL"],

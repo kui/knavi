@@ -1,11 +1,14 @@
 body {
   font-size: 100%
 }
+h1 > img {
+  width: 1em;
+}
 .config-table th {
   text-align: right;
 }
 input[is^="key"] {
-  width: 8em;
+  width: 12em;
 }
 textarea[name="css"] {
   width: 30em;

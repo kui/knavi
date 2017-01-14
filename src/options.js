@@ -7,7 +7,7 @@ import "codemirror/mode/css/css.js";
 se.register();
 ki.register();
 
-function init() {
+async function init() {
   for (const e of document.body.getElementsByClassName("js-clear-button")) {
     console.log("clear button: ", e);
     e.addEventListener("click", (e: MouseEvent) => {
@@ -21,17 +21,34 @@ function init() {
     });
   }
 
-  initCodeMirror();
+  await initCodeMirror();
 }
 
-function initCodeMirror() {
+async function initCodeMirror() {
   const t: HTMLTextAreaElement = (document.getElementsByName("css")[0]: any);
   t.style.display = "none";
   const w =  document.getElementById("cm-wrapper");
-  CodeMirror(w, {
-    value: t.value,
-    onChange: (e) => t.textContent = e.getValue(),
+  let value = t.value;
+  const cm = CodeMirror(w, { value: t.value });
+
+  cm.on("change", () => {
+    const v = cm.getValue();
+    t.value = value = v;
   });
+
+  (async function() {
+    while (true) {
+      await nextTick();
+      if (value !== t.value) {
+        value = t.value;
+        cm.setValue(value);
+      }
+    }
+  })();
+}
+
+function nextTick(): Promise<number> {
+  return new Promise((resolve) => requestAnimationFrame(resolve));
 }
 
 if (document.readyState === "loading") {
