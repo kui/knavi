@@ -77,7 +77,7 @@ async function main(window: any) {
   css = configValues["css"] || DEFAULT_STYLE;
 
   // wait event setup untill document.body.firstChild is reachable.
-  while (!document.body.firstChild) await utils.nextTick();
+  while (!(document.body && document.body.firstChild)) await utils.nextTick();
 
   setupEvents(window);
 }
@@ -383,10 +383,11 @@ function handleHitTarget(hitHint: ?Hint, options: DehintOptions) {
     // Make scrollable from your keyboard
     if (!element.hasAttribute("tabindex")) {
       element.setAttribute("tabindex", "-1");
-      element.addEventListener("blur", function removeTabIndex() {
-        element.removeAttribute("tabindex");
-        element.removeEventListener("blur", removeTabIndex);
-      });
+      element.addEventListener(
+        "blur",
+        () => element.removeAttribute("tabindex"),
+        { once: true }
+      );
     }
     element.focus();
     console.log("focus as an scrollable element");
@@ -761,15 +762,16 @@ class BlurView {
       display: "block",
       zIndex: Z_INDEX_OFFSET.toString(),
     });
-    overlay.addEventListener("AnimationEnd", () => {
-      console.debug("Blur animation end");
-      document.body.removeChild(overlay);
-    });
 
-    blurEvents.listen((element) => {
+    function removeOverlay() {
       if (document.body.contains(overlay)) {
         document.body.removeChild(overlay);
       }
+    }
+
+    blurEvents.listen((element) => {
+      removeOverlay();
+
       const rect = element.getBoundingClientRect();
       Object.assign(overlay.style, {
         top:  `${window.scrollY + rect.top}px`,
@@ -779,12 +781,14 @@ class BlurView {
       });
       document.body.insertBefore(overlay, document.body.firstChild);
       // $FlowFixMe
-      overlay.animate([
+      const animation = overlay.animate([
         { boxShadow: "0 0   0    0 rgba(128,128,128,0.15), 0 0   0    0 rgba(0,0,128,0.1)" },
         { boxShadow: "0 0 3px 72px rgba(128,128,128,   0), 0 0 3px 80px rgba(0,0,128,  0)" },
       ], {
-        duration: 300,
+        duration: 200,
       });
+      animation.addEventListener("finish", removeOverlay);
+      window.addEventListener("keydown", removeOverlay, { once: true });
     });
   }
 }
