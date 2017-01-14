@@ -29,6 +29,7 @@
     "babel-preset-env": "^1.1.6",
     "babel-register": "^6.18.0",
     "babili-webpack-plugin": "0.0.7",
+    "codemirror": "^5.22.2",
     "eslint": "^3.13.0",
     "eslint-config-babel": "^3.0.0",
     "eslint-plugin-babel": "^4.0.0",

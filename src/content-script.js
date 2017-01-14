@@ -73,18 +73,21 @@ async function main(window: any) {
 
 function setupEvents(window: any) {
   function hookKeydown(event: KeyboardEvent) {
-    if (hinter.status === HinterStatus.NO_HINT &&
-        !isEditable(event.target) &&
-        eventMatcher.test(event)) {
-      event.preventDefault();
-      event.stopPropagation();
-      hinter.attachHints();
+    if (hinter.status === HinterStatus.NO_HINT) {
+      if (!isEditable(event.target) && eventMatcher.test(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+        hinter.attachHints();
+        return;
+      }
+      return;
     }
     if (hinter.status === HinterStatus.HINTING) {
       if (hinter.hitHint(event.key)) {
         event.preventDefault();
         event.stopPropagation();
       }
+      return;
     }
   }
   function hookKeyup(event: KeyboardEvent) {

@@ -17,6 +17,27 @@ class Storage {
       });
     });
   }
+
+  async getSingle(name: string): Promise<string> {
+    return (await this.get(name))[name];
+  }
+
+  set(items: ChromeStorageItems): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.storage.set(items, () => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          reject(Error(err.message));
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+
+  async setSingle(name: string, value: string): Promise<void> {
+    await this.set({[name]: value});
+  }
 }
 
 export const sync  = new Storage(chrome.storage.sync);
@@ -30,8 +51,17 @@ class Config {
 
   async getSingle(name: string): Promise<?string> {
     const s = await this.getStorage();
-    const v = await s.get(name);
-    return v[name];
+    return await s.getSingle(name);
+  }
+
+  async set(items: ChromeStorageItems) {
+    const s = await this.getStorage();
+    await s.set(items);
+  }
+
+  async setSingle(name: string, value: string) {
+    const s = await this.getStorage();
+    await s.setSingle(name, value);
   }
 
   async getStorage(): Promise<Storage> {
@@ -39,8 +69,7 @@ class Config {
     switch (result["_area"]) {
     case "chrome-local": return local;
     case "chrome-sync":  return sync;
-    case undefined:      return sync;
-    default: throw Error("Unknown storage area: " + result["_area"]);
+    default:      return sync;
     }
   }
 }

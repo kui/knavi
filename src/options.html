@@ -1,32 +1,103 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>KNavi Config</title>
+    <title>KNavi Settings</title>
+    <link rel="stylesheet" type="text/css" href="codemirror.css">
     <link rel="stylesheet" type="text/css" href="options.css">
     <script src="options.js" async></script>
   </head>
   <body>
-    <h1>KNavi Config</h1>
+    <h1>KNavi Settings</h1>
+
     <form is="storage-form" autosync>
-      <table>
-        <tr class="config-row">
+      <h2>Basic Settings</h2>
+      <table class="config-table">
+        <tr>
           <th><label for="magic-key">Magic Key</label></th>
-          <td><input is="keydown-input" id="magic-key" name="magic-key" size="18" value="Space" noMod></td>
+          <td><input is="keydown-input" id="magic-key" name="magic-key" value="Space" noMod></td>
         </tr>
-        <tr class="config-row">
+        <tr>
           <th><label for="hints">Hint Letters</label></th>
-          <td><input id="hints" name="hints" size="18" value="ASDFGHJKL"></td>
+          <td><input id="hints" name="hints" value="ASDFGHJKL"></td>
         </tr>
-        <tr class="config-row">
-          <th><label for="_area">Setting Store</label></th>
+      </table>
+
+      <h2>Blur key</h2>
+      <p>A support function to in-activate a current focused element. Press [X] if you want to disable.</p>
+      <table class="config-table">
+        <tr>
+          <th><label for="blur-key">Key</label></th>
           <td>
-            <select is="area-select" id="_area" name="_area" area="chrome-local">
-              <option value="chrome-sync" selected>sync</option>
-              <option value="chrome-local">local</option>
-            </select>
+            <input is="keydown-input" id="blur-key" name="blur-key" value="">
+            <button class="js-clear-button"
+                    data-target="#blur-key"
+                    alt="Clear to disable"
+                    title="Clear to disable">×</button>
           </td>
         </tr>
       </table>
+
+      <h2>Style</h2>
+      <p>Styles for Hint elements and overlays.</p>
+      <textarea name="css">
+#jp-k-ui-knavi-overlay {
+  background-color: black;
+  border: 1px solid white;
+  opacity: 0.2;
+  transition-property: left, top, width, height;
+  transition-duration: 0.4s;
+  /* transition-timing-function: ease-in; */
+}
+#jp-k-ui-knavi-active-overlay {
+  background-color: red;
+  border: 1px solid white;
+  opacity: 0.1;
+  transition-property: left, top, width, height;
+  transition-duration: 0.2s;
+}
+#jp-k-ui-knavi-wrapper > div {
+  margin: 0px;
+  padding: 3px;
+  background-color: black;
+  color: white;
+  border: white solid 1px;
+  line-height: 1em;
+  font-size: 16px;
+  font-family: monospace;
+}
+#jp-k-ui-knavi-wrapper > div.jp-k-ui-knavi-disabled {
+  opacity: 0.6;
+}
+#jp-k-ui-knavi-wrapper > div.jp-k-ui-knavi-candidate {
+  background-color: yellow;
+  color: black;
+  border: black solid 1px;
+}
+#jp-k-ui-knavi-wrapper > div.jp-k-ui-knavi-hit {
+  background-color: #c00;
+  color: white;
+  border: black solid 1px;
+  font-weight: bold;
+}</textarea>
+      <div id="cm-wrapper"></div>
+
+      <details name="advanced-configs">
+        <summary>Advanced settings</summary>
+
+        <h2>Settings Storage</h2>
+        <p>Indicate where these setting values are stored. <code>sync</code> shares your settings between your browser.</p>
+        <table class="config-table">
+          <tr>
+            <th><label for="_area">Value</label></th>
+            <td>
+              <select is="area-select" id="_area" name="_area" area="chrome-local">
+                <option value="chrome-sync" selected>sync</option>
+                <option value="chrome-local">local</option>
+              </select>
+            </td>
+          </tr>
+        </table>
+      </details>
     </form>
   </body>
 </html>

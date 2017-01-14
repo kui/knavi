@@ -28,7 +28,9 @@ export default {
   options_page: "options.html",
   options_ui: {
     page: "options.html",
-    chrome_style: true
+    // chrome_style: true,
+    // New option UI style grubs escape key events to close the modal.
+    open_in_tab: true,
   },
   permissions: [
     "storage",

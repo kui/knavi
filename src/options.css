@@ -1,3 +1,38 @@
-.config-row > th {
+body {
+  font-size: 100%
+}
+.config-table th {
   text-align: right;
+}
+input[is^="key"] {
+  width: 8em;
+}
+textarea[name="css"] {
+  width: 30em;
+  height: 20em;
+}
+details {
+  margin: 9px 6px;
+  background-color: #eee;
+}
+summary {
+  padding: 9px 3px;
+}
+
+/* css editor */
+#cm-wrapper {
+  overflow: hidden;
+  resize: both;
+  border: 1px black solid;
+  width: 30em;
+  height: 20em;
+  padding: 0 10px 10px 0;
+  background-color: #eee;
+}
+.CodeMirror {
+  border: #999 1px;
+  border-style: none solid solid none;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
