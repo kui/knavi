@@ -635,20 +635,29 @@ function distinctSimilarTarget(targets: Target[]): Target[] {
     }
   }
 
+  function isVisibleNode(n) {
+    // filter out blank text nodes
+    if (n instanceof Text) return !(/^\s*$/).test(n.textContent);
+    // filter out invisible element.
+    if (n instanceof HTMLElement) {
+      if (targetMap.has(n)) return true;
+      if (getVisibleRects(n).length >= 1) return true;
+      return false;
+    }
+    return true;
+  }
+
   // Filter out targets that is only one child for a parent target element.
   for (let i = 0; i < targets.length; i++) {
     const target = targets[i];
     if (!target.mightBeClickable) continue;
     if (target.filteredOutBy) continue;
 
-    const traverseThinParent = takeWhile(traverseParent(target.element), (e) => {
-      const childNodes = filterOutBlankTextNode(e.childNodes).filter((c) => {
-        if (!(c instanceof HTMLElement)) return true;
-        return getVisibleRects(c).length >= 1;
-      });
+    const thinAncestors = takeWhile(traverseParent(target.element), (e) => {
+      const childNodes = Array.from(filter(e.childNodes, isVisibleNode));
       return childNodes.length === 1;
     });
-    const parentTarget = first(flatMap(traverseThinParent, (p) => {
+    const parentTarget = first(flatMap(thinAncestors, (p) => {
       const t = targetMap.get(p);
       if (t == null) return [];
       if (t.filteredOutBy) return [t.filteredOutBy];
@@ -666,13 +675,7 @@ function distinctSimilarTarget(targets: Target[]): Target[] {
     if (!target.mightBeClickable) continue;
     if (target.filteredOutBy) continue;
 
-    const childNodes = Array.from(
-      filter(filter(target.element.childNodes,
-                    // filter out blank text nodes
-                    (n) => !((n instanceof Text) && (/^\s*$/).test(n.textContent))),
-             // filter out invisible element.
-             (n) => !((n instanceof HTMLElement) && getVisibleRects(n).length === 0)));
-
+    const childNodes = Array.from(filter(target.element.childNodes, isVisibleNode));
     if (childNodes.every((c) => targetMap.has((c: any)))) {
       const child = childNodes[0];
       target.filteredOutBy = targetMap.get((child: any));
@@ -794,6 +797,16 @@ function *takeWhile<T>(iter: Iterator<T> | Iterable<T>, p: (t: T) => boolean): I
   }
 }
 
+function reduce<T, U>(i: Iterable<T> | Iterator<T>, m: (u: U, t: T) => U, initValue: U): U {
+  let u = initValue;
+  for (const e of i) u = m(u, e);
+  return u;
+}
+
+function length<T>(i: Iterable<T> | Iterator<T>): number {
+  return reduce(i, (n) => n++, 0);
+}
+
 function first<T>(i: Iterator<T> | Iterable<T>): ?T {
   for (const e of i) return e;
   return null;
@@ -816,7 +829,7 @@ function* filter<T>(i: Iterable<T> | Iterator<T>, p: (t: T) => boolean): Iterato
   for (const e of i) if (p(e)) yield e;
 }
 
-function* map<T, U>(i: Iterable<T>, m: (t: T) => U): Iterable<U> {
+function* map<T, U>(i: Iterable<T> | Iterator<T>, m: (t: T) => U): Iterable<U> {
   for (const e of i) yield m(e);
 }
 
@@ -824,13 +837,13 @@ function* flatMap<T, U>(i: Iterable<T> | Iterator<T>, m: (t: T) => Iterable<U> |
   for (const e of i) for (const u of m(e)) yield u;
 }
 
-function* distinct<T>(i: Iterable<T>): Iterable<T> {
+function distinct<T>(i: Iterable<T> | Iterator<T>): Iterable<T> {
   const s = new Set();
-  for (const e of i) {
-    if (s.has(e)) continue;
+  return filter(i, (e) => {
+    if (s.has(e)) return false;
     s.add(e);
-    yield e;
-  }
+    return true;
+  });
 }
 
 function generateHintTexts(num: number, hintLetters: string): string[] {
