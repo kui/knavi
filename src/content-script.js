@@ -59,6 +59,7 @@ const WRAPPER_ID = "jp-k-ui-knavi-wrapper";
 const Z_INDEX_OFFSET = 2147483640;
 const CANDIDATE_HINT_Z_INDEX = Z_INDEX_OFFSET + 1;
 const HIT_HINT_Z_INDEX = Z_INDEX_OFFSET + 2;
+const BLUR_MESSAGE = "jp-k-ui-knavi-blur";
 
 let hitEventMatcher: EventMatcher;
 let blurEventMatcher: EventMatcher;
@@ -86,14 +87,21 @@ function setupEvents(window: any) {
         hinter.attachHints();
         return;
       }
-      if (blurEventMatcher.test(event) && isBlurable()) {
-        event.preventDefault();
-        event.stopPropagation();
-        console.debug("blur", document.activeElement);
-        document.activeElement.blur();
-        return;
+      if (blurEventMatcher.test(event)) {
+        if (isBlurable()) {
+          event.preventDefault();
+          event.stopPropagation();
+          console.debug("blur", document.activeElement);
+          document.activeElement.blur();
+          return;
+        } else if (isInFrame()) {
+          event.preventDefault();
+          event.stopPropagation();
+          console.debug("blur form the current frame", window.document.body);
+          window.parent.postMessage(BLUR_MESSAGE, "*");
+          return;
+        }
       }
-      return;
     }
     if (hinter.status === HinterStatus.HINTING) {
       if (hinter.hitHint(event.key)) {
@@ -122,6 +130,14 @@ function setupEvents(window: any) {
   window.addEventListener("keyup", hookKeyup, true);
   window.addEventListener("keypress", hookKeypress, true);
 
+  // Blur request from a child frame
+  window.addEventListener("message", (e) => {
+    if (e.data === BLUR_MESSAGE) {
+      console.debug("blur request from a frame", e.source);
+      document.activeElement.blur();
+    }
+  });
+
   new HintsView(hinter);
 }
 
@@ -132,6 +148,10 @@ function isEditable(elem: EventTarget) {
 
 function isBlurable() {
   return document.activeElement !== document.body;
+}
+
+function isInFrame() {
+  return window.parent !== window;
 }
 
 //
