@@ -354,7 +354,13 @@ function handleHitTarget(hitHint: ?Hint, options: DehintOptions) {
   const style = window.getComputedStyle(element);
   if (isScrollable(element, style)) {
     // Make scrollable from your keyboard
-    if (!element.hasAttribute("tabindex")) element.setAttribute("tabindex", "-1");
+    if (!element.hasAttribute("tabindex")) {
+      element.setAttribute("tabindex", "-1");
+      element.addEventListener("blur", function removeTabIndex() {
+        element.removeAttribute("tabindex");
+        element.removeEventListener("blur", removeTabIndex);
+      });
+    }
     element.focus();
     console.log("focus as an scrollable element");
     return;
