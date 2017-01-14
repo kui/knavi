@@ -2,11 +2,11 @@ import { config, local } from "./lib/config";
 
 const DEFAULT_STYLE = `/* base overlay */
 #jp-k-ui-knavi-overlay {
-  background-color: black;
+  background-color: gray;
   border: 1px solid white;
   opacity: 0.2;
   transition-property: left, top, width, height;
-  transition-duration: 0.4s;
+  transition-duration: 0.24s;
 }
 
 /* hit target overlay */
@@ -15,14 +15,37 @@ const DEFAULT_STYLE = `/* base overlay */
   border: 1px solid white;
   opacity: 0.1;
   transition-property: left, top, width, height;
-  transition-duration: 0.2s;
+  transition-duration: 0.12s;
+  animation: pulse 2s linear infinite;
+}
+@keyframes pulse {
+  0% {
+    box-shadow:
+    0 0 0 0 rgba(128,128,128,0.8),
+    0 0 0 0 rgba(255,0,0,0.8);
+  }
+  10% {
+    box-shadow:
+    0 0 3px 0px rgba(128,128,128,0.8),
+    0 0 3px 8px rgba(255,0,0,0.8);
+  }
+  80% {
+    box-shadow:
+    0 0 3px 56px rgba(128,128,128,0.8),
+    0 0 3px 64px rgba(255,0,0,0.8);
+  }
+  100% {
+    box-shadow:
+    0 0 3px 72px rgba(128,128,128,0),
+    0 0 3px 80px rgba(255,0,0,0);
+  }
 }
 
 /* \`#jp-k-ui-knavi-wrapper\` wraps hint elements */
 #jp-k-ui-knavi-wrapper > div {
   margin: 0px;
   padding: 3px;
-  background-color: black;
+  background-color: #999;
   color: white;
   border: white solid 1px;
   line-height: 1em;
