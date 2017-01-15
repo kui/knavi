@@ -4,21 +4,25 @@ import { EventEmitter } from "./event-emitter";
 import RectsDetector from "./rects-detector";
 import * as iters from "./iters";
 import * as utils from "./utils";
+import ActionHandler from "./action-handlers";
 
 import type { Rect } from "./rects-detector";
+import type { ActionOptions } from "./action-handlers";
 
 export default class Hinter {
   hintLetters: string;
   rectsDetector: RectsDetector;
   context: ?HintContext;
+  actionHandler: ActionHandler;
 
   onHinted: EventEmitter<HintEvent>;
   onHintHit: EventEmitter<HitEvent>;
   onDehinted: EventEmitter<DehintEvent>;
 
-  constructor(hintLetters: string) {
+  constructor(hintLetters: string, actionHandler: ActionHandler) {
     this.hintLetters = hintLetters.toLowerCase();
     this.rectsDetector = new RectsDetector;
+    this.actionHandler = actionHandler;
 
     this.onHinted = new EventEmitter;
     this.onHintHit = new EventEmitter;
@@ -51,22 +55,19 @@ export default class Hinter {
     return;
   }
 
-  removeHints(options: DehintOptions) {
+  removeHints(options: ActionOptions) {
     const context = this.context;
     if (context == null) {
       throw Error("Ilegal state invocation: removeHints");
     }
 
+    if (context.hitTarget != null) {
+      this.actionHandler.handle(context.hitTarget, options);
+    }
+
     this.context = null;
     this.onDehinted.emit({ context, options });
   }
-}
-
-export interface DehintOptions {
-  metaKey: boolean;
-  ctrlKey: boolean;
-  altKey: boolean;
-  shiftKey: boolean;
 }
 
 export type TargetState = "disabled" | "candidate" | "hit" | "init";
@@ -111,7 +112,7 @@ declare interface HitEvent {
 
 declare interface DehintEvent {
   context: HintContext;
-  options: DehintOptions;
+  options: ActionOptions;
 }
 
 function initContext(self: Hinter): HintContext {

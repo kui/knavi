@@ -6,6 +6,7 @@ import * as utils from "./lib/utils";
 
 import Hinter from "./lib/hinter";
 import HintsView from "./lib/hint-view";
+import ActionHandler from "./lib/action-handlers";
 
 import Blurer from "./lib/blurer";
 import BlurView from "./lib/blur-view";
@@ -53,21 +54,25 @@ const DEFAULT_STYLE = `
   font-weight: bold;
 }`.replace(/(^|\n)\t+/g, "$1");
 
-let hitEventMatcher: EventMatcher;
-let blurEventMatcher: EventMatcher;
-let hinter: Hinter;
-let blurer: Blurer;
 let css: string;
+let actionHandler: ActionHandler;
+let hinter: Hinter;
+let hitEventMatcher: EventMatcher;
+
+let blurer: Blurer;
+let blurEventMatcher: EventMatcher;
 
 async function main() {
   const configValues = await config.get();
   console.debug("config: ", configValues);
 
   hitEventMatcher = new EventMatcher(configValues["magic-key"] || DEFAULT_MAGIC_KEY);
-  blurEventMatcher = new EventMatcher(configValues["blur-key"] || "");
-  hinter = new Hinter(configValues["hints"] || DEFAULT_HINTS);
-  blurer = new Blurer();
+  actionHandler = new ActionHandler;
+  hinter = new Hinter(configValues["hints"] || DEFAULT_HINTS, actionHandler);
   css = configValues["css"] || DEFAULT_STYLE;
+
+  blurEventMatcher = new EventMatcher(configValues["blur-key"] || "");
+  blurer = new Blurer;
 
   // wait event setup untill document.body.firstChild is reachable.
   while (!(document.body && document.body.firstChild)) await utils.nextTick();
