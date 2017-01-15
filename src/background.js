@@ -5,7 +5,6 @@ import { config, local } from "./lib/config";
 const DEFAULT_STYLE = `/* base overlay */
 #jp-k-ui-knavi-overlay {
   background-color: gray;
-  border: 1px solid white;
   opacity: 0.2;
   transition-property: left, top, width, height;
   transition-duration: 0.24s;
@@ -47,7 +46,7 @@ const DEFAULT_STYLE = `/* base overlay */
 #jp-k-ui-knavi-wrapper > div {
   margin: 0px;
   padding: 3px;
-  background-color: #999;
+  background-color: #333;
   color: white;
   border: white solid 1px;
   line-height: 1em;

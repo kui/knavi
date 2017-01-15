@@ -184,7 +184,7 @@ function buildBoundingRect(rects: Rect[]): Rect {
   const top    = Math.min(...rects.map((r) => r.top));
   const bottom = Math.max(...rects.map((r) => r.bottom));
   const left   = Math.min(...rects.map((r) => r.left));
-  const right  = Math.min(...rects.map((r) => r.right));
+  const right  = Math.max(...rects.map((r) => r.right));
   return { top, bottom, left, right, height: bottom - top, width: right - left };
 }
 

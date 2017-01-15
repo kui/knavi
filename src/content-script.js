@@ -3,11 +3,11 @@
 import EventMatcher from "key-input-elements/lib/event-matcher";
 import { EventEmitter } from "./lib/event-emitter";
 import { config } from "./lib/config";
-import * as iters from "./lib/iters";
 import * as utils from "./lib/utils";
-import RectsDetector from "./lib/rects-detector";
+import * as iters from "./lib/iters";
+import Hinter from "./lib/hinter";
 
-import type { Rect } from "./lib/rects-detector";
+import type { HintedTarget, DehintOptions, TargetState, TargetStateChanges } from "./lib/hinter";
 
 const DEFAULT_MAGIC_KEY = "Space";
 const DEFAULT_HINTS = "ASDFGHJKL";
@@ -85,49 +85,41 @@ async function main(window: any) {
 function setupEvents(window: any) {
   const blurEvents = new EventEmitter();
   function hookKeydown(event: KeyboardEvent) {
-    if (hinter.status === HinterStatus.NO_HINT) {
+    if (hinter.isHinting()) {
+      event.preventDefault();
+      event.stopPropagation();
+      hinter.hitHint(event.key);
+    } else {
       if (!isEditable(event.target) && hitEventMatcher.test(event)) {
         event.preventDefault();
         event.stopPropagation();
         hinter.attachHints();
-        return;
-      }
-      if (blurEventMatcher.test(event)) {
+      } else if (blurEventMatcher.test(event)) {
         if (isBlurable()) {
           event.preventDefault();
           event.stopPropagation();
           console.debug("blur", document.activeElement);
           blurEvents.emit(document.activeElement);
           document.activeElement.blur();
-          return;
         } else if (isInFrame()) {
           event.preventDefault();
           event.stopPropagation();
           console.debug("blur form the current frame", window.document.body);
           window.parent.postMessage(BLUR_MESSAGE, "*");
-          return;
         }
-      }
-      return;
-    }
-    if (hinter.status === HinterStatus.HINTING) {
-      if (hinter.hitHint(event.key)) {
-        event.preventDefault();
-        event.stopPropagation();
       }
       return;
     }
   }
   function hookKeyup(event: KeyboardEvent) {
-    if (hinter.status === HinterStatus.HINTING &&
-        hitEventMatcher.testModInsensitive(event)) {
+    if (hinter.isHinting() && hitEventMatcher.testModInsensitive(event)) {
       event.preventDefault();
       event.stopPropagation();
       hinter.removeHints(event);
     }
   }
   function hookKeypress(event: KeyboardEvent) {
-    if (hinter.status === HinterStatus.HINTING) {
+    if (hinter.isHinting()) {
       event.preventDefault();
       event.stopPropagation();
     }
@@ -165,150 +157,14 @@ function isInFrame() {
 
 //
 
-type HinterStatusType = NO_HINT_TYPE | HINTING_TYPE;
-type NO_HINT_TYPE = 0;
-type HINTING_TYPE = 1;
-
-const HinterStatus: { [k: string]: HinterStatusType } = {
-  NO_HINT: 0,
-  HINTING: 1,
-};
-
-declare interface DehintOptions {
-  metaKey: boolean;
-  ctrlKey: boolean;
-  altKey: boolean;
-  shiftKey: boolean;
-}
-
-class Hinter {
-  hints: string;
-  inputs: string[];
-  status: HinterStatusType;
-
-  onHinted: EventEmitter<null>;
-  onHintHit: EventEmitter<string[]>;
-  onDehinted: EventEmitter<DehintOptions>;
-
-  constructor(hintChars: string) {
-    this.hints = hintChars.toLowerCase();
-    this.inputs = [];
-    this.status = HinterStatus.NO_HINT;
-
-    this.onHinted = new EventEmitter();
-    this.onHintHit = new EventEmitter();
-    this.onDehinted = new EventEmitter();
-  }
-
-  attachHints() {
-    if (this.status === HinterStatus.HINTING) {
-      throw Error("Ilegal state invokation: attachHints");
-    }
-    this.status = HinterStatus.HINTING;
-    this.onHinted.emit(null);
-  }
-
-  hitHint(key: string): boolean {
-    if (this.status !== HinterStatus.HINTING) {
-      throw Error("Ilegal state invokation: hitHint");
-    }
-
-    const inputChar = key.toLowerCase();
-    if (!isHintChar(this, inputChar)) return false;
-
-    this.inputs.push(inputChar);
-    this.onHintHit.emit(this.inputs);
-    return true;
-  }
-
-  removeHints(opts: DehintOptions) {
-    if (this.status !== HinterStatus.HINTING) {
-      throw Error("Ilegal state invokation: removeHints");
-    }
-
-    this.inputs = [];
-    this.status = HinterStatus.NO_HINT;
-    this.onDehinted.emit(opts);
-  }
-}
-
-function isHintChar(self: Hinter, inputChar: string) {
-  return self.hints.indexOf(inputChar) >= 0;
-}
-
-//
-
 declare class Object {
   static assign: Object$Assign;
 }
 
-class Hint {
-  state: "disable" | "candidate" | "hit" | null;
-  text: string;
+declare type Hint = {
   elements: HTMLDivElement[];
-  target: Target;
-
-  constructor(text: string, elements: HTMLDivElement[], target: Target) {
-    this.state = null;
-    this.text = text;
-    this.elements = elements;
-    this.target = target;
-  }
-
-  isDisabled() { return this.state === "disable"; }
-  setDisabled() {
-    if (this.isDisabled()) return;
-    this.state = "disable";
-    for (const e of this.elements) {
-      e.classList.add("jp-k-ui-knavi-disabled");
-      e.classList.remove("jp-k-ui-knavi-hit");
-      e.classList.remove("jp-k-ui-knavi-candidate");
-      e.style.zIndex = Z_INDEX_OFFSET.toString();
-    }
-  }
-
-  isCandidate() { return this.state === "candidate"; }
-  setCandidate() {
-    if (this.isCandidate()) return;
-    if (this.isDisabled()) throw Error("Illegal state");
-    if (this.isHit()) throw Error("Illegal state");
-    this.state = "candidate";
-    for (const e of this.elements) {
-      e.classList.add("jp-k-ui-knavi-candidate");
-      e.style.zIndex = CANDIDATE_HINT_Z_INDEX.toString();
-    }
-  }
-
-  isHit() { return this.state === "hit"; }
-  setHit() {
-    if (this.isHit()) return;
-    if (this.isDisabled()) throw Error("Illegal state");
-    this.state = "hit";
-    for (const e of this.elements) {
-      e.classList.add("jp-k-ui-knavi-hit");
-      e.classList.remove("jp-k-ui-knavi-candidate");
-      e.style.zIndex = HIT_HINT_Z_INDEX.toString();
-    }
-  }
-
-  match(inputs: string) {
-    if (this.isDisabled()) return;
-    if (this.text === inputs) {
-      this.setHit();
-      return;
-    }
-    if (this.text.startsWith(inputs)) {
-      this.setCandidate();
-      return;
-    }
-    this.setDisabled();
-  }
+  target: HintedTarget;
 }
-
-declare type HintContext = {
-  rectsDetector: RectsDetector,
-  hints: Hint[],
-};
 
 class HintsView {
   constructor(hinter: Hinter) {
@@ -341,47 +197,54 @@ class HintsView {
 
     let wrapper: ?HTMLDivElement;
     let style: ?HTMLElement;
-    let hintContext: ?HintContext;
+    let hints: ?Map<HintedTarget, Hint>;
 
-    hinter.onHinted.listen(() => {
+    hinter.onHinted.listen(({ context }) => {
       fitOverlay(overlay);
       activeOverlay.style.display = "none";
 
-      const rectsDetector = new RectsDetector;
-      const o = generateHints(hinter.hints, rectsDetector);
-      wrapper = o.wrapper;
-      hintContext = { hints: o.hints, rectsDetector };
+      wrapper = generateHintsWrapper();
+      hints = generateHintElements(wrapper, context.targets);
       style = generateStyle();
+
       container.appendChild(wrapper);
       container.appendChild(style);
       document.body.insertBefore(container, document.body.firstChild);
     });
-    hinter.onHintHit.listen((inputs) => {
-      if (hintContext == null) throw Error("Illegal state");
-      highligtHints(hintContext.hints, inputs.join(""));
-      moveOverlay(overlay, hintContext);
-      moveActiveOverlay(activeOverlay, hintContext);
+    hinter.onHintHit.listen(({ context, stateChanges }) => {
+      if (!hints) throw Error("Illegal state");
+      highligtHints(hints, stateChanges);
+      moveOverlay(overlay, context.targets);
+      moveActiveOverlay(activeOverlay, context.hitTarget);
     });
-    hinter.onDehinted.listen((opts) => {
-      if (wrapper == null || style == null || hintContext == null) throw Error("Illegal state");
-      const hitHint = hintContext.hints.find((h) => h.state === "hit");
-      handleHitTarget(hitHint, opts);
+    hinter.onDehinted.listen(({ context, options }) => {
+      if (!hints || !wrapper || !style) throw Error("Illegal state");
+      handleHitTarget(context.hitTarget, options);
       document.body.removeChild(container);
       container.removeChild(wrapper);
       container.removeChild(style);
       wrapper = null;
       style = null;
-      hintContext = null;
+      hints = null;
     });
   }
 }
 
-function handleHitTarget(hitHint: ?Hint, options: DehintOptions) {
-  if (!hitHint) return;
+function generateHintsWrapper(): HTMLDivElement {
+  const w = document.createElement("div");
+  w.id = WRAPPER_ID;
+  Object.assign(w.style, {
+    position: "static",
+  });
+  return w;
+}
 
-  console.log("hit", hitHint);
+function handleHitTarget(target: ?HintedTarget, options: DehintOptions) {
+  if (!target) return;
 
-  const element = hitHint.target.element;
+  console.log("hit", target.element);
+
+  const element = target.element;
   const style = window.getComputedStyle(element);
   if (isScrollable(element, style)) {
     // Make scrollable from your keyboard
@@ -473,14 +336,13 @@ function isScrollable(element: HTMLElement, style: any): boolean {
   return false;
 }
 
-function moveActiveOverlay(activeOverlay: HTMLDivElement, context: HintContext) {
-  const hit = context.hints.find((h) => h.isHit());
-  if (!hit) {
+function moveActiveOverlay(activeOverlay: HTMLDivElement, hitTarget: ?HintedTarget) {
+  if (!hitTarget) {
     activeOverlay.style.display = "none";
     return;
   }
 
-  const rect = context.rectsDetector.getBoundingClientRect(hit.target.element);
+  const rect = hitTarget.getBoundingClientRect();
   const offsetY = window.scrollY;
   const offsetX = window.scrollX;
 
@@ -493,18 +355,18 @@ function moveActiveOverlay(activeOverlay: HTMLDivElement, context: HintContext) 
   });
 }
 
-function moveOverlay(overlay: HTMLDivElement, context: HintContext) {
+function moveOverlay(overlay: HTMLDivElement, targets: HintedTarget[]) {
   const scrollHeight = document.body.scrollHeight;
   const scrollWidth = document.body.scrollWidth;
   const offsetY = window.scrollY;
   const offsetX = window.scrollX;
   let hasHitOrCand = false;
   const rr = { top: scrollHeight, left: scrollWidth, bottom: 0, right: 0 };
-  for (const hint of context.hints) {
-    if (hint.isDisabled()) continue;
+  for (const target of targets) {
+    if (target.state === "disabled") continue;
     hasHitOrCand = true;
 
-    const rect = context.rectsDetector.getBoundingClientRect(hint.target.element);
+    const rect = target.getBoundingClientRect();
 
     rr.top = Math.min(rr.top, rect.top + offsetY);
     rr.left = Math.min(rr.left, rect.left + offsetX);
@@ -518,10 +380,10 @@ function moveOverlay(overlay: HTMLDivElement, context: HintContext) {
   }
 
   // padding
-  rr.top = rr.top - OVERLAY_PADDING > 0 ? rr.top - OVERLAY_PADDING : 0;
-  rr.left = rr.left - OVERLAY_PADDING > 0 ? rr.left - OVERLAY_PADDING : 0;
-  rr.bottom = rr.bottom + OVERLAY_PADDING < scrollHeight ? rr.bottom + OVERLAY_PADDING : scrollHeight;
-  rr.right = rr.right + OVERLAY_PADDING < scrollWidth ? rr.right + OVERLAY_PADDING : scrollWidth;
+  rr.top = Math.max(rr.top - OVERLAY_PADDING, 0);
+  rr.left = Math.max(rr.left - OVERLAY_PADDING, 0);
+  rr.bottom = Math.min(rr.bottom + OVERLAY_PADDING, scrollHeight);
+  rr.right = Math.min(rr.right + OVERLAY_PADDING, scrollWidth);
 
   Object.assign(overlay.style, {
     top: `${rr.top}px`,
@@ -539,9 +401,22 @@ function generateStyle(): HTMLElement {
   return s;
 }
 
-function highligtHints(hints: Hint[], inputs: string) {
-  for (const hint of hints) {
-    hint.match(inputs);
+const HINT_Z_INDEXES: { [key: TargetState ]: number } = {
+  "disabled": Z_INDEX_OFFSET,
+  "candidate": CANDIDATE_HINT_Z_INDEX,
+  "hit": HIT_HINT_Z_INDEX,
+  "init": Z_INDEX_OFFSET,
+};
+
+function highligtHints(hints: Map<HintedTarget, Hint>, changes: TargetStateChanges) {
+  for (const [target, { oldState, newState }] of changes.entries()) {
+    const hint = hints.get(target);
+    if (hint == null) continue;
+    for (const e of hint.elements) {
+      e.classList.remove(`jp-k-ui-knavi-${oldState}`);
+      e.classList.add(`jp-k-ui-knavi-${newState}`);
+      e.style.zIndex = HINT_Z_INDEXES[newState].toString();
+    }
   }
 }
 
@@ -555,36 +430,28 @@ function fitOverlay(overlay: HTMLDivElement) {
   });
 }
 
-function generateHints(hintLetters: string, visibleRects: RectsDetector):
-{ wrapper: HTMLDivElement, hints: Hint[] } {
-  // Benchmark: this operation is most heavy.
-  console.time("list all target");
-  const targets = listAllTarget(visibleRects);
-  console.timeEnd("list all target");
-  const hintTexts = generateHintTexts(targets.length, hintLetters);
-  const wrapper = document.createElement("div");
-  wrapper.id = WRAPPER_ID;
-  Object.assign(wrapper.style, {
-    position: "static",
-  });
-  const hints = targets.map((target: Target, index: number) => {
-    const text = hintTexts[index];
-    const elements = buildHintElements(target, text);
+function generateHintElements(wrapper: HTMLDivElement, targets: HintedTarget[]): Map<HintedTarget, Hint> {
+  const hints = targets.reduce((m, target) => {
+    const elements = buildHintElements(target);
     elements.forEach((e) => wrapper.appendChild(e));
-    return new Hint(text, elements, target);
-  });
-  console.debug("hints[%d]: %o", hints.length, hints);
-  return { wrapper, hints };
+    m.set(target, { elements, target });
+    return m;
+  }, new Map);
+  console.debug("hints[%d]: %o", hints.size, iters.reduce(hints.values(), (o, h) => {
+    o[h.target.hint] = h;
+    return o;
+  }, {}));
+  return hints;
 }
 
-function buildHintElements(target: Target, hintTexts: string): HTMLDivElement[] {
+function buildHintElements(target: HintedTarget): HTMLDivElement[] {
   const xOffset = window.scrollX;
   const yOffset = window.scrollY;
 
   return target.rects.map((rect) => {
     const h = document.createElement("div");
-    h.textContent = hintTexts.toUpperCase();
-    h.dataset["hint"] = hintTexts;
+    h.textContent = target.hint.toUpperCase();
+    h.dataset["hint"] = target.hint;
     const top = Math.max(rect.top, 0);
     const left = Math.max(rect.left, 0);
     Object.assign(h.style, {
@@ -595,167 +462,6 @@ function buildHintElements(target: Target, hintTexts: string): HTMLDivElement[] 
     });
     return h;
   });
-}
-
-const HINTABLE_QUERY = [
-  "a[href]",
-  "area[href]",
-  "details",
-  "textarea:not([disabled])",
-  "button:not([disabled])",
-  "select:not([disabled])",
-  "input:not([type=hidden]):not([disabled])",
-  "iframe",
-  "[tabindex]",
-  "[onclick]",
-  "[onmousedown]",
-  "[onmouseup]",
-  "[contenteditable='']",
-  "[contenteditable=true]",
-  "[role=link]",
-  "[role=button]",
-  "[data-image-url]",
-].map((s) => "body /deep/ " + s).join(",");
-
-declare type Target = {
-  element: HTMLElement;
-  rects: Rect[];
-  mightBeClickable: boolean;
-  filteredOutBy?: Target;
-};
-
-function listAllTarget(visibleRects: RectsDetector): Target[] {
-  const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
-  const targets = [];
-  if (document.activeElement !== document.body) {
-    const rects = Array.from(document.body.getClientRects());
-    const r = rects[0];
-    if (r.height > window.innerHeight || r.width > window.innerWidth) {
-      targets.push({
-        element: document.body,
-        rects,
-        mightBeClickable: false
-      });
-    }
-  }
-  for (const element of document.querySelectorAll("body /deep/ *")) {
-    let isClickableElement = false;
-    let mightBeClickable = false;
-
-    if (selecteds.has(element)) {
-      isClickableElement = true;
-    } else {
-      const style = window.getComputedStyle(element);
-      // might be clickable
-      if (["pointer", "zoom-in", "zoom-out"].includes(style.cursor)) {
-        mightBeClickable = true;
-        isClickableElement = true;
-      } else if (isScrollable(element, style)) {
-        isClickableElement = true;
-      }
-    }
-
-    if (!isClickableElement) continue;
-
-    const rects = visibleRects.get(element);
-    if (rects.length === 0) continue;
-    targets.push({ element, rects, mightBeClickable });
-  }
-
-  return distinctSimilarTarget(targets, visibleRects);
-}
-
-function distinctSimilarTarget(targets: Target[], visibleRects: RectsDetector): Target[] {
-  const targetMap: Map<Element, Target> = new Map((function* () {
-    for (const t of targets) yield [t.element, t];
-  })());
-
-  function isVisibleNode(node) {
-    // filter out blank text nodes
-    if (node instanceof Text) return !(/^\s*$/).test(node.textContent);
-    // filter out invisible element.
-    if (node instanceof HTMLElement) {
-      if (visibleRects.get(node).length >= 1) return true;
-      return false;
-    }
-    return true;
-  }
-
-  // Filter out if this target is a child of <a> or <button>
-  for (let i = 0; i < targets.length; i++) {
-    const target = targets[i];
-    if (!target.mightBeClickable) continue;
-
-    const parentTarget = iters.first(iters.flatMap(iters.traverseParent(target.element), (p) => {
-      const t = targetMap.get(p);
-      if (t == null) return [];
-      if (t.filteredOutBy) return [t.filteredOutBy];
-      if (["A", "BUTTON"].includes(t.element.tagName)) return [t];
-      return [];
-    }));
-    if (parentTarget) {
-      target.filteredOutBy = parentTarget;
-      console.debug("filter out: a child of a parent <a>/<button>: target=%o", target.element);
-    }
-  }
-
-  // Filter out targets that is only one child for a parent target element.
-  for (let i = 0; i < targets.length; i++) {
-    const target = targets[i];
-    if (!target.mightBeClickable) continue;
-    if (target.filteredOutBy) continue;
-
-    const thinAncestors = iters.takeWhile(iters.traverseParent(target.element), (e) => {
-      return iters.length(iters.filter(e.childNodes, isVisibleNode)) === 1;
-    });
-    const parentTarget = iters.first(iters.flatMap(thinAncestors, (p) => {
-      const t = targetMap.get(p);
-      if (t == null) return [];
-      if (t.filteredOutBy) return [t.filteredOutBy];
-      return [t];
-    }));
-    if (parentTarget) {
-      target.filteredOutBy = parentTarget;
-      console.debug("filter out: a child of a thin parent: target=%o", target.element);
-    }
-  }
-
-  // Filter out targets that contains only existing targets
-  for (let i = targets.length - 1; i >= 0; i--) {
-    const target = targets[i];
-    if (!target.mightBeClickable) continue;
-    if (target.filteredOutBy) continue;
-
-    const childNodes = Array.from(iters.filter(target.element.childNodes, isVisibleNode));
-    if (childNodes.every((c) => targetMap.has((c: any)))) {
-      const child = childNodes[0];
-      target.filteredOutBy = targetMap.get((child: any));
-      console.debug("filter out: only targets containing: target=%o", target.element);
-    }
-  }
-
-  return targets.filter((t) => t.filteredOutBy == null);
-}
-
-function generateHintTexts(num: number, hintLetters: string): string[] {
-  const texts = Array.from(hintLetters);
-
-  if (texts.length > num) return texts;
-
-  // At first, Add repeat 2 same letters text because we input these easily.
-  for (const hintLetter of hintLetters) texts.push(hintLetter + hintLetter);
-
-  let i = 0;
-  while (texts.length < num) {
-    const suffix = texts[i];
-    for (const hintLetter of hintLetters) {
-      if (suffix !== hintLetter) // Avoid text duplications with above texts
-        texts.push(hintLetter + suffix);
-    }
-    i++;
-  }
-
-  return texts.sort();
 }
 
 class BlurView {
