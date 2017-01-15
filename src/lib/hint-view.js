@@ -3,17 +3,14 @@
 import * as iters from "./iters";
 import Hinter from "./hinter";
 
-import type { HintedTarget, TargetState, TargetStateChanges } from "./hinter";
+import type { HintedTarget, TargetStateChanges } from "./hinter";
 
 const OVERLAY_PADDING = 8;
 const CONTAINER_ID = "jp-k-ui-knavi";
 const OVERLAY_ID = "jp-k-ui-knavi-overlay";
 const ACTIVE_OVERLAY_ID = "jp-k-ui-knavi-active-overlay";
-const WRAPPER_ID = "jp-k-ui-knavi-wrapper";
 const HINT_CLASS = "jp-k-ui-knavi-hint";
 const Z_INDEX_OFFSET = 2147483640;
-const CANDIDATE_HINT_Z_INDEX = Z_INDEX_OFFSET + 1;
-const HIT_HINT_Z_INDEX = Z_INDEX_OFFSET + 2;
 
 declare class Object {
   static assign: Object$Assign;
@@ -29,10 +26,11 @@ export default class HintsView {
     const container = document.createElement("div");
     container.id = CONTAINER_ID;
     Object.assign(container.style, {
-      position: "static",
+      position: "absolute",
       padding: "0px", margin: "0px",
-      width:  "0px", height: "0px",
-      background: "none"
+      width:  "100%", height: "100%",
+      background: "none",
+      zIndex: Z_INDEX_OFFSET.toString(),
     });
 
     const overlay = container.appendChild(document.createElement("div"));
@@ -41,7 +39,6 @@ export default class HintsView {
       padding: "0px", margin: "0px",
       display: "block",
       position: "absolute",
-      zIndex: Z_INDEX_OFFSET.toString(),
     });
 
     const activeOverlay = container.appendChild(document.createElement("div"));
@@ -50,7 +47,6 @@ export default class HintsView {
       padding: "0px", margin: "0px",
       display: "none",
       position: "absolute",
-      zIndex: Z_INDEX_OFFSET.toString(),
     });
 
     let wrapper: ?HTMLDivElement;
@@ -61,7 +57,7 @@ export default class HintsView {
       fitOverlay(overlay);
       activeOverlay.style.display = "none";
 
-      wrapper = generateHintsWrapper();
+      wrapper = document.createElement("div");
       hints = generateHintElements(wrapper, context.targets);
       style = generateStyle(css);
 
@@ -86,15 +82,6 @@ export default class HintsView {
       hints = null;
     });
   }
-}
-
-function generateHintsWrapper(): HTMLDivElement {
-  const w = document.createElement("div");
-  w.id = WRAPPER_ID;
-  Object.assign(w.style, {
-    position: "static",
-  });
-  return w;
 }
 
 function moveActiveOverlay(activeOverlay: HTMLDivElement, hitTarget: ?HintedTarget) {
@@ -162,17 +149,6 @@ function generateStyle(css: string): HTMLElement {
   return s;
 }
 
-const HINT_Z_INDEXES: { [key: TargetState ]: number } = {
-  "disabled": Z_INDEX_OFFSET,
-  "candidate": CANDIDATE_HINT_Z_INDEX,
-  "hit": HIT_HINT_Z_INDEX,
-  "init": Z_INDEX_OFFSET,
-};
-
-function getZIndex(state: TargetState): number {
-  return HINT_Z_INDEXES[state] || Z_INDEX_OFFSET;
-}
-
 function highligtHints(hints: Map<HintedTarget, Hint>,
                        changes: TargetStateChanges,
                        actionDescription: ?string) {
@@ -181,7 +157,6 @@ function highligtHints(hints: Map<HintedTarget, Hint>,
     if (hint == null) continue;
     for (const e of hint.elements) {
       e.dataset.state = newState;
-      e.style.zIndex = getZIndex(newState).toString();
 
       if (newState === "hit" && actionDescription) {
         e.setAttribute("data-action-description", actionDescription);
@@ -235,7 +210,6 @@ function buildHintElements(target: HintedTarget): HTMLDivElement[] {
       position: "absolute",
       top: Math.round(yOffset + top) + "px",
       left: Math.round(xOffset + left) + "px",
-      zIndex: CANDIDATE_HINT_Z_INDEX.toString(),
     });
     h.classList.add(HINT_CLASS);
     return h;

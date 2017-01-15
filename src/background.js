@@ -18,6 +18,7 @@ const DEFAULT_STYLE = `/* base overlay */
   transition-property: left, top, width, height;
   transition-duration: 0.12s;
   animation: pulse 2s linear infinite;
+  z-index: 2;
 }
 @keyframes pulse {
   0% {
@@ -42,6 +43,7 @@ const DEFAULT_STYLE = `/* base overlay */
   }
 }
 
+/* hit marker styles. */
 .jp-k-ui-knavi-hint {
   margin: 0px;
   padding: 3px;
@@ -54,24 +56,44 @@ const DEFAULT_STYLE = `/* base overlay */
 }
 .jp-k-ui-knavi-hint[data-state="disabled"] {
   opacity: 0.6;
+  z-index: 0;
 }
 .jp-k-ui-knavi-hint[data-state="candidate"] {
   background-color: yellow;
   color: black;
   border: black solid 1px;
+  z-index: 1;
 }
 .jp-k-ui-knavi-hint[data-state="hit"] {
   background-color: #c00;
   color: white;
   border: black solid 1px;
   font-weight: bold;
+  z-index: 2;
 }
 
-/* Add action description into hit marker. */
+/* add action description into hit marker. */
+.jp-k-ui-knavi-hint:after {
+  content: attr(data-action-description);
+  font-size: 50%;
+  position: absolute;
+  background-color: #333;
+  color: white;
+  border: #ccc 1px solid;
+  padding: 3px;
+  border-radius: 4px;
+  line-height: 1em;
+  transition: 200ms;
+  left: 0px;
+  z-index: -1;
+  opacity: 0;
+}
 .jp-k-ui-knavi-hint[data-state="hit"]:after {
-  font-size: 10px;
-  content: "|" attr(data-action-description);
-}`.replace(/(^|\n)\t+/g, "$1");
+  transition-delay: 100ms;
+  left: calc(100% + 4px);
+  opacity: 1;
+}
+`.replace(/(^|\n)\t+/g, "$1");
 
 const DEFAULT_VALUES = new Map([
   ["magic-key", "Space"],
