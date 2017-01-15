@@ -10,6 +10,7 @@ const CONTAINER_ID = "jp-k-ui-knavi";
 const OVERLAY_ID = "jp-k-ui-knavi-overlay";
 const ACTIVE_OVERLAY_ID = "jp-k-ui-knavi-active-overlay";
 const WRAPPER_ID = "jp-k-ui-knavi-wrapper";
+const HINT_CLASS = "jp-k-ui-knavi-hint";
 const Z_INDEX_OFFSET = 2147483640;
 const CANDIDATE_HINT_Z_INDEX = Z_INDEX_OFFSET + 1;
 const HIT_HINT_Z_INDEX = Z_INDEX_OFFSET + 2;
@@ -68,9 +69,10 @@ export default class HintsView {
       container.appendChild(style);
       document.body.insertBefore(container, document.body.firstChild);
     });
-    hinter.onHintHit.listen(({ context, stateChanges }) => {
+    hinter.onHintHit.listen(({ context, stateChanges, actionDescriptions }) => {
       if (!hints) throw Error("Illegal state");
-      highligtHints(hints, stateChanges);
+      const shortDescription = actionDescriptions && actionDescriptions.short;
+      highligtHints(hints, stateChanges, shortDescription);
       moveOverlay(overlay, context.targets);
       moveActiveOverlay(activeOverlay, context.hitTarget);
     });
@@ -171,14 +173,22 @@ function getZIndex(state: TargetState): number {
   return HINT_Z_INDEXES[state] || Z_INDEX_OFFSET;
 }
 
-function highligtHints(hints: Map<HintedTarget, Hint>, changes: TargetStateChanges) {
+function highligtHints(hints: Map<HintedTarget, Hint>,
+                       changes: TargetStateChanges,
+                       actionDescription: ?string) {
   for (const [target, { oldState, newState }] of changes.entries()) {
     const hint = hints.get(target);
     if (hint == null) continue;
     for (const e of hint.elements) {
-      e.classList.remove(`jp-k-ui-knavi-${oldState}`);
-      e.classList.add(`jp-k-ui-knavi-${newState}`);
+      e.dataset.state = newState;
       e.style.zIndex = getZIndex(newState).toString();
+
+      if (newState === "hit" && actionDescription) {
+        e.setAttribute("data-action-description", actionDescription);
+      }
+      if (oldState === "hit") {
+        e.removeAttribute("data-action-description");
+      }
     }
   }
 }
@@ -227,6 +237,7 @@ function buildHintElements(target: HintedTarget): HTMLDivElement[] {
       left: Math.round(xOffset + left) + "px",
       zIndex: CANDIDATE_HINT_Z_INDEX.toString(),
     });
+    h.classList.add(HINT_CLASS);
     return h;
   });
 }

@@ -49,7 +49,8 @@ export default class Hinter {
     if (!this.hintLetters.includes(inputChar)) return;
 
     const stateChanges = context.update(inputChar);
-    this.onHintHit.emit({ context, input: inputChar, stateChanges });
+    const actionDescriptions = context.hitTarget && this.actionHandler.getDescriptions(context.hitTarget);
+    this.onHintHit.emit({ context, input: inputChar, stateChanges, actionDescriptions });
     return;
   }
 
@@ -106,6 +107,7 @@ declare interface HitEvent {
   context: HintContext;
   input: string;
   stateChanges: TargetStateChanges;
+  actionDescriptions: ?{ short: string, long: string };
 }
 
 declare interface DehintEvent {

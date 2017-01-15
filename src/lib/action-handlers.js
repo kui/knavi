@@ -24,6 +24,11 @@ export default class ActionHandlerDelegater {
     this.getHandler(target).handle(target, options);
   }
 
+  getDescriptions(target: HintedTarget): { short: string, long: ?string } {
+    const h = this.getHandler(target);
+    return { short: h.shortDescription, long: h.longDescription };
+  }
+
   getHandler(target: HintedTarget): Handler {
     const h = handlers.find((h) => h.isSupported(target));
     if (h == null) throw Error("Unreachable code");

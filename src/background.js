@@ -42,8 +42,7 @@ const DEFAULT_STYLE = `/* base overlay */
   }
 }
 
-/* \`#jp-k-ui-knavi-wrapper\` wraps hint elements */
-#jp-k-ui-knavi-wrapper > div {
+.jp-k-ui-knavi-hint {
   margin: 0px;
   padding: 3px;
   background-color: #333;
@@ -53,19 +52,25 @@ const DEFAULT_STYLE = `/* base overlay */
   font-size: 16px;
   font-family: monospace;
 }
-#jp-k-ui-knavi-wrapper > div.jp-k-ui-knavi-disabled {
+.jp-k-ui-knavi-hint[data-state="disabled"] {
   opacity: 0.6;
 }
-#jp-k-ui-knavi-wrapper > div.jp-k-ui-knavi-candidate {
+.jp-k-ui-knavi-hint[data-state="candidate"] {
   background-color: yellow;
   color: black;
   border: black solid 1px;
 }
-#jp-k-ui-knavi-wrapper > div.jp-k-ui-knavi-hit {
+.jp-k-ui-knavi-hint[data-state="hit"] {
   background-color: #c00;
   color: white;
   border: black solid 1px;
   font-weight: bold;
+}
+
+/* Add action description into hit marker. */
+.jp-k-ui-knavi-hint[data-state="hit"]:after {
+  font-size: 10px;
+  content: "|" attr(data-action-description);
 }`.replace(/(^|\n)\t+/g, "$1");
 
 const DEFAULT_VALUES = new Map([
