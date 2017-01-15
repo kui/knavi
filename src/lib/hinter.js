@@ -204,7 +204,7 @@ const HINTABLE_QUERY = [
   "[data-image-url]",
 ].map((s) => "body /deep/ " + s).join(",");
 
-function listAllTarget(visibleRects: RectsDetector): Target[] {
+function listAllTarget(rectsDetector: RectsDetector): Target[] {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
   const targets: Target[] = [];
 
@@ -233,7 +233,7 @@ function listAllTarget(visibleRects: RectsDetector): Target[] {
 
     if (!isClickableElement) continue;
 
-    const rects = visibleRects.get(element);
+    const rects = rectsDetector.get(element);
     if (rects.length === 0) continue;
 
     targets.push({ element, rects, mightBeClickable, style });
@@ -242,7 +242,7 @@ function listAllTarget(visibleRects: RectsDetector): Target[] {
   return targets;
 }
 
-function distinctSimilarTarget(targets: Target[], visibleRects: RectsDetector): Target[] {
+function distinctSimilarTarget(targets: Target[], rectsDetector: RectsDetector): Target[] {
   const targetMap: Map<Element, Target> = new Map((function* () {
     for (const t of targets) yield [t.element, t];
   })());
@@ -252,7 +252,7 @@ function distinctSimilarTarget(targets: Target[], visibleRects: RectsDetector): 
     if (node instanceof Text) return !(/^\s*$/).test(node.textContent);
     // filter out invisible element.
     if (node instanceof HTMLElement) {
-      if (visibleRects.get(node).length >= 1) return true;
+      if (rectsDetector.get(node).length >= 1) return true;
       return false;
     }
     return true;
