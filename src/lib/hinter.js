@@ -11,7 +11,6 @@ import type { ActionOptions } from "./action-handlers";
 
 export default class Hinter {
   hintLetters: string;
-  rectsDetector: RectsDetector;
   context: ?HintContext;
   actionHandler: ActionHandler;
 
@@ -21,7 +20,6 @@ export default class Hinter {
 
   constructor(hintLetters: string, actionHandler: ActionHandler) {
     this.hintLetters = hintLetters.toLowerCase();
-    this.rectsDetector = new RectsDetector;
     this.actionHandler = actionHandler;
 
     this.onHinted = new EventEmitter;
@@ -60,12 +58,12 @@ export default class Hinter {
     if (context == null) {
       throw Error("Ilegal state invocation: removeHints");
     }
+    this.context = null;
 
     if (context.hitTarget != null) {
       this.actionHandler.handle(context.hitTarget, options);
     }
 
-    this.context = null;
     this.onDehinted.emit({ context, options });
   }
 }
@@ -116,12 +114,13 @@ declare interface DehintEvent {
 }
 
 function initContext(self: Hinter): HintContext {
+  const rectsDetector = new RectsDetector;
   // Benchmark: this operation is most heavy.
   console.time("list all target");
-  let targets = listAllTarget(self.rectsDetector);
+  let targets = listAllTarget(rectsDetector);
   console.timeEnd("list all target");
-  targets = distinctSimilarTarget(targets, self.rectsDetector);
-  return new HintContext(hintTargets(targets, self.hintLetters, self.rectsDetector), self.rectsDetector);
+  targets = distinctSimilarTarget(targets, rectsDetector);
+  return new HintContext(hintTargets(targets, self.hintLetters, rectsDetector), rectsDetector);
 }
 
 export class HintedTarget {
