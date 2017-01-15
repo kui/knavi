@@ -211,7 +211,11 @@ function buildHintElements(target: HintedTarget): HTMLDivElement[] {
   const xOffset = window.scrollX;
   const yOffset = window.scrollY;
 
-  return target.rects.map((rect) => {
+  // Hinting for all client rects are annoying
+  // const rects = target.rects;
+  const rects = target.rects.slice(0, 1);
+
+  return rects.map((rect) => {
     const h = document.createElement("div");
     h.textContent = target.hint.toUpperCase();
     h.dataset["hint"] = target.hint;

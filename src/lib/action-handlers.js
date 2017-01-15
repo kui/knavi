@@ -9,49 +9,94 @@ export interface ActionOptions {
   shiftKey: boolean;
 }
 
-export default class ActionHandlerDelegater {
-  constructor() {}
+declare interface Handler {
+  shortDescription: string;
+  longDescription?: string;
+  isSupported(target: HintedTarget): boolean;
+  handle(target: HintedTarget, options: ActionOptions): void;
+}
 
+const handlers: Handler[] = [];
+
+export default class ActionHandlerDelegater {
   handle(target: HintedTarget, options: ActionOptions) {
     console.log("hit", target.element);
+    this.getHandler(target).handle(target, options);
+  }
 
-    const element = target.element;
-    const style = window.getComputedStyle(element);
-    if (utils.isScrollable(element, style)) {
-      // Make scrollable from your keyboard
-      if (!element.hasAttribute("tabindex")) {
-        element.setAttribute("tabindex", "-1");
-        element.addEventListener(
-          "blur",
-          () => element.removeAttribute("tabindex"),
-          { once: true }
-        );
-      }
-      element.focus();
-      console.log("focus as an scrollable element");
-      return;
-    }
-    if (utils.isEditable(element)) {
-      element.focus();
-      console.log("focus as an editable element");
-      return;
-    }
-    if (element.tagName === "BODY") {
-      const activeElement = document.activeElement;
-      activeElement.blur();
-      console.log("blue an active element: ", activeElement);
-      return;
-    }
-    if (element.tagName === "IFRAME") {
-      element.focus();
-      console.log("focus as an iframe");
-      return;
-    }
-
-    simulateClick(element, options);
-    console.log("click");
+  getHandler(target: HintedTarget): Handler {
+    const h = handlers.find((h) => h.isSupported(target));
+    if (h == null) throw Error("Unreachable code");
+    return h;
   }
 }
+
+handlers.push({
+  shortDescription: "Focus iframe",
+  isSupported(target: HintedTarget) {
+    return target.element.tagName === "IFRAME";
+  },
+  handle(target: HintedTarget) {
+    target.element.focus();
+    console.log("Focus iframe");
+  }
+});
+
+handlers.push({
+  shortDescription: "Blur",
+  longDescription: "Blur the focused element",
+  isSupported(target: HintedTarget) {
+    return target.element.tagName === "BODY";
+  },
+  handle() {
+    const activeElement = document.activeElement;
+    activeElement.blur();
+    console.log(this.longDescription, activeElement);
+  }
+});
+
+handlers.push({
+  shortDescription: "Edit",
+  longDescription: "Focus the editable element",
+  isSupported(target: HintedTarget) {
+    return utils.isEditable(target.element);
+  },
+  handle(target: HintedTarget) {
+    target.element.focus();
+    console.log(this.longDescription);
+  }
+});
+
+handlers.push({
+  shortDescription: "Scroll",
+  longDescription: "Focus the scrollable element",
+  isSupported(target: HintedTarget) {
+    return utils.isScrollable(target.element, target.getStyle());
+  },
+  handle(target: HintedTarget) {
+    const element = target.element;
+    // Make scrollable from your keyboard
+    if (!element.hasAttribute("tabindex")) {
+      element.setAttribute("tabindex", "-1");
+      element.addEventListener(
+        "blur",
+        () => element.removeAttribute("tabindex"),
+        { once: true }
+      );
+    }
+    element.focus();
+    console.log("focus as an scrollable element");
+  }
+});
+
+handlers.push({
+  shortDescription: "Click",
+  isSupported() { return true; },
+  handle(target: HintedTarget, options: ActionOptions) {
+    simulateClick(target.element, options);
+    console.log("click");
+  }
+});
 
 function simulateClick(element: HTMLElement, options: ActionOptions) {
   dispatchMouseEvent("mouseover", element, options);
