@@ -11,7 +11,7 @@ export interface Rect {
   height: number;
 }
 
-export default class VisibleRects {
+export default class RectsDetector {
   cachedY: number;
   cachedX: number;
   cache: Cache<HTMLElement, Rect[]>;
@@ -34,6 +34,11 @@ export default class VisibleRects {
       const clientRects = getClientRects(this, element);
       return cropVisibleRects(element, clientRects);
     });
+  }
+
+  getBoundingClientRect(element: HTMLElement): Rect {
+    const rects = getClientRects(this,element);
+    return buildBoundingRect(Array.from(rects));
   }
 }
 
@@ -89,7 +94,7 @@ function cropVisibleRects(element: HTMLElement, clientRects: Iterable<Rect>): Re
   }));
 }
 
-function getClientRects(self: VisibleRects, element: HTMLElement): Iterable<Rect> {
+function getClientRects(self: RectsDetector, element: HTMLElement): Iterable<Rect> {
   switch (element.tagName) {
   case "AREA": return getAreaRects((element: any));
   case "A": return getAnchorRects(self, (element: any));
@@ -132,14 +137,14 @@ function getAreaRects(element: HTMLAreaElement): Rect[] {
 }
 
 /// Return a img element client rect if the anchor contains only it.
-function getAnchorRects(self: VisibleRects, element: HTMLAnchorElement): Iterable<Rect> {
+function getAnchorRects(self: RectsDetector, element: HTMLAnchorElement): Iterable<Rect> {
   const childNodes = Array.from(iters.filter(element.childNodes, (n) => isVisibleNode(self, n)));
   if (childNodes.length !== 1) return element.getClientRects();
   const child = childNodes[0];
   return (child instanceof HTMLImageElement ? child : element).getClientRects();
 }
 
-function isVisibleNode(self: VisibleRects, node: Node): boolean {
+function isVisibleNode(self: RectsDetector, node: Node): boolean {
   if (node instanceof Text) return !(/^\s*$/).test(node.textContent);
   if (node instanceof HTMLElement) {
     if (self.get(node).length >= 1) return true;
@@ -147,14 +152,6 @@ function isVisibleNode(self: VisibleRects, node: Node): boolean {
   }
   // Unknown node type
   return true;
-}
-
-function createRect(x1, y1, x2, y2): Rect {
-  const top = Math.min(y1, y2);
-  const bottom = Math.max(y1, y2);
-  const left = Math.min(x1, x2);
-  const right = Math.max(x1, x2);
-  return { top, bottom, left, right, height: bottom - top, width: right - left };
 }
 
 const RECT_POSITIONS = [[0.5, 0.5], [0.1, 0.1], [0.1, 0.9], [0.9, 0.1], [0.9, 0.9]];
@@ -181,6 +178,14 @@ function isPointable(element: HTMLElement, rect: Rect): boolean {
     if (element === pointedElem || element.contains(pointedElem)) return true;
   }
   return false;
+}
+
+function buildBoundingRect(rects: Rect[]): Rect {
+  const top    = Math.min(...rects.map((r) => r.top));
+  const bottom = Math.max(...rects.map((r) => r.bottom));
+  const left   = Math.min(...rects.map((r) => r.left));
+  const right  = Math.min(...rects.map((r) => r.right));
+  return { top, bottom, left, right, height: bottom - top, width: right - left };
 }
 
 function avg(a: number, b: number, ratio: number): number {

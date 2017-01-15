@@ -5,9 +5,9 @@ import { EventEmitter } from "./lib/event-emitter";
 import { config } from "./lib/config";
 import * as iters from "./lib/iters";
 import * as utils from "./lib/utils";
-import VisibleRects from "./lib/visible-rects";
+import RectsDetector from "./lib/rects-detector";
 
-import type { Rect } from "./lib/visible-rects";
+import type { Rect } from "./lib/rects-detector";
 
 const DEFAULT_MAGIC_KEY = "Space";
 const DEFAULT_HINTS = "ASDFGHJKL";
@@ -73,7 +73,7 @@ async function main(window: any) {
 
   hitEventMatcher = new EventMatcher(configValues["magic-key"] || DEFAULT_MAGIC_KEY);
   blurEventMatcher = new EventMatcher(configValues["blur-key"] || "");
-  hinter = new Hinter(document, configValues["hints"] || DEFAULT_HINTS);
+  hinter = new Hinter(configValues["hints"] || DEFAULT_HINTS);
   css = configValues["css"] || DEFAULT_STYLE;
 
   // wait event setup untill document.body.firstChild is reachable.
@@ -182,7 +182,6 @@ declare interface DehintOptions {
 }
 
 class Hinter {
-  doc: Document;
   hints: string;
   inputs: string[];
   status: HinterStatusType;
@@ -191,8 +190,7 @@ class Hinter {
   onHintHit: EventEmitter<string[]>;
   onDehinted: EventEmitter<DehintOptions>;
 
-  constructor(doc: Document, hintChars: string) {
-    this.doc = doc;
+  constructor(hintChars: string) {
     this.hints = hintChars.toLowerCase();
     this.inputs = [];
     this.status = HinterStatus.NO_HINT;
@@ -307,6 +305,11 @@ class Hint {
   }
 }
 
+declare type HintContext = {
+  rectsDetector: RectsDetector,
+  hints: Hint[],
+};
+
 class HintsView {
   constructor(hinter: Hinter) {
     const container = document.createElement("div");
@@ -337,37 +340,38 @@ class HintsView {
     });
 
     let wrapper: ?HTMLDivElement;
-    let hints: ?Hint[];
     let style: ?HTMLElement;
+    let hintContext: ?HintContext;
 
     hinter.onHinted.listen(() => {
       fitOverlay(overlay);
       activeOverlay.style.display = "none";
 
-      const o = generateHints(hinter.hints);
+      const rectsDetector = new RectsDetector;
+      const o = generateHints(hinter.hints, rectsDetector);
       wrapper = o.wrapper;
-      hints = o.hints;
+      hintContext = { hints: o.hints, rectsDetector };
       style = generateStyle();
       container.appendChild(wrapper);
       container.appendChild(style);
       document.body.insertBefore(container, document.body.firstChild);
     });
     hinter.onHintHit.listen((inputs) => {
-      if (hints == null) throw Error("Illegal state");
-      highligtHints(hints, inputs.join(""));
-      moveOverlay(overlay, hints);
-      moveActiveOverlay(activeOverlay, hints);
+      if (hintContext == null) throw Error("Illegal state");
+      highligtHints(hintContext.hints, inputs.join(""));
+      moveOverlay(overlay, hintContext);
+      moveActiveOverlay(activeOverlay, hintContext);
     });
     hinter.onDehinted.listen((opts) => {
-      if (wrapper == null || style == null || hints == null) throw Error("Illegal state");
-      const hitHint = hints.find((h) => h.state === "hit");
+      if (wrapper == null || style == null || hintContext == null) throw Error("Illegal state");
+      const hitHint = hintContext.hints.find((h) => h.state === "hit");
       handleHitTarget(hitHint, opts);
       document.body.removeChild(container);
       container.removeChild(wrapper);
       container.removeChild(style);
       wrapper = null;
-      hints = null;
       style = null;
+      hintContext = null;
     });
   }
 }
@@ -469,14 +473,14 @@ function isScrollable(element: HTMLElement, style: any): boolean {
   return false;
 }
 
-function moveActiveOverlay(activeOverlay: HTMLDivElement, hints: Hint[]) {
-  const hit = hints.find((h) => h.isHit());
+function moveActiveOverlay(activeOverlay: HTMLDivElement, context: HintContext) {
+  const hit = context.hints.find((h) => h.isHit());
   if (!hit) {
     activeOverlay.style.display = "none";
     return;
   }
 
-  const rect = hit.target.element.getBoundingClientRect();
+  const rect = context.rectsDetector.getBoundingClientRect(hit.target.element);
   const offsetY = window.scrollY;
   const offsetX = window.scrollX;
 
@@ -489,18 +493,18 @@ function moveActiveOverlay(activeOverlay: HTMLDivElement, hints: Hint[]) {
   });
 }
 
-function moveOverlay(overlay: HTMLDivElement, hints: Hint[]) {
+function moveOverlay(overlay: HTMLDivElement, context: HintContext) {
   const scrollHeight = document.body.scrollHeight;
   const scrollWidth = document.body.scrollWidth;
   const offsetY = window.scrollY;
   const offsetX = window.scrollX;
   let hasHitOrCand = false;
   const rr = { top: scrollHeight, left: scrollWidth, bottom: 0, right: 0 };
-  for (const hint of hints) {
+  for (const hint of context.hints) {
     if (hint.isDisabled()) continue;
     hasHitOrCand = true;
 
-    const rect = hint.target.element.getBoundingClientRect();
+    const rect = context.rectsDetector.getBoundingClientRect(hint.target.element);
 
     rr.top = Math.min(rr.top, rect.top + offsetY);
     rr.left = Math.min(rr.left, rect.left + offsetX);
@@ -551,8 +555,8 @@ function fitOverlay(overlay: HTMLDivElement) {
   });
 }
 
-function generateHints(hintLetters: string): { wrapper: HTMLDivElement, hints: Hint[] } {
-  const visibleRects = new VisibleRects;
+function generateHints(hintLetters: string, visibleRects: RectsDetector):
+{ wrapper: HTMLDivElement, hints: Hint[] } {
   // Benchmark: this operation is most heavy.
   console.time("list all target");
   const targets = listAllTarget(visibleRects);
@@ -620,7 +624,7 @@ declare type Target = {
   filteredOutBy?: Target;
 };
 
-function listAllTarget(visibleRects: VisibleRects): Target[] {
+function listAllTarget(visibleRects: RectsDetector): Target[] {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
   const targets = [];
   if (document.activeElement !== document.body) {
@@ -661,7 +665,7 @@ function listAllTarget(visibleRects: VisibleRects): Target[] {
   return distinctSimilarTarget(targets, visibleRects);
 }
 
-function distinctSimilarTarget(targets: Target[], visibleRects: VisibleRects): Target[] {
+function distinctSimilarTarget(targets: Target[], visibleRects: RectsDetector): Target[] {
   const targetMap: Map<Element, Target> = new Map((function* () {
     for (const t of targets) yield [t.element, t];
   })());
