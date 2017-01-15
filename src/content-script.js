@@ -144,7 +144,14 @@ function setupEvents(window: any) {
 
 function isEditable(elem: EventTarget) {
   if (!(elem instanceof HTMLElement)) return false;
-  return elem.selectionStart != null || elem.contentEditable === "true";
+  // No-selectable <input> throws an error when "selectionStart" are referred.
+  let selectionStart;
+  try {
+    selectionStart = (elem: any).selectionStart;
+  } catch (e) {
+    return false;
+  }
+  return selectionStart != null || elem.contentEditable === "true";
 }
 
 function isBlurable() {
