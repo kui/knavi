@@ -253,7 +253,7 @@ function handleHitTarget(target: ?HintedTarget, options: DehintOptions) {
 
   const element = target.element;
   const style = window.getComputedStyle(element);
-  if (isScrollable(element, style)) {
+  if (utils.isScrollable(element, style)) {
     // Make scrollable from your keyboard
     if (!element.hasAttribute("tabindex")) {
       element.setAttribute("tabindex", "-1");
@@ -333,14 +333,6 @@ function dispatchMouseEvent(type: MouseEventTypes, element: HTMLElement, options
     metaKey: options.metaKey || options.ctrlKey,
   });
   return element.dispatchEvent(event);
-}
-
-function isScrollable(element: HTMLElement, style: any): boolean {
-  if (element.scrollHeight - element.clientHeight > 10
-      && ["auto", "scroll"].includes(style.overflowY)) return true;
-  if (element.scrollWidth - element.clientWidth > 10
-      && ["auto", "scroll"].includes(style.overflowX)) return true;
-  return false;
 }
 
 function moveActiveOverlay(activeOverlay: HTMLDivElement, hitTarget: ?HintedTarget) {

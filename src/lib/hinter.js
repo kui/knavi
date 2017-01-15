@@ -3,6 +3,7 @@
 import { EventEmitter } from "./event-emitter";
 import RectsDetector from "./rects-detector";
 import * as iters from "./iters";
+import * as utils from "./utils";
 
 import type { Rect } from "./rects-detector";
 
@@ -223,7 +224,7 @@ function listAllTarget(visibleRects: RectsDetector): Target[] {
       if (["pointer", "zoom-in", "zoom-out"].includes(style.cursor)) {
         mightBeClickable = true;
         isClickableElement = true;
-      } else if (isScrollable(element, style)) {
+      } else if (utils.isScrollable(element, style)) {
         isClickableElement = true;
       }
     }
@@ -344,12 +345,4 @@ function generateHintTexts(num: number, hintLetters: string): string[] {
   }
 
   return texts.sort();
-}
-
-function isScrollable(element: HTMLElement, style: any): boolean {
-  if (element.scrollHeight - element.clientHeight > 10
-      && ["auto", "scroll"].includes(style.overflowY)) return true;
-  if (element.scrollWidth - element.clientWidth > 10
-      && ["auto", "scroll"].includes(style.overflowX)) return true;
-  return false;
 }
