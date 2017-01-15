@@ -20,7 +20,7 @@ $(BUILD):
 $(BUILD)/manifest.json: $(SRC)/manifest.js
 	$(BIN)/babel-node scripts/jsonize-manifest.js > $@
 
-$(BUILD)/%.js: $(SRC)/%.js
+$(BUILD)/%.js: $(SRC)/%.js $(SRC)/lib/*.js
 	$(BIN)/webpack
 
 $(ICONS): $(SRC)/icon.svg

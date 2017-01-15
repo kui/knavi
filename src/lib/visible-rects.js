@@ -1,6 +1,6 @@
 // @flow
 
-import * as i from "./iters";
+import * as iters from "./iters";
 
 export interface Rect {
   left: number;
@@ -31,7 +31,7 @@ export default class VisibleRects {
     }
 
     return this.cache.get(element, () => {
-      const clientRects = getClientRects(element);
+      const clientRects = getClientRects(this, element);
       return cropVisibleRects(element, clientRects);
     });
   }
@@ -61,7 +61,7 @@ class Cache<K, V> {
 function cropVisibleRects(element: HTMLElement, clientRects: Iterable<Rect>): Rect[] {
   const innerWidth = window.innerWidth;
   const innerHeight = window.innerHeight;
-  return Array.from(i.flatMap(clientRects, (rect) => {
+  return Array.from(iters.flatMap(clientRects, (rect) => {
     const { width, height, top, bottom, left, right } = rect;
 
     // too small rects
@@ -89,15 +89,16 @@ function cropVisibleRects(element: HTMLElement, clientRects: Iterable<Rect>): Re
   }));
 }
 
-function getClientRects(element: HTMLElement): Iterable<Rect> {
+function getClientRects(self: VisibleRects, element: HTMLElement): Iterable<Rect> {
   switch (element.tagName) {
   case "AREA": return getAreaRects((element: any));
+  case "A": return getAnchorRects(self, (element: any));
   default: return element.getClientRects();
   }
 }
 
 function getAreaRects(element: HTMLAreaElement): Rect[] {
-  const map = i.first(i.filter(i.traverseParent(element), (e) => e.tagName === "MAP"));
+  const map = iters.first(iters.filter(iters.traverseParent(element), (e) => e.tagName === "MAP"));
   if (!(map instanceof HTMLMapElement)) return [];
 
   const img = document.querySelector(`body /deep/ img[usemap="#${map.name}"]`);
@@ -130,12 +131,23 @@ function getAreaRects(element: HTMLAreaElement): Rect[] {
   return [{ left, right, top, bottom, width: right - left, height: bottom - top }];
 }
 
-// function getAnchorRects(element: HTMLAnchorElement): Rect[] {
-//   const childNodes = Array.from(filter(element.childNodes, (n) => isVisibleNode(n)));
-//   if (childNodes.length !== 1) return element.getClientRects();
-//   const child = childNodes[0];
-//   if (!(child.nodeName instanceof HTMLImageElement)) return element.getClientRects();
-// }
+/// Return a img element client rect if the anchor contains only it.
+function getAnchorRects(self: VisibleRects, element: HTMLAnchorElement): Iterable<Rect> {
+  const childNodes = Array.from(iters.filter(element.childNodes, (n) => isVisibleNode(self, n)));
+  if (childNodes.length !== 1) return element.getClientRects();
+  const child = childNodes[0];
+  return (child instanceof HTMLImageElement ? child : element).getClientRects();
+}
+
+function isVisibleNode(self: VisibleRects, node: Node): boolean {
+  if (node instanceof Text) return !(/^\s*$/).test(node.textContent);
+  if (node instanceof HTMLElement) {
+    if (self.get(node).length >= 1) return true;
+    return false;
+  }
+  // Unknown node type
+  return true;
+}
 
 function createRect(x1, y1, x2, y2): Rect {
   const top = Math.min(y1, y2);
