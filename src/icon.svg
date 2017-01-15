@@ -3,7 +3,6 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      xmlns:xlink="http://www.w3.org/1999/xlink"
      viewBox="0 0 160 160">
-
   <symbol id="keytop">
     <rect rx="10" ry="10" width="100" height="100" fill="#333" />
   </symbol>
@@ -27,7 +26,7 @@
     <use xlink:href="#keytops" x="-125" y="-85" />
   </symbol>
   <clipPath id="radius-rect-clip">
-    <rect x="0" y="0" width="160" height="160" rx="24" ry="24" />
+    <rect x="0" y="0" width="160" height="160" rx="18" ry="18" />
   </clipPath>
   <use xlink:href="#offset-keytops" clip-path="url(#radius-rect-clip)" />
 </svg>
