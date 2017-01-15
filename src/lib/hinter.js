@@ -20,9 +20,9 @@ export default class Hinter {
     this.hintLetters = hintLetters.toLowerCase();
     this.rectsDetector = new RectsDetector;
 
-    this.onHinted = new EventEmitter();
-    this.onHintHit = new EventEmitter();
-    this.onDehinted = new EventEmitter();
+    this.onHinted = new EventEmitter;
+    this.onHintHit = new EventEmitter;
+    this.onDehinted = new EventEmitter;
   }
 
   isHinting() {
