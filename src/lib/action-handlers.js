@@ -103,16 +103,14 @@ handlers.push({
   }
 });
 
-function simulateClick(element: HTMLElement, options: ActionOptions) {
+async function simulateClick(element: HTMLElement, options: ActionOptions) {
   dispatchMouseEvent("mouseover", element, options);
 
   for (const type of ["mousedown", "mouseup", "click"]) {
-    if (!dispatchMouseEvent(type, element, options)) {
-      console.debug("Canceled: ", type);
-      return false;
-    }
+    await utils.nextTick();
+    const b = dispatchMouseEvent(type, element, options);
+    if (!b) console.debug("canceled", type);
   }
-  return true;
 }
 
 declare class MouseEvent extends UIEvent {
