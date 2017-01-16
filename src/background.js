@@ -43,13 +43,15 @@ const DEFAULT_STYLE = `/* base overlay */
   }
 }
 
-/* hit marker styles. */
+/* hint marker styles. */
 .jp-k-ui-knavi-hint {
   margin: 0px;
   padding: 3px;
   background-color: #333;
   color: white;
   border: white solid 1px;
+  word-break: normal;
+  white-space: nowrap;
   line-height: 1em;
   font-size: 16px;
   font-family: monospace;
@@ -85,15 +87,13 @@ const DEFAULT_STYLE = `/* base overlay */
   line-height: 1em;
   transition: 200ms;
   left: 0px;
-  z-index: -1;
   opacity: 0;
 }
 .jp-k-ui-knavi-hint[data-state="hit"]:after {
   transition-delay: 100ms;
   left: calc(100% + 4px);
   opacity: 1;
-}
-`.replace(/(^|\n)\t+/g, "$1");
+}`.replace(/(^|\n)\t+/g, "$1");
 
 const DEFAULT_VALUES = new Map([
   ["magic-key", "Space"],
