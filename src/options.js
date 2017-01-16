@@ -40,6 +40,10 @@ async function initCodeMirror() {
   let value = t.value;
   const cm = CodeMirror(w, { value: t.value });
 
+  // for styling
+  cm.on("focus", () => w.classList.add("focused"));
+  cm.on("blur",  () => w.classList.remove("focused"));
+
   // two way data binding with textarea and codemirror
   cm.on("change", () => {
     const v = cm.getValue();

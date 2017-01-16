@@ -11,6 +11,9 @@ input {
   border: solid gray 1px;
   padding: 2px;
 }
+input:focus, #cm-wrapper.focused {
+  outline: -webkit-focus-ring-color 3px auto;
+}
 input[is^="key"] {
   width: 12em;
   background-image: url("keyboard-icon.png");
