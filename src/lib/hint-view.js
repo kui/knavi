@@ -208,6 +208,7 @@ function buildHintElements(target: HintedTarget): HTMLDivElement[] {
     const left = Math.max(rect.left, 0);
     Object.assign(h.style, {
       position: "absolute",
+      display: "block",
       top: Math.round(yOffset + top) + "px",
       left: Math.round(xOffset + left) + "px",
     });
