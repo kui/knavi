@@ -21,4 +21,3 @@ export function isEditable(elem: EventTarget) {
   }
   return selectionStart != null || elem.contentEditable === "true";
 }
-

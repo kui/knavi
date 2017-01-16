@@ -5,9 +5,6 @@ import CodeMirror from "codemirror";
 import "codemirror/mode/css/css.js";
 import * as utils from "./lib/utils";
 
-se.register();
-ki.register();
-
 async function init() {
   for (const e of document.body.getElementsByClassName("js-clear-button")) {
     console.log("clear button: ", e);
@@ -19,24 +16,35 @@ async function init() {
       for (const t of targets) {
         if ("value" in t) (t: any).value = "";
       }
+      return false;
     });
   }
 
-  await initCodeMirror();
+  initCodeMirror();
+
+  se.register();
+  ki.register();
 }
 
 async function initCodeMirror() {
+
+  const form = document.querySelector("form[is=storage-form]");
+  if (form == null) throw Error("form element not found");
+  await new Promise((resolve) => {
+    form.addEventListener("storage-form-init", () => resolve(), { once: true });
+  });
+
   const t: HTMLTextAreaElement = (document.getElementsByName("css")[0]: any);
   t.style.display = "none";
   const w =  document.getElementById("cm-wrapper");
   let value = t.value;
   const cm = CodeMirror(w, { value: t.value });
 
+  // two way data binding with textarea and codemirror
   cm.on("change", () => {
     const v = cm.getValue();
     t.value = value = v;
   });
-
   (async function() {
     while (true) {
       await utils.nextTick();
