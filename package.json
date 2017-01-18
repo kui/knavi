@@ -38,7 +38,7 @@
     "flow-typed": "^2.0.0",
     "key-input-elements": "git://github.com/kui/key-input-elements",
     "mocha": "^3.2.0",
-    "storage-elements": "git://github.com/kui/storage-elements",
+    "storage-form": "^1.0.0",
     "watch": "^1.0.1",
     "webpack": "^1.14.0"
   }
