@@ -31,7 +31,8 @@
           <th><label for="blur-key">Key</label></th>
           <td>
             <input is="keydown-input" id="blur-key" name="blurKey" value="" autocomplete="off">
-            <button class="js-clear-button"
+            <button type="button"
+                    class="js-clear-button"
                     data-target="#blur-key"
                     alt="Clear to disable"
                     title="Clear to disable">Clear</button>
@@ -41,8 +42,11 @@
 
       <h2>Style</h2>
       <p>Styles for Hint elements and overlays.</p>
-      <textarea name="css"></textarea>
+      <textarea id="css" name="css"></textarea>
       <div id="cm-wrapper"></div>
+      <p><button type="button"
+                 class="js-revert-button"
+                 data-target="#css">Revert to Default Style</button></p>
 
       <details name="advanced-configs">
         <summary>Advanced settings</summary>

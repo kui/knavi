@@ -68,7 +68,7 @@ export default {
       if (name in s) continue;
       switch (name) {
       case "css":
-        changes.css = await (await fetch("./default-style.css")).text();
+        changes.css = await fetchCss();
         break;
       default:
         changes[name] = DEFAULT_SETTINGS[name];
@@ -83,8 +83,15 @@ export default {
     const storage = await getStorage();
     const s = await getAll(storage);
     return Object.assign({}, DEFAULT_SETTINGS, s);
+  },
+  async loadDefaults(): Promise<Settings> {
+    return Object.assign({}, DEFAULT_SETTINGS, { css: await fetchCss() });
   }
 };
+
+async function fetchCss(): Promise<string> {
+  return await (await fetch("./default-style.css")).text();
+}
 
 async function getAll(storage): Object {
   return storage.get(Object.keys(DEFAULT_SETTINGS));
