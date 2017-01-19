@@ -85,11 +85,10 @@ handlers.push({
     // Make scrollable from your keyboard
     if (!element.hasAttribute("tabindex")) {
       element.setAttribute("tabindex", "-1");
-      element.addEventListener(
-        "blur",
-        () => element.removeAttribute("tabindex"),
-        { once: true }
-      );
+      element.addEventListener("blur", function removeTabIndex() {
+        element.removeEventListener("blur", removeTabIndex);
+        element.removeAttribute("tabindex");
+      });
     }
     element.focus();
     console.log("focus as an scrollable element");

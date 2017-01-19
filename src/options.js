@@ -31,7 +31,11 @@ async function initCodeMirror() {
   const form = document.querySelector("form[is=storage-form]");
   if (form == null) throw Error("form element not found");
   await new Promise((resolve) => {
-    form.addEventListener("storage-form-sync", () => resolve(), { once: true });
+    form.addEventListener("storage-form-sync", function waitingInitSync () {
+      form.removeEventListener("storage-from-sync", waitingInitSync);
+      console.log("storage-form init sync");
+      resolve();
+    });
   });
 
   const t: HTMLTextAreaElement = (document.getElementsByName("css")[0]: any);

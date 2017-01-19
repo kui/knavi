@@ -32,7 +32,6 @@ export default class BlurView {
         duration: 200,
       });
       animation.addEventListener("finish", removeOverlay);
-      window.addEventListener("keydown", removeOverlay, { once: true });
     }
 
     blurer.onBlured.listen((element) => {

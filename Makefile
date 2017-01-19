@@ -59,7 +59,7 @@ lint:
 
 .PHONY: watch
 watch:
-	$(BIN)/watch make src
+	$(BIN)/watch "make; echo '--' " src
 
 .PHONY: clean
 clean:
