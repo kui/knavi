@@ -107,7 +107,7 @@ declare interface HitEvent {
   context: HintContext;
   input: string;
   stateChanges: TargetStateChanges;
-  actionDescriptions: ?{ short: string, long: string };
+  actionDescriptions: ?{ short: string, long: ?string };
 }
 
 declare interface DehintEvent {

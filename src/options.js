@@ -1,9 +1,9 @@
 // @flow
+
 import sf from "storage-form";
 import * as ki from "key-input-elements";
 import CodeMirror from "codemirror";
 import "codemirror/mode/css/css.js";
-import * as utils from "./lib/utils";
 
 async function init() {
   for (const e of document.body.getElementsByClassName("js-clear-button")) {
@@ -37,7 +37,6 @@ async function initCodeMirror() {
   const t: HTMLTextAreaElement = (document.getElementsByName("css")[0]: any);
   t.style.display = "none";
   const w =  document.getElementById("cm-wrapper");
-  let value = t.value;
   const cm = CodeMirror(w, { value: t.value });
 
   // for styling
@@ -47,17 +46,8 @@ async function initCodeMirror() {
   // two way data binding with textarea and codemirror
   cm.on("change", () => {
     const v = cm.getValue();
-    t.value = value = v;
+    t.value = v;
   });
-  (async function() {
-    while (true) {
-      await utils.nextTick();
-      if (value !== t.value) {
-        value = t.value;
-        cm.setValue(value);
-      }
-    }
-  })();
 }
 
 if (document.readyState === "loading") {

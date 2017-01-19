@@ -1,3 +1,5 @@
+// @flow
+
 export function nextAnimationFrame(): Promise<number> {
   return new Promise((resolve) => requestAnimationFrame(resolve));
 }

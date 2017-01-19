@@ -1,3 +1,5 @@
+// @flow
+
 import * as utils from "./utils";
 
 import type { HintedTarget } from "./hinter";
@@ -107,7 +109,7 @@ async function simulateClick(element: HTMLElement, options: ActionOptions) {
   dispatchMouseEvent("mouseover", element, options);
 
   for (const type of ["mousedown", "mouseup", "click"]) {
-    await utils.nextTick();
+    await utils.nextAnimationFrame();
     const b = dispatchMouseEvent(type, element, options);
     if (!b) console.debug("canceled", type);
   }

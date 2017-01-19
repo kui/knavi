@@ -12,7 +12,7 @@ FILES = $(BUILD) $(BUILD)/manifest.json $(BUILD)/codemirror.css $(STATICS) $(ICO
 all: debug-build
 
 .PHONY: debug-build
-debug-build: node_modules $(FILES) $(JS)
+debug-build: node_modules $(FILES) $(JS) check
 
 $(BUILD):
 	mkdir -v $(BUILD)
@@ -41,7 +41,7 @@ node_modules:
 	npm install
 
 .PHONY: prod-build
-prod-build: clean node_modules $(FILES)
+prod-build: clean node_modules check $(FILES)
 	NODE_ENV=production $(BIN)/webpack
 
 .PHONE: check
@@ -49,6 +49,8 @@ check: flow eslint
 
 .PHONY: flow
 flow:
+# Detect no "@flow" files
+	@for f in src/{,**/}*.js; do ( head -n1 "$$f" | grep -qF '@flow' ) || printf "\e[38;5;1mWARN: No @flow: $$f\n\e[0m"; done
 	$(BIN)/flow src
 
 .PHONY: eslint

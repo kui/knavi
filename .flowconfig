@@ -1,7 +1,6 @@
 # -*- coding:utf-8-unix; mode:toml; -*-
 [ignore]
-.*/examples/.*
-.*/docs/.*
+.*/build/.*
 
 [include]
 

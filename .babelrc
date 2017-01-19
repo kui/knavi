@@ -18,18 +18,16 @@
         ["env", {
           loose: true,
           targets: {
-            node: 6,
             chrome: 53,
-            // firefix: 50,
-            safari: 10,
-            edge: 13,
-            ios: 10,
           },
         }],
         "babili",
       ],
       plugins: [
         "transform-flow-strip-types",
+        ["strip-funciton-call", {
+          strip: [ "console.debug" ]
+        }]
       ],
     },
   },

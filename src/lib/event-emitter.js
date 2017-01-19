@@ -13,7 +13,7 @@ export class EventEmitter<T> {
 
   async emit(value: T) {
     await Promise.all(this.listeners.map(async (l) => {
-      await utils.nextTick();
+      await utils.nextAnimationFrame();
       l.callback(value);
     }));
   }

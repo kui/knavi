@@ -1,3 +1,4 @@
+// @flow
 /* eslint-env node */
 import pkg from "../package.json";
 
