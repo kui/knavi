@@ -37,7 +37,7 @@ $(BUILD)/codemirror.css: node_modules
 $(BUILD)/%: $(SRC)/%
 	cp -v $< $@
 
-node_modules:
+node_modules: package.json
 	npm install
 
 .PHONY: prod-build

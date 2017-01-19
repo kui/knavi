@@ -27,7 +27,8 @@ export default class HintsView {
     container.id = CONTAINER_ID;
     Object.assign(container.style, {
       position: "absolute",
-      padding: "0px", margin: "0px",
+      padding: "0", margin: "0",
+      top: "0", left: "0",
       width:  "100%", height: "100%",
       background: "none",
       zIndex: Z_INDEX_OFFSET.toString(),
@@ -36,7 +37,7 @@ export default class HintsView {
     const overlay = container.appendChild(document.createElement("div"));
     overlay.id = OVERLAY_ID;
     Object.assign(overlay.style, {
-      padding: "0px", margin: "0px",
+      padding: "0", margin: "0",
       display: "block",
       position: "absolute",
     });
@@ -44,7 +45,7 @@ export default class HintsView {
     const activeOverlay = container.appendChild(document.createElement("div"));
     activeOverlay.id = ACTIVE_OVERLAY_ID;
     Object.assign(activeOverlay.style, {
-      padding: "0px", margin: "0px",
+      padding: "0", margin: "0",
       display: "none",
       position: "absolute",
     });
