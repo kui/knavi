@@ -1,7 +1,7 @@
 // @flow
 
 import EventMatcher from "key-input-elements/lib/event-matcher";
-import { config } from "./lib/config";
+import settings from "./lib/settings";
 import * as utils from "./lib/utils";
 
 import Hinter from "./lib/hinter";
@@ -10,49 +10,6 @@ import ActionHandler from "./lib/action-handlers";
 
 import Blurer from "./lib/blurer";
 import BlurView from "./lib/blur-view";
-
-const DEFAULT_MAGIC_KEY = "Space";
-const DEFAULT_HINTS = "ASDFGHJKL";
-const DEFAULT_STYLE = `
-#jp-k-ui-knavi-overlay {
-  background-color: black;
-  border: 1px solid white;
-  opacity: 0.2;
-  transition-property: left, top, width, height;
-  transition-duration: 0.4s;
-  /* transition-timing-function: ease-in; */
-}
-#jp-k-ui-knavi-active-overlay {
-  background-color: red;
-  border: 1px solid white;
-  opacity: 0.1;
-  transition-property: left, top, width, height;
-  transition-duration: 0.2s;
-}
-#jp-k-ui-knavi-wrapper > div {
-  margin: 0px;
-  padding: 3px;
-  background-color: black;
-  color: white;
-  border: white solid 1px;
-  line-height: 1em;
-  font-size: 16px;
-  font-family: monospace;
-}
-#jp-k-ui-knavi-wrapper > div.jp-k-ui-knavi-disabled {
-  opacity: 0.6;
-}
-#jp-k-ui-knavi-wrapper > div.jp-k-ui-knavi-candidate {
-  background-color: yellow;
-  color: black;
-  border: black solid 1px;
-}
-#jp-k-ui-knavi-wrapper > div.jp-k-ui-knavi-hit {
-  background-color: #c00;
-  color: white;
-  border: black solid 1px;
-  font-weight: bold;
-}`.replace(/(^|\n)\t+/g, "$1");
 
 let css: string;
 let actionHandler: ActionHandler;
@@ -63,19 +20,19 @@ let blurer: Blurer;
 let blurEventMatcher: EventMatcher;
 
 async function main() {
-  const configValues = await config.get();
-  console.debug("config: ", configValues);
+  const settingValues = await settings.load();
+  console.debug("config: ", settingValues);
 
-  hitEventMatcher = new EventMatcher(configValues["magic-key"] || DEFAULT_MAGIC_KEY);
+  hitEventMatcher = new EventMatcher(settingValues.magicKey);
   actionHandler = new ActionHandler;
-  hinter = new Hinter(configValues["hints"] || DEFAULT_HINTS, actionHandler);
-  css = configValues["css"] || DEFAULT_STYLE;
+  hinter = new Hinter(settingValues.hints, actionHandler);
+  css = settingValues.css;
 
-  blurEventMatcher = new EventMatcher(configValues["blur-key"] || "");
+  blurEventMatcher = new EventMatcher(settingValues.blurKey);
   blurer = new Blurer;
 
   // wait event setup untill document.body.firstChild is reachable.
-  while (!(document.body && document.body.firstChild)) await utils.nextTick();
+  while (!(document.body && document.body.firstChild)) await utils.nextAnimationFrame();
 
   setupEvents();
 }

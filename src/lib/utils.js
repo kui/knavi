@@ -1,4 +1,4 @@
-export function nextTick(): Promise<number> {
+export function nextAnimationFrame(): Promise<number> {
   return new Promise((resolve) => requestAnimationFrame(resolve));
 }
 
