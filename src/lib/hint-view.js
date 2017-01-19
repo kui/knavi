@@ -12,10 +12,6 @@ const ACTIVE_OVERLAY_ID = "jp-k-ui-knavi-active-overlay";
 const HINT_CLASS = "jp-k-ui-knavi-hint";
 const Z_INDEX_OFFSET = 2147483640;
 
-declare class Object {
-  static assign: Object$Assign;
-}
-
 declare type Hint = {
   elements: HTMLDivElement[];
   target: HintedTarget;
