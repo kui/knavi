@@ -1,7 +1,12 @@
+/* Make the page to be grayscale */
+body > :not(#jp-k-ui-knavi) {
+  filter: grayscale(0.8);
+}
+
 /* base overlay */
 #jp-k-ui-knavi-overlay {
   background-color: gray;
-  opacity: 0.2;
+  opacity: 0.15;
   transition-property: left, top, width, height;
   transition-duration: 0.24s;
 }

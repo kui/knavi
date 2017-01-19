@@ -144,7 +144,6 @@ function moveOverlay(overlay: HTMLDivElement, targets: HintedTarget[]) {
 
 function generateStyle(css: string): HTMLElement {
   const s = document.createElement("style");
-  (s: any).scoped = true;
   s.textContent = css;
   return s;
 }
