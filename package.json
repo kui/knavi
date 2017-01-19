@@ -36,7 +36,7 @@
     "eslint-plugin-flowtype": "^2.29.2",
     "flow-bin": "^0.37.4",
     "flow-typed": "^2.0.0",
-    "key-input-elements": "git://github.com/kui/key-input-elements",
+    "key-input-elements": "^1.0.0",
     "mocha": "^3.2.0",
     "storage-form": "^1.0.0",
     "watch": "^1.0.1",
