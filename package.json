@@ -19,7 +19,7 @@
     "clean": "rm -fr build"
   },
   "author": "Keiichiro Ui<keiichiro.ui@gmail.com>",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "babel-cli": "^6.18.0",
     "babel-eslint": "^7.1.1",
