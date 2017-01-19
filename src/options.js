@@ -6,6 +6,15 @@ import CodeMirror from "codemirror";
 import "codemirror/mode/css/css.js";
 
 async function init() {
+  initClearButton();
+
+  initCodeMirror();
+
+  sf.register();
+  ki.register();
+}
+
+function initClearButton() {
   for (const e of document.body.getElementsByClassName("js-clear-button")) {
     console.log("clear button: ", e);
     e.addEventListener("click", (e: MouseEvent) => {
@@ -19,27 +28,23 @@ async function init() {
       return false;
     });
   }
-
-  initCodeMirror();
-
-  sf.register();
-  ki.register();
 }
 
 async function initCodeMirror() {
-
   const form = document.querySelector("form[is=storage-form]");
   if (form == null) throw Error("form element not found");
+  const t: HTMLTextAreaElement = (document.getElementsByName("css")[0]: any);
   await new Promise((resolve) => {
     form.addEventListener("storage-form-sync", function waitingInitSync () {
-      form.removeEventListener("storage-from-sync", waitingInitSync);
-      console.log("storage-form init sync");
-      resolve();
+      if (t.value) {
+        console.log("storage-form init sync");
+        form.removeEventListener("storage-from-sync", waitingInitSync);
+        resolve();
+      }
     });
   });
-
-  const t: HTMLTextAreaElement = (document.getElementsByName("css")[0]: any);
   t.style.display = "none";
+
   const w =  document.getElementById("cm-wrapper");
   const cm = CodeMirror(w, { value: t.value });
 
