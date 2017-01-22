@@ -3,16 +3,14 @@ body {
   overflow: hidden;
 }
 
-:root {
-  --overlay-opacity: 0.2;
-}
-
 /* base overlay */
 #overlay {
   background-color: #999;
-  opacity: var(--overlay-opacity);
   transition-property: left, top, width, height;
   transition-duration: 240ms;
+
+  --overlay-opacity: 0.2;
+  opacity: var(--overlay-opacity);
   animation: fadein 240ms linear;
 }
 @keyframes fadein {
@@ -23,7 +21,7 @@ body {
 /* hit target overlay */
 #active-overlay {
   background-color: white;
-  opacity: var(--overlay-opacity);
+  opacity: 0.2;
   transition-property: left, top, width, height;
   transition-duration: 160ms;
   animation: pulse 1200ms linear infinite;

@@ -40,8 +40,6 @@ export default class HintsView {
         initStyles(container, overlay, activeOverlay);
         document.body.insertBefore(container, document.body.firstChild);
         container.contentDocument.head.appendChild(style);
-        container.contentDocument.body.appendChild(overlay);
-        container.contentDocument.body.appendChild(activeOverlay);
 
         wrapper = document.createElement("div");
         hints = new Map;
@@ -55,6 +53,9 @@ export default class HintsView {
       });
       hinter.onEndHinting.listen(() => {
         container.style.display = "block";
+        const body = container.contentDocument.body;
+        body.insertBefore(activeOverlay, body.firstChild);
+        body.insertBefore(overlay, body.firstChild);
       });
       hinter.onHintHit.listen(({ context, stateChanges, actionDescriptions }) => {
         if (!hints) throw Error("Illegal state");
@@ -88,6 +89,7 @@ function initStyles(container: HTMLElement,
     padding: "0", margin: "0",
     top: "0", left: "0",
     width: "100%", height: "100%",
+    display: "block"
   });
   Object.assign(activeOverlay.style, {
     position: "absolute",
