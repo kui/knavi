@@ -1,5 +1,7 @@
 // @flow
 
+import type { Rect } from "./rect-fetcher-client";
+
 export function nextAnimationFrame(): Promise<number> {
   return new Promise((resolve) => requestAnimationFrame(resolve));
 }
@@ -22,4 +24,45 @@ export function isEditable(elem: EventTarget) {
     return false;
   }
   return selectionStart != null || elem.contentEditable === "true";
+}
+
+export function getBoundingRect(rects: Rect[]): Rect {
+  if (rects.length === 1) return rects[0];
+
+  const top    = Math.min(...rects.map((r) => r.top));
+  const bottom = Math.max(...rects.map((r) => r.bottom));
+  const left   = Math.min(...rects.map((r) => r.left));
+  const right  = Math.max(...rects.map((r) => r.right));
+  return { top, bottom, left, right, height: bottom - top, width: right - left };
+}
+
+export class SetMap<K, V> extends Map<K, Set<V>> {
+  add(k: K, v: V): Set<V> {
+    let vs = this.get(k);
+    if (vs == null) {
+      vs = new Set;
+      this.set(k, vs);
+    }
+    return vs.add(v);
+  }
+
+  has(k: K, v?: V): boolean {
+    if (v == null) {
+      return this.has(k);
+    }
+
+    const vs = this.get(k);
+    if (vs == null) return false;
+    return vs.has(v);
+  }
+
+  delete(k: K, v?: V): boolean {
+    if (v == null) return super.delete(k);
+
+    const vs = this.get(k);
+    if (vs == null) return false;
+    const b = vs.delete(v);
+    if (vs.size === 0) super.delete(k);
+    return b;
+  }
 }

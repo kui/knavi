@@ -2,8 +2,6 @@
 
 import * as utils from "./utils";
 
-import type { HintedTarget } from "./hinter";
-
 export interface ActionOptions {
   metaKey: boolean;
   ctrlKey: boolean;
@@ -14,24 +12,24 @@ export interface ActionOptions {
 declare interface Handler {
   shortDescription: string;
   longDescription?: string;
-  isSupported(target: HintedTarget): boolean;
-  handle(target: HintedTarget, options: ActionOptions): void;
+  isSupported(element: HTMLElement): boolean;
+  handle(element: HTMLElement, options: ActionOptions): void;
 }
 
 const handlers: Handler[] = [];
 
 export default class ActionHandlerDelegater {
-  handle(target: HintedTarget, options: ActionOptions) {
-    console.log("hit", target.element);
+  handle(target: HTMLElement, options: ActionOptions) {
+    console.log("hit", target);
     this.getHandler(target).handle(target, options);
   }
 
-  getDescriptions(target: HintedTarget): { short: string, long: ?string } {
+  getDescriptions(target: HTMLElement): { short: string, long: ?string } {
     const h = this.getHandler(target);
     return { short: h.shortDescription, long: h.longDescription };
   }
 
-  getHandler(target: HintedTarget): Handler {
+  getHandler(target: HTMLElement): Handler {
     const h = handlers.find((h) => h.isSupported(target));
     if (h == null) throw Error("Unreachable code");
     return h;
@@ -40,11 +38,11 @@ export default class ActionHandlerDelegater {
 
 handlers.push({
   shortDescription: "Focus iframe",
-  isSupported(target: HintedTarget) {
-    return target.element.tagName === "IFRAME";
+  isSupported(target: HTMLElement) {
+    return target.tagName === "IFRAME";
   },
-  handle(target: HintedTarget) {
-    target.element.focus();
+  handle(target: HTMLElement) {
+    target.focus();
     console.log("Focus iframe");
   }
 });
@@ -52,8 +50,8 @@ handlers.push({
 handlers.push({
   shortDescription: "Blur",
   longDescription: "Blur the focused element",
-  isSupported(target: HintedTarget) {
-    return target.element.tagName === "BODY";
+  isSupported(target: HTMLElement) {
+    return target.tagName === "BODY";
   },
   handle() {
     const activeElement = document.activeElement;
@@ -65,11 +63,11 @@ handlers.push({
 handlers.push({
   shortDescription: "Edit",
   longDescription: "Focus the editable element",
-  isSupported(target: HintedTarget) {
-    return utils.isEditable(target.element);
+  isSupported(target: HTMLElement) {
+    return utils.isEditable(target);
   },
-  handle(target: HintedTarget) {
-    target.element.focus();
+  handle(target: HTMLElement) {
+    target.focus();
     console.log(this.longDescription);
   }
 });
@@ -77,11 +75,10 @@ handlers.push({
 handlers.push({
   shortDescription: "Scroll",
   longDescription: "Focus the scrollable element",
-  isSupported(target: HintedTarget) {
-    return utils.isScrollable(target.element, target.getStyle());
+  isSupported(target: HTMLElement) {
+    return utils.isScrollable(target, window.getComputedStyle(target));
   },
-  handle(target: HintedTarget) {
-    const element = target.element;
+  handle(element: HTMLElement) {
     // Make scrollable from your keyboard
     if (!element.hasAttribute("tabindex")) {
       element.setAttribute("tabindex", "-1");
@@ -98,8 +95,8 @@ handlers.push({
 handlers.push({
   shortDescription: "Click",
   isSupported() { return true; },
-  handle(target: HintedTarget, options: ActionOptions) {
-    simulateClick(target.element, options);
+  handle(target: HTMLElement, options: ActionOptions) {
+    simulateClick(target, options);
     console.log("click");
   }
 });

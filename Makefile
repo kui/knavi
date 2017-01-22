@@ -1,6 +1,6 @@
 SRC = src
 BUILD = build
-JS = $(addprefix $(BUILD)/,content-script.js options.js background.js)
+JS = $(patsubst $(SRC)/%, $(BUILD)/%, $(filter-out $(SRC)/manifest.js, $(wildcard $(SRC)/*.js)))
 STATICS = $(patsubst $(SRC)/%, $(BUILD)/%, $(wildcard $(SRC)/*.html $(SRC)/*.css))
 ICONS = $(addprefix $(BUILD)/icon, $(addsuffix .png/, 16 48 128))
 PNG = $(patsubst $(SRC)/%.svg, $(BUILD)/%.png, $(wildcard $(SRC)/*.svg))
@@ -21,6 +21,7 @@ $(BUILD)/manifest.json: $(SRC)/manifest.js
 	$(BIN)/babel-node scripts/jsonize-manifest.js > $@
 
 $(BUILD)/%.js: $(SRC)/%.js $(SRC)/lib/*.js
+	@echo execute webpack for $@
 	$(BIN)/webpack
 
 $(ICONS): $(SRC)/icon.svg
@@ -45,15 +46,17 @@ prod-build: clean node_modules check $(FILES)
 	NODE_ENV=production $(BIN)/webpack
 
 .PHONE: check
-check: flow eslint
+check: flow lint
 
 .PHONY: flow
 flow:
 # Detect no "@flow" files
-	@for f in src/{,**/}*.js; do ( head -n1 "$$f" | grep -qF '@flow' ) || printf "\e[38;5;1mWARN: No @flow: $$f\n\e[0m"; done
+	@for f in src/**/*.js src/*.js; \
+		do ( head -n1 "$$f" | grep -qF '@flow' ) || printf "\e[38;5;1mWARN: No @flow: $$f\n\e[0m"; \
+	done
 	$(BIN)/flow src
 
-.PHONY: eslint
+.PHONY: lint
 lint:
 	$(BIN)/eslint src
 

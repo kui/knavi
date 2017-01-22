@@ -20,21 +20,26 @@ export default {
   },
   content_scripts: [
     { matches: ["<all_urls>"],
-      js: ["content-script.js"],
+      js: ["content-script-all.js"],
       run_at: "document_start",
       all_frames: true,
+    },
+    { matches: ["<all_urls>"],
+      js: ["content-script-root.js"],
+      run_at: "document_start",
     },
   ],
   content_security_policy: "script-src 'self'; object-src 'self'",
   options_page: "options.html",
   options_ui: {
     page: "options.html",
-    // chrome_style: true,
-    // New option UI style grubs escape key events to close the modal.
+    // This option page require to be open in a tab,
+    // because new option UI style grubs escape key events to close the modal.
     open_in_tab: true,
   },
   permissions: [
     "storage",
+    "tabs",
     "activeTab",
     "<all_urls>"
   ],

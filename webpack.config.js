@@ -17,7 +17,8 @@ module.exports = {
   entry: {
     options: "./src/options.js",
     background: "./src/background.js",
-    "content-script": "./src/content-script.js",
+    "content-script-root": "./src/content-script-root.js",
+    "content-script-all": "./src/content-script-all.js",
   },
   output: {
     path: "./build",

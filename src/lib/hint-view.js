@@ -1,9 +1,10 @@
 // @flow
 
 import * as iters from "./iters";
+import * as utils from "./utils";
 import Hinter from "./hinter";
 
-import type { HintedTarget, TargetStateChanges } from "./hinter";
+import type { Target, TargetStateChanges } from "./hinter";
 
 const OVERLAY_PADDING = 8;
 const CONTAINER_ID = "jp-k-ui-knavi";
@@ -14,53 +15,41 @@ const Z_INDEX_OFFSET = 2147483640;
 
 declare type Hint = {
   elements: HTMLDivElement[];
-  target: HintedTarget;
+  target: Target;
 }
 
 export default class HintsView {
   constructor(hinter: Hinter, css: string) {
     const container = document.createElement("div");
     container.id = CONTAINER_ID;
-    Object.assign(container.style, {
-      position: "absolute",
-      padding: "0", margin: "0",
-      top: "0", left: "0",
-      width:  "100%", height: "100%",
-      background: "none",
-      zIndex: Z_INDEX_OFFSET.toString(),
-    });
-
     const overlay = container.appendChild(document.createElement("div"));
     overlay.id = OVERLAY_ID;
-    Object.assign(overlay.style, {
-      padding: "0", margin: "0",
-      display: "block",
-      position: "absolute",
-    });
-
     const activeOverlay = container.appendChild(document.createElement("div"));
     activeOverlay.id = ACTIVE_OVERLAY_ID;
-    Object.assign(activeOverlay.style, {
-      padding: "0", margin: "0",
-      display: "none",
-      position: "absolute",
-    });
 
     let wrapper: ?HTMLDivElement;
     let style: ?HTMLElement;
-    let hints: ?Map<HintedTarget, Hint>;
+    let hints: ?Map<Target, Hint>;
 
-    hinter.onHinted.listen(({ context }) => {
-      fitOverlay(overlay);
-      activeOverlay.style.display = "none";
+    hinter.onStartHinting.listen(() => {
+      initStyles(container, overlay, activeOverlay);
 
       wrapper = document.createElement("div");
-      hints = generateHintElements(wrapper, context.targets);
+      hints = new Map;
       style = generateStyle(css);
 
       container.appendChild(wrapper);
       container.appendChild(style);
       document.body.insertBefore(container, document.body.firstChild);
+    });
+    hinter.onNewTargets.listen(({ newTargets }) => {
+      if (wrapper == null || hints == null) return;
+      for (const [k, v] of generateHintElements(wrapper, newTargets)) {
+        hints.set(k, v);
+      }
+    });
+    hinter.onEndHinting.listen(() => {
+      fitOverlay(container, overlay);
     });
     hinter.onHintHit.listen(({ context, stateChanges, actionDescriptions }) => {
       if (!hints) throw Error("Illegal state");
@@ -81,13 +70,26 @@ export default class HintsView {
   }
 }
 
-function moveActiveOverlay(activeOverlay: HTMLDivElement, hitTarget: ?HintedTarget) {
+function fitOverlay(container, overlay) {
+  Object.assign(container.style, {
+    width:  "100%", height: "100%",
+    display: "block",
+  });
+  Object.assign(overlay.style, {
+    top: `${window.scrollY}px`,
+    left: `${window.scrollX}px`,
+    width:  "100%", height: "100%",
+    display: "block",
+  });
+}
+
+function moveActiveOverlay(activeOverlay: HTMLDivElement, hitTarget: ?Target) {
   if (!hitTarget) {
     activeOverlay.style.display = "none";
     return;
   }
 
-  const rect = hitTarget.getBoundingClientRect();
+  const rect = utils.getBoundingRect(hitTarget.holder.rects);
   const offsetY = window.scrollY;
   const offsetX = window.scrollX;
 
@@ -100,7 +102,7 @@ function moveActiveOverlay(activeOverlay: HTMLDivElement, hitTarget: ?HintedTarg
   });
 }
 
-function moveOverlay(overlay: HTMLDivElement, targets: HintedTarget[]) {
+function moveOverlay(overlay: HTMLDivElement, targets: Target[]) {
   const scrollHeight = document.body.scrollHeight;
   const scrollWidth = document.body.scrollWidth;
   const offsetY = window.scrollY;
@@ -111,8 +113,7 @@ function moveOverlay(overlay: HTMLDivElement, targets: HintedTarget[]) {
     if (target.state === "disabled") continue;
     hasHitOrCand = true;
 
-    const rect = target.getBoundingClientRect();
-
+    const rect = utils.getBoundingRect(target.holder.rects);
     rr.top = Math.min(rr.top, rect.top + offsetY);
     rr.left = Math.min(rr.left, rect.left + offsetX);
     rr.bottom = Math.max(rr.bottom, rect.bottom + offsetY);
@@ -145,7 +146,7 @@ function generateStyle(css: string): HTMLElement {
   return s;
 }
 
-function highligtHints(hints: Map<HintedTarget, Hint>,
+function highligtHints(hints: Map<Target, Hint>,
                        changes: TargetStateChanges,
                        actionDescription: ?string) {
   for (const [target, { oldState, newState }] of changes.entries()) {
@@ -164,20 +165,38 @@ function highligtHints(hints: Map<HintedTarget, Hint>,
   }
 }
 
-function fitOverlay(overlay: HTMLDivElement) {
+function initStyles(container: HTMLDivElement,
+                    overlay: HTMLDivElement,
+                    activeOverlay: HTMLDivElement) {
+  Object.assign(container.style, {
+    position: "absolute",
+    padding: "0", margin: "0",
+    top: "0", left: "0",
+    width: "0", height: "0",
+    background: "display",
+    zIndex: Z_INDEX_OFFSET.toString(),
+  });
   Object.assign(overlay.style, {
-    top: `${window.scrollY}px`,
-    left: `${window.scrollX}px`,
-    width:  "100%",
-    height: "100%",
-    display: "block",
+    position: "absolute",
+    padding: "0", margin: "0",
+    top: "0", left: "0",
+    width: "0", height: "0",
+    display: "none",
+  });
+  Object.assign(activeOverlay.style, {
+    position: "absolute",
+    padding: "0", margin: "0",
+    top: "0", left: "0",
+    width: "0", height: "0",
+    display: "none",
   });
 }
 
-function generateHintElements(wrapper: HTMLDivElement, targets: HintedTarget[]): Map<HintedTarget, Hint> {
+function generateHintElements(wrapper: HTMLDivElement, targets: Target[]): Map<Target, Hint> {
+  const df = document.createDocumentFragment();
   const hints = targets.reduce((m, target) => {
     const elements = buildHintElements(target);
-    elements.forEach((e) => wrapper.appendChild(e));
+    elements.forEach((e) => df.appendChild(e));
     m.set(target, { elements, target });
     return m;
   }, new Map);
@@ -185,28 +204,27 @@ function generateHintElements(wrapper: HTMLDivElement, targets: HintedTarget[]):
     o[h.target.hint] = h;
     return o;
   }, {}));
+  wrapper.appendChild(df);
   return hints;
 }
 
-function buildHintElements(target: HintedTarget): HTMLDivElement[] {
+function buildHintElements(target: Target): HTMLDivElement[] {
   const xOffset = window.scrollX;
   const yOffset = window.scrollY;
 
   // Hinting for all client rects are annoying
   // const rects = target.rects;
-  const rects = target.rects.slice(0, 1);
+  const rects = target.holder.rects.slice(0, 1);
 
   return rects.map((rect) => {
     const h = document.createElement("div");
     h.textContent = target.hint.toUpperCase();
     h.dataset["hint"] = target.hint;
-    const top = Math.max(rect.top, 0);
-    const left = Math.max(rect.left, 0);
     Object.assign(h.style, {
       position: "absolute",
       display: "block",
-      top: Math.round(yOffset + top) + "px",
-      left: Math.round(xOffset + left) + "px",
+      top: Math.round(yOffset + rect.top) + "px",
+      left: Math.round(xOffset + rect.left) + "px",
     });
     h.classList.add(HINT_CLASS);
     return h;

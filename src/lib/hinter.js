@@ -1,28 +1,53 @@
 // @flow
 
 import { EventEmitter } from "./event-emitter";
-import RectsDetector from "./rects-detector";
-import * as iters from "./iters";
-import * as utils from "./utils";
-import ActionHandler from "./action-handlers";
+import * as rectFetcher from "./rect-fetcher-client";
 
-import type { Rect } from "./rects-detector";
 import type { ActionOptions } from "./action-handlers";
+import type { RectHolder, Descriptions } from "./rect-fetcher-client";
+
+declare interface StartHintingEvent {
+  context: HintContext;
+}
+
+declare interface NewTargetsEvent {
+  context: HintContext;
+  newTargets: Target[];
+}
+
+declare interface EndHintingEvent {
+  context: HintContext;
+}
+
+declare interface HitEvent {
+  context: HintContext;
+  input: string;
+  stateChanges: TargetStateChanges;
+  actionDescriptions: ?Descriptions;
+}
+
+declare interface DehintEvent {
+  context: HintContext;
+  options: ActionOptions;
+}
 
 export default class Hinter {
   hintLetters: string;
   context: ?HintContext;
-  actionHandler: ActionHandler;
+  hintTextGenerator: Iterator<string>
 
-  onHinted: EventEmitter<HintEvent>;
+  onStartHinting: EventEmitter<StartHintingEvent>;
+  onNewTargets: EventEmitter<NewTargetsEvent>;
+  onEndHinting: EventEmitter<EndHintingEvent>;
   onHintHit: EventEmitter<HitEvent>;
   onDehinted: EventEmitter<DehintEvent>;
 
-  constructor(hintLetters: string, actionHandler: ActionHandler) {
+  constructor(hintLetters: string) {
     this.hintLetters = hintLetters.toLowerCase();
-    this.actionHandler = actionHandler;
 
-    this.onHinted = new EventEmitter;
+    this.onStartHinting = new EventEmitter;
+    this.onNewTargets = new EventEmitter;
+    this.onEndHinting = new EventEmitter;
     this.onHintHit = new EventEmitter;
     this.onDehinted = new EventEmitter;
   }
@@ -31,15 +56,41 @@ export default class Hinter {
     return this.context != null;
   }
 
-  attachHints() {
+  async attachHints() {
     if (this.isHinting()) {
       throw Error("Ilegal state invocation: attachHints");
     }
-    this.context = initContext(this);
-    this.onHinted.emit({ context: this.context });
+
+    const hintTextGenerator = generateHintTexts(this.hintLetters);
+    const context = new HintContext;
+    this.context = context;
+
+    this.onStartHinting.emit({ context });
+
+    console.log("start hinting");
+
+    await rectFetcher.fetchAllRects((holders) => {
+      if (holders.length === 0) return;
+
+      const hintTexts = [];
+      for (let i = 0; i < holders.length; i++) {
+        hintTexts.push(hintTextGenerator.next().value);
+      }
+      hintTexts.sort();
+
+      console.debug("hintTexts", hintTexts);
+      const newTargets = holders.map((holder, index) => {
+        const t = hintTexts[index];
+        if (!t) throw Error("Illegal state");
+        return new Target(t, holder);
+      });
+      context.targets.splice(-1, 0, ...newTargets);
+      this.onNewTargets.emit({ context, newTargets });
+    });
+    this.onEndHinting.emit({ context });
   }
 
-  hitHint(key: string) {
+  async hitHint(key: string) {
     const context = this.context;
     if (context == null) {
       throw Error("Ilegal state invocation: hitHint");
@@ -49,7 +100,12 @@ export default class Hinter {
     if (!this.hintLetters.includes(inputChar)) return;
 
     const stateChanges = context.update(inputChar);
-    const actionDescriptions = context.hitTarget && this.actionHandler.getDescriptions(context.hitTarget);
+
+    let actionDescriptions;
+    if (context.hitTarget) {
+      actionDescriptions = await rectFetcher.getDescriptions(context.hitTarget.holder);
+    }
+
     this.onHintHit.emit({ context, input: inputChar, stateChanges, actionDescriptions });
     return;
   }
@@ -62,25 +118,44 @@ export default class Hinter {
     this.context = null;
 
     if (context.hitTarget != null) {
-      this.actionHandler.handle(context.hitTarget, options);
+      rectFetcher.action(context.hitTarget.holder, options);
     }
-
     this.onDehinted.emit({ context, options });
   }
 }
 
 export type TargetState = "disabled" | "candidate" | "hit" | "init";
-export type TargetStateChanges = Map<HintedTarget, { oldState: TargetState, newState: TargetState }>;
+export type TargetStateChanges = Map<Target, { oldState: TargetState, newState: TargetState }>;
+export class Target {
+  state: TargetState;
+  hint: string;
+  holder: RectHolder;
+
+  constructor(hint: string, holder: RectHolder) {
+    this.hint = hint;
+    this.holder = holder;
+    this.state = "init";
+  }
+
+  updateState(inputs: string): TargetState {
+    if (this.hint === inputs) {
+      this.state = "hit";
+    } else if (this.hint.startsWith(inputs)) {
+      this.state = "candidate";
+    } else {
+      this.state = "disabled";
+    }
+    return this.state;
+  }
+}
 
 class HintContext {
-  targets: HintedTarget[];
-  hitTarget: ?HintedTarget;
-  rectsDetector: RectsDetector;
+  targets: Target[];
+  hitTarget: ?Target;
   inputSequence: string[];
 
-  constructor(targets: HintedTarget[], rectsDetector: RectsDetector) {
-    this.targets = targets;
-    this.rectsDetector = rectsDetector;
+  constructor() {
+    this.targets = [];
     this.inputSequence = [];
   }
 
@@ -99,252 +174,31 @@ class HintContext {
   }
 }
 
-declare interface HintEvent {
-  context: HintContext;
-}
+function* generateHintTexts(hintLetters: string): Iterator<string> {
+  const letters = Array.from(hintLetters);
+  const history = [];
 
-declare interface HitEvent {
-  context: HintContext;
-  input: string;
-  stateChanges: TargetStateChanges;
-  actionDescriptions: ?{ short: string, long: ?string };
-}
-
-declare interface DehintEvent {
-  context: HintContext;
-  options: ActionOptions;
-}
-
-function initContext(self: Hinter): HintContext {
-  const rectsDetector = new RectsDetector;
-  // Benchmark: this operation is most heavy.
-  console.time("list all target");
-  let targets = listAllTarget(rectsDetector);
-  console.timeEnd("list all target");
-  targets = distinctSimilarTarget(targets, rectsDetector);
-  return new HintContext(hintTargets(targets, self.hintLetters, rectsDetector), rectsDetector);
-}
-
-export class HintedTarget {
-  state: TargetState;
-  hint: string;
-  element: HTMLElement;
-  rects: Rect[];
-  mightBeClickable: boolean;
-  filteredOutBy: ?Target;
-  _style: ?CSSStyleDeclaration;
-  _rectsDetector: RectsDetector;
-
-  constructor(hint: string,
-              element: HTMLElement,
-              rects: Rect[],
-              rectsDetector: RectsDetector,
-              opts?: {
-                mightBeClickable?: boolean,
-                style?: ?CSSStyleDeclaration,
-              } = {
-                mightBeClickable: false,
-              }) {
-    this.state = "init";
-    this.hint = hint;
-    this.element = element;
-    this.rects = rects;
-    this.mightBeClickable = opts.mightBeClickable || false;
-    this._style = opts.style;
-    this._rectsDetector = rectsDetector;
+  for (const t of letters) {
+    history.push(t);
+    yield t;
   }
-
-  getStyle(): CSSStyleDeclaration {
-    if (this._style) return this._style;
-    this._style = window.getComputedStyle(this.element);
-    return this._style;
-  }
-
-  getBoundingClientRect(): Rect {
-    return this._rectsDetector.getBoundingClientRect(this.element);
-  }
-
-  updateState(inputs: string): TargetState {
-    if (this.hint === inputs) {
-      this.state = "hit";
-    } else if (this.hint.startsWith(inputs)) {
-      this.state = "candidate";
-    } else {
-      this.state = "disabled";
-    }
-    return this.state;
-  }
-}
-
-declare interface Target {
-  element: HTMLElement;
-  rects: Rect[];
-  mightBeClickable?: boolean;
-  filteredOutBy?: ?Target;
-  style?: ?CSSStyleDeclaration;
-}
-
-const HINTABLE_QUERY = [
-  "a[href]",
-  "area[href]",
-  "details",
-  "textarea:not([disabled])",
-  "button:not([disabled])",
-  "select:not([disabled])",
-  "input:not([type=hidden]):not([disabled])",
-  "iframe",
-  "[tabindex]",
-  "[onclick]",
-  "[onmousedown]",
-  "[onmouseup]",
-  "[contenteditable='']",
-  "[contenteditable=true]",
-  "[role=link]",
-  "[role=button]",
-  "[data-image-url]",
-].map((s) => "body /deep/ " + s).join(",");
-
-function listAllTarget(rectsDetector: RectsDetector): Target[] {
-  const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
-  const targets: Target[] = [];
-
-  if (document.activeElement !== document.body) {
-    const rects = Array.from(document.body.getClientRects());
-    targets.push({ element: document.body, rects });
-  }
-
-  for (const element of document.querySelectorAll("body /deep/ *")) {
-    let isClickableElement = false;
-    let mightBeClickable = false;
-    let style = null;
-
-    if (selecteds.has(element)) {
-      isClickableElement = true;
-    } else {
-      style = window.getComputedStyle(element);
-      // might be clickable
-      if (["pointer", "zoom-in", "zoom-out"].includes(style.cursor)) {
-        mightBeClickable = true;
-        isClickableElement = true;
-      } else if (utils.isScrollable(element, style)) {
-        isClickableElement = true;
-      }
-    }
-
-    if (!isClickableElement) continue;
-
-    const rects = rectsDetector.get(element);
-    if (rects.length === 0) continue;
-
-    targets.push({ element, rects, mightBeClickable, style });
-  }
-
-  return targets;
-}
-
-function distinctSimilarTarget(targets: Target[], rectsDetector: RectsDetector): Target[] {
-  const targetMap: Map<Element, Target> = new Map((function* () {
-    for (const t of targets) yield [t.element, t];
-  })());
-
-  function isVisibleNode(node) {
-    // filter out blank text nodes
-    if (node instanceof Text) return !(/^\s*$/).test(node.textContent);
-    // filter out invisible element.
-    if (node instanceof HTMLElement) {
-      if (rectsDetector.get(node).length >= 1) return true;
-      return false;
-    }
-    return true;
-  }
-
-  // Filter out if this target is a child of <a> or <button>
-  for (let i = 0; i < targets.length; i++) {
-    const target = targets[i];
-    if (!target.mightBeClickable) continue;
-
-    const parentTarget = iters.first(iters.flatMap(iters.traverseParent(target.element), (p) => {
-      const t = targetMap.get(p);
-      if (t == null) return [];
-      if (t.filteredOutBy) return [t.filteredOutBy];
-      if (["A", "BUTTON"].includes(t.element.tagName)) return [t];
-      return [];
-    }));
-    if (parentTarget) {
-      target.filteredOutBy = parentTarget;
-      console.debug("filter out: a child of a parent <a>/<button>: target=%o", target.element);
-    }
-  }
-
-  // Filter out targets that is only one child for a parent target element.
-  for (let i = 0; i < targets.length; i++) {
-    const target = targets[i];
-    if (!target.mightBeClickable) continue;
-    if (target.filteredOutBy) continue;
-
-    const thinAncestors = iters.takeWhile(iters.traverseParent(target.element), (e) => {
-      return iters.length(iters.filter(e.childNodes, isVisibleNode)) === 1;
-    });
-    const parentTarget = iters.first(iters.flatMap(thinAncestors, (p) => {
-      const t = targetMap.get(p);
-      if (t == null) return [];
-      if (t.filteredOutBy) return [t.filteredOutBy];
-      return [t];
-    }));
-    if (parentTarget) {
-      target.filteredOutBy = parentTarget;
-      console.debug("filter out: a child of a thin parent: target=%o", target.element);
-    }
-  }
-
-  // Filter out targets that contains only existing targets
-  for (let i = targets.length - 1; i >= 0; i--) {
-    const target = targets[i];
-    if (!target.mightBeClickable) continue;
-    if (target.filteredOutBy) continue;
-
-    const childNodes = Array.from(iters.filter(target.element.childNodes, isVisibleNode));
-    if (childNodes.every((c) => targetMap.has((c: any)))) {
-      const child = childNodes[0];
-      target.filteredOutBy = targetMap.get((child: any));
-      console.debug("filter out: only targets containing: target=%o", target.element);
-    }
-  }
-
-  return targets.filter((t) => t.filteredOutBy == null);
-}
-
-function hintTargets(targets: Target[], hintLetters: string, rectsDetector: RectsDetector): HintedTarget[] {
-  const texts = generateHintTexts(targets.length, hintLetters);
-  return targets.map((t, index) => new HintedTarget(
-    texts[index],
-    t.element,
-    t.rects,
-    rectsDetector,
-    {
-      mightBeClickable: t.mightBeClickable,
-      style: t.style,
-    }
-  ));
-}
-
-function generateHintTexts(num: number, hintLetters: string): string[] {
-  const texts = Array.from(hintLetters);
-
-  if (texts.length > num) return texts;
 
   // At first, Add repeat 2 same letters text because we input these easily.
-  for (const hintLetter of hintLetters) texts.push(hintLetter + hintLetter);
-
-  let i = 0;
-  while (texts.length < num) {
-    const suffix = texts[i];
-    for (const hintLetter of hintLetters) {
-      if (suffix !== hintLetter) // Avoid text duplications with above texts
-        texts.push(hintLetter + suffix);
-    }
-    i++;
+  for (const t of letters) {
+    const h = t + t;
+    history.push(h);
+    yield h;
   }
 
-  return texts.sort();
+  let index = 0;
+  while (true) {
+    const suffix = history[index];
+    for (const t of letters) {
+      if (suffix === t) continue; // Avoid above 2-same-letters-text
+      const h = t + suffix;
+      history.push(h);
+      yield h;
+    }
+    index++;
+  }
 }

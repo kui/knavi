@@ -1,48 +1,36 @@
 // @flow
 
+import "./lib/rect-fetcher-service";
 import EventMatcher from "key-input-elements/lib/event-matcher";
 import settings from "./lib/settings";
 import * as utils from "./lib/utils";
-
-import Hinter from "./lib/hinter";
-import HintsView from "./lib/hint-view";
-import ActionHandler from "./lib/action-handlers";
-
+import HinterClient from "./lib/hinter-client";
 import Blurer from "./lib/blurer";
 import BlurView from "./lib/blur-view";
 
-let css: string;
-let actionHandler: ActionHandler;
-let hinter: Hinter;
-let hitEventMatcher: EventMatcher;
-
-let blurer: Blurer;
-let blurEventMatcher: EventMatcher;
-
 async function main() {
-  const settingValues = await settings.load();
-  console.debug("config: ", settingValues);
+  let hinter: HinterClient;
+  let hitEventMatcher: EventMatcher;
+  let blurEventMatcher: EventMatcher;
 
-  hitEventMatcher = new EventMatcher(settingValues.magicKey);
-  actionHandler = new ActionHandler;
-  hinter = new Hinter(settingValues.hints, actionHandler);
-  css = settingValues.css;
+  await settings.listen((settingValues) => {
+    hitEventMatcher = new EventMatcher(settingValues.magicKey);
+    hinter = new HinterClient;
+    blurEventMatcher = new EventMatcher(settingValues.blurKey);
+  });
 
-  blurEventMatcher = new EventMatcher(settingValues.blurKey);
-  blurer = new Blurer;
+  const blurer = new Blurer;
+  new BlurView(blurer);
 
   // wait event setup untill document.body.firstChild is reachable.
   while (!(document.body && document.body.firstChild)) await utils.nextAnimationFrame();
 
-  setupEvents();
-}
-
-function setupEvents() {
   function hookKeydown(event: KeyboardEvent) {
-    if (hinter.isHinting()) {
+    if (hinter.isHinting) {
       event.preventDefault();
       event.stopPropagation();
       hinter.hitHint(event.key);
+      return;
     } else {
       if (!utils.isEditable(event.target) && hitEventMatcher.test(event)) {
         event.preventDefault();
@@ -55,25 +43,25 @@ function setupEvents() {
     }
   }
   function hookKeyup(event: KeyboardEvent) {
-    if (hinter.isHinting() && hitEventMatcher.testModInsensitive(event)) {
+    if (hinter.isHinting && hitEventMatcher.testModInsensitive(event)) {
       event.preventDefault();
       event.stopPropagation();
-      hinter.removeHints(event);
+      const { shiftKey, altKey, ctrlKey, metaKey } = event;
+      hinter.removeHints({ shiftKey, altKey, ctrlKey, metaKey });
+      return;
     }
   }
   function hookKeypress(event: KeyboardEvent) {
-    if (hinter.isHinting()) {
+    if (hinter.isHinting) {
       event.preventDefault();
       event.stopPropagation();
+      return;
     }
   }
 
   window.addEventListener("keydown", hookKeydown, true);
   window.addEventListener("keyup", hookKeyup, true);
   window.addEventListener("keypress", hookKeypress, true);
-
-  new HintsView(hinter, css);
-  new BlurView(blurer);
 }
 
 main();

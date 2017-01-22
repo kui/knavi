@@ -1,24 +1,28 @@
-/* Make the page to be grayscale */
+/* Make the whole of page to be grayscale */
 body > :not(#jp-k-ui-knavi) {
-  filter: grayscale(0.8);
+  filter: grayscale(0.5);
 }
 
 /* base overlay */
 #jp-k-ui-knavi-overlay {
-  background-color: gray;
-  opacity: 0.15;
+  background-color: #999;
+  opacity: 0.2;
   transition-property: left, top, width, height;
   transition-duration: 0.24s;
+  animation: fadein 300ms linear;
+}
+@keyframes fadein {
+  0% { opacity: 0 }
+  100% { opacity: 0.2 }
 }
 
 /* hit target overlay */
 #jp-k-ui-knavi-active-overlay {
-  background-color: red;
-  border: 1px solid white;
-  opacity: 0.1;
+  background-color: white;
+  opacity: 0.2;
   transition-property: left, top, width, height;
   transition-duration: 0.12s;
-  animation: pulse 2s linear infinite;
+  animation: pulse 1s linear infinite;
   z-index: 2;
 }
 @keyframes pulse {
@@ -32,10 +36,10 @@ body > :not(#jp-k-ui-knavi) {
     0 0 3px 0px rgba(128,128,128,0.8),
     0 0 3px 8px rgba(255,0,0,0.8);
   }
-  80% {
+  50% {
     box-shadow:
-    0 0 3px 56px rgba(128,128,128,0.8),
-    0 0 3px 64px rgba(255,0,0,0.8);
+    0 0 3px 32px rgba(128,128,128,0.8),
+    0 0 3px 40px rgba(255,0,0,0.8);
   }
   100% {
     box-shadow:
@@ -75,7 +79,7 @@ body > :not(#jp-k-ui-knavi) {
   z-index: 2;
 }
 
-/* add action description into hit marker. */
+/* Action description of the hit marker. */
 .jp-k-ui-knavi-hint:after {
   content: attr(data-action-description);
   font-size: 50%;

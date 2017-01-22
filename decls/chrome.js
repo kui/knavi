@@ -3,7 +3,6 @@ declare class ChromeStorageListenee {
   addListener(callback: (changes: ChromeStorageItems, areaName: string) => void): void;
 }
 declare class ChromeStorageArea {
-  onChanged: ChromeStorageListenee;
   getBytesInUse(callback: (bytesInUse: number) => void): void;
   getBytesInUse(keys: string, callback: (bytesInUse: number) => void): void;
   getBytesInUse(keys: string[], callback: (bytesInUse: number) => void): void;
@@ -28,6 +27,7 @@ declare class SyncChromeStorageArea extends ChromeStorageArea {
 declare class ChromeStorage {
   local: LocalChromeStorageArea;
   sync: SyncChromeStorageArea;
+  onChanged: ChromeStorageListenee;
 }
 
 //
@@ -47,11 +47,11 @@ declare type ChromeMessageSender = {
 };
 declare class ChromeRuntime {
   lastError: ChromeRuntimeError;
-  onMessage: {
-    addListener(callback: (message: any, sender: ChromeMessageSender, sendResponse: () => any) => any): void;
-  };
+  onMessage: ChromeEventEmmitter<(message: any, sender: ChromeMessageSender, sendResponse: () => any) => any>;
   sendMessage(message: any,
-              options?: { includeTlsChannelId: boolean },
+              options?: ?{ includeTlsChannelId: boolean },
+              responseCallback?: (response: any) => any): void;
+  sendMessage(message: any,
               responseCallback?: (response: any) => any): void;
 }
 
@@ -67,17 +67,32 @@ declare type InsertCssDetails = {
 }
 
 declare class ChromeTabs {
+  getCurrent(callback: (tab: ChromeTabsTab) => void): void;
   insertCSS(tabId: number, details: InsertCssDetails, callback?: () => any): void;
   insertCSS(details: InsertCssDetails, callback?: () => any): void;
-  onUpdated: {
-    addListener(callback: (tabId: number, changeInfo: any, tab: ChromeTabsTab) => any): void;
-  };
+  sendMessage(tabId: number,
+              message: any,
+              options?: { frameId?: number },
+              responseCallback?: (response: any) => any): void;
+  onUpdated: ChromeEventEmmitter<(tabId: number, changeInfo: any, tab: ChromeTabsTab) => any>;
 }
 
 //
+
+declare class ChromeWebNavigation {
+  getAllFrames(details: { tabId: number }, callback: (details: { frameId: number }[]) => void): void;
+}
+
+//
+
+declare class ChromeEventEmmitter<C> {
+  addListener(callback: C): void;
+  removeListener(callback: C): void;
+}
 
 declare var chrome: {
   tabs: ChromeTabs;
   runtime: ChromeRuntime;
   storage: ChromeStorage;
+  webNavigation: ChromeWebNavigation;
 }

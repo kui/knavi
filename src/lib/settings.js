@@ -1,5 +1,7 @@
 // @flow
 
+import { EventEmitter } from "./event-emitter";
+
 class Storage {
   storage: ChromeStorageArea;
 
@@ -59,6 +61,16 @@ export interface Settings {
   css: string;
 }
 
+const onUpdated: EventEmitter<Settings> = new EventEmitter;
+let currentSettingsPromise: Promise<Settings>;
+update();
+chrome.storage.onChanged.addListener((changes, area) => {
+  console.debug("changes=", changes,
+                "area=", area,
+                "location=", location.href);
+  update();
+});
+
 export default {
   async init(): Promise<void> {
     const storage = await getStorage();
@@ -79,10 +91,13 @@ export default {
     console.log("Initialize settings", changes);
     await storage.set(changes);
   },
-  async load(): Promise<Settings> {
-    const storage = await getStorage();
-    const s = await getAll(storage);
-    return Object.assign({}, DEFAULT_SETTINGS, s);
+  async load() {},
+  /// Return a promise resolved when the first callback execution.
+  async listen(callback: (v: Settings) => void) {
+    onUpdated.listen(callback);
+    const s = await currentSettingsPromise;
+    console.debug("Init settings callback:", s, "location=", location.href);
+    callback(s);
   },
   async loadDefaults(): Promise<Settings> {
     return Object.assign({}, DEFAULT_SETTINGS, { css: await fetchCss() });
@@ -93,8 +108,19 @@ async function fetchCss(): Promise<string> {
   return await (await fetch("./default-style.css")).text();
 }
 
-async function getAll(storage): Object {
-  return storage.get(Object.keys(DEFAULT_SETTINGS));
+async function update() {
+  currentSettingsPromise = getAll();
+  onUpdated.emit(await currentSettingsPromise);
+}
+
+async function getAll(storage): Promise<Settings> {
+  if (!storage)
+    storage = await getStorage();
+  return Object.assign(
+    {},
+    DEFAULT_SETTINGS,
+    await storage.get(Object.keys(DEFAULT_SETTINGS))
+  );
 }
 
 async function getStorage(): Promise<Storage> {
