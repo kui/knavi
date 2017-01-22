@@ -13,7 +13,9 @@ export default class RectFetcher {
   }
 
   getAll(): { element: HTMLElement, rects: Rect[] }[] {
+    console.time("List all target elements");
     const t = listAllTarget(this.detector);
+    console.timeEnd("List all target elements");
     return distinctSimilarTarget(this.detector, t);
   }
 }
