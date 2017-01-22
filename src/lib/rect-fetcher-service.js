@@ -13,24 +13,36 @@ import type {
 
 export type AllRectsResponseComplete = {
   type: "AllRectsResponseComplete";
-}
+};
 
 export type RectsFragmentResponse = {
   type: "RectsFragmentResponse";
   holders: RectHolder[];
-}
+};
+
+type RegisterFrame = {
+  type: "RegisterFrame";
+};
 
 let frameId: number;
 let rectFetcher: RectFetcher;
 let rectElements: { element: HTMLElement, holder: RectHolder }[];
 let actionHandler: ActionHandler = new ActionHandler;
+const registeredFrames: Set<WindowProxy> = new Set;
 
 chrome.runtime.sendMessage("getFrameId", (id) => frameId = id);
+
+if (parent !== window) {
+  parent.postMessage(({ type: "RegisterFrame" }: RegisterFrame), "*");
+}
 
 window.addEventListener("message", (event) => {
   switch (event.data.type) {
   case "AllRectsRequest":
     handleAllRectsRequest(event.data);
+    return;
+  case "RegisterFrame":
+    handleRegisterFrame(event.source);
     return;
   }
 });
@@ -64,8 +76,14 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
     }: RectsFragmentResponse), resolve);
   });
 
-  // propagate requests to child frames
-  const frames = new Set(filter(rectElements, ({ element }) => element.tagName === "IFRAME"));
+  // Propagate requests to child frames
+  // Child frames require to be visible by above rect detection, and
+  // be registered by a init "RegisterFrame" message.
+  const frames = new Set(
+    filter(filter(rectElements,
+                  ({ element }) => element.tagName === "IFRAME"),
+           ({ element }) => registeredFrames.has((element: any).contentWindow))
+  );
   if (frames.size === 0) {
     console.debug("No frames", location.href);
     window.parent.postMessage({ type: "AllRectsResponseComplete" }, "*");
@@ -83,7 +101,7 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
     }: AllRectsRequest), "*");
   }
 
-  // handle reqest complete
+  // Handle reqest complete
   let responseCompleteHandler;
   let timeoutId;
   window.addEventListener("message", responseCompleteHandler = (event) => {
@@ -101,7 +119,7 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
       clearTimeout(timeoutId);
     }
   });
-  // fetching complete timeout
+  // Fetching complete timeout
   timeoutId = setTimeout(() => {
     console.warn("Timeout: no response child frames=", frames, "location=", location.href);
     window.parent.postMessage({ type: "AllRectsResponseComplete" }, "*");
@@ -118,6 +136,12 @@ function addOffsets(rects, offsets) {
     height: r.height,
     width: r.width,
   }));
+}
+
+function handleRegisterFrame(frame: WindowProxy) {
+  if (registeredFrames.has(frame)) return;
+  console.debug("New child frame", frame, "parent-location=", location.href);
+  registeredFrames.add(frame);
 }
 
 function handleDescriptionsRequest(req: DescriptionsRequest, resolve) {
