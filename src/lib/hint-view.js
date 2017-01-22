@@ -40,6 +40,12 @@ export default class HintsView {
         initStyles(container, overlay, activeOverlay);
         document.body.insertBefore(container, document.body.firstChild);
         container.contentDocument.head.appendChild(style);
+        container.contentWindow.onfocus = () => {
+          if (document.body.contains(container)) {
+            document.body.removeChild(container);
+            return false;
+          }
+        };
 
         wrapper = document.createElement("div");
         hints = new Map;
@@ -66,7 +72,9 @@ export default class HintsView {
       });
       hinter.onDehinted.listen(() => {
         if (!hints || !wrapper) throw Error("Illegal state");
-        document.body.removeChild(container);
+        if (document.body.contains(container)) {
+          document.body.removeChild(container);
+        }
       });
     })();
   }
