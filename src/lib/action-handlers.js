@@ -37,6 +37,19 @@ export default class ActionHandlerDelegater {
 }
 
 handlers.push({
+  shortDescription: "Blur",
+  longDescription: "Blur the focused element",
+  isSupported(target: HTMLElement) {
+    return target === document.activeElement;
+  },
+  handle() {
+    const activeElement = document.activeElement;
+    activeElement.blur();
+    console.log(this.longDescription, activeElement);
+  }
+});
+
+handlers.push({
   shortDescription: "Focus iframe",
   isSupported(target: HTMLElement) {
     return target.tagName === "IFRAME";
@@ -44,19 +57,6 @@ handlers.push({
   handle(target: HTMLElement) {
     target.focus();
     console.log("Focus iframe");
-  }
-});
-
-handlers.push({
-  shortDescription: "Blur",
-  longDescription: "Blur the focused element",
-  isSupported(target: HTMLElement) {
-    return target.tagName === "BODY";
-  },
-  handle() {
-    const activeElement = document.activeElement;
-    activeElement.blur();
-    console.log(this.longDescription, activeElement);
   }
 });
 
@@ -73,10 +73,36 @@ handlers.push({
 });
 
 handlers.push({
+  shortDescription: "Click",
+  longDescription: "Click the <input> element",
+  isSupported(target: HTMLElement) {
+    return target.tagName === "INPUT" &&
+      ["checkbox", "radio", "button", "image", "submit", "reset"].includes((target: any).type);
+  },
+  handle(target: HTMLElement, options: ActionOptions) {
+    target.focus();
+    simulateClick(target, options);
+    console.log(this.longDescription);
+  }
+});
+
+handlers.push({
   shortDescription: "Focus",
-  longDescription: "Focus the input element",
+  longDescription: "Focus the <input> element",
   isSupported(target: HTMLElement) {
     return target.tagName === "INPUT";
+  },
+  handle(target: HTMLElement) {
+    target.focus();
+    console.log(this.longDescription);
+  }
+});
+
+handlers.push({
+  shortDescription: "Focus",
+  longDescription: "Focus the <select> element",
+  isSupported(target: HTMLElement) {
+    return target.tagName === "SELECT";
   },
   handle(target: HTMLElement) {
     target.focus();
@@ -100,7 +126,7 @@ handlers.push({
       });
     }
     element.focus();
-    console.log("focus as an scrollable element");
+    console.log(this.longDescription);
   }
 });
 
