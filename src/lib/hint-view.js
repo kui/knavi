@@ -58,6 +58,7 @@ export default class HintsView {
         }
       });
       hinter.onEndHinting.listen(() => {
+        if (!container.contentDocument) return;
         container.style.display = "block";
         const body = container.contentDocument.body;
         body.insertBefore(activeOverlay, body.firstChild);
