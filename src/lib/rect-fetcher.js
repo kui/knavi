@@ -114,7 +114,7 @@ function distinctSimilarTarget(rectsDetector: RectsDetector, targets: Target[]):
     }));
     if (parentTarget) {
       target.filteredOutBy = parentTarget;
-      console.debug("filter out: a child of a parent <a>/<button>: target=%o", target.element);
+      // console.debug("filter out: a child of a parent <a>/<button>: target=%o", target.element);
     }
   }
 
@@ -135,7 +135,7 @@ function distinctSimilarTarget(rectsDetector: RectsDetector, targets: Target[]):
     }));
     if (parentTarget) {
       target.filteredOutBy = parentTarget;
-      console.debug("filter out: a child of a thin parent: target=%o", target.element);
+      // console.debug("filter out: a child of a thin parent: target=%o", target.element);
     }
   }
 
@@ -149,7 +149,7 @@ function distinctSimilarTarget(rectsDetector: RectsDetector, targets: Target[]):
     if (childNodes.every((c) => targetMap.has((c: any)))) {
       const child = childNodes[0];
       target.filteredOutBy = targetMap.get((child: any));
-      console.debug("filter out: only targets containing: target=%o", target.element);
+      // console.debug("filter out: only targets containing: target=%o", target.element);
     }
   }
 

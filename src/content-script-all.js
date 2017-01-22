@@ -22,9 +22,6 @@ async function main() {
   const blurer = new Blurer;
   new BlurView(blurer);
 
-  // wait event setup untill document.body.firstChild is reachable.
-  while (!(document.body && document.body.firstChild)) await utils.nextAnimationFrame();
-
   function hookKeydown(event: KeyboardEvent) {
     if (hinter.isHinting) {
       event.preventDefault();
