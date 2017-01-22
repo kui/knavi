@@ -31,42 +31,47 @@ export default class HintsView {
     let style: ?HTMLElement;
     let hints: ?Map<Target, Hint>;
 
-    hinter.onStartHinting.listen(() => {
-      initStyles(container, overlay, activeOverlay);
+    (async () => {
+      // wait event setup untill document.body.firstChild is reachable.
+      while (!(document.body && document.body.firstChild)) await utils.nextAnimationFrame();
 
-      wrapper = document.createElement("div");
-      hints = new Map;
-      style = generateStyle(css);
+      hinter.onStartHinting.listen(() => {
+        initStyles(container, overlay, activeOverlay);
 
-      container.appendChild(wrapper);
-      container.appendChild(style);
-      document.body.insertBefore(container, document.body.firstChild);
-    });
-    hinter.onNewTargets.listen(({ newTargets }) => {
-      if (wrapper == null || hints == null) return;
-      for (const [k, v] of generateHintElements(wrapper, newTargets)) {
-        hints.set(k, v);
-      }
-    });
-    hinter.onEndHinting.listen(() => {
-      fitOverlay(container, overlay);
-    });
-    hinter.onHintHit.listen(({ context, stateChanges, actionDescriptions }) => {
-      if (!hints) throw Error("Illegal state");
-      const shortDescription = actionDescriptions && actionDescriptions.short;
-      highligtHints(hints, stateChanges, shortDescription);
-      moveOverlay(overlay, context.targets);
-      moveActiveOverlay(activeOverlay, context.hitTarget);
-    });
-    hinter.onDehinted.listen(() => {
-      if (!hints || !wrapper || !style) throw Error("Illegal state");
-      document.body.removeChild(container);
-      container.removeChild(wrapper);
-      container.removeChild(style);
-      wrapper = null;
-      style = null;
-      hints = null;
-    });
+        wrapper = document.createElement("div");
+        hints = new Map;
+        style = generateStyle(css);
+
+        container.appendChild(wrapper);
+        container.appendChild(style);
+        document.body.insertBefore(container, document.body.firstChild);
+      });
+      hinter.onNewTargets.listen(({ newTargets }) => {
+        if (wrapper == null || hints == null) return;
+        for (const [k, v] of generateHintElements(wrapper, newTargets)) {
+          hints.set(k, v);
+        }
+      });
+      hinter.onEndHinting.listen(() => {
+        fitOverlay(container, overlay);
+      });
+      hinter.onHintHit.listen(({ context, stateChanges, actionDescriptions }) => {
+        if (!hints) throw Error("Illegal state");
+        const shortDescription = actionDescriptions && actionDescriptions.short;
+        highligtHints(hints, stateChanges, shortDescription);
+        moveOverlay(overlay, context.targets);
+        moveActiveOverlay(activeOverlay, context.hitTarget);
+      });
+      hinter.onDehinted.listen(() => {
+        if (!hints || !wrapper || !style) throw Error("Illegal state");
+        document.body.removeChild(container);
+        container.removeChild(wrapper);
+        container.removeChild(style);
+        wrapper = null;
+        style = null;
+        hints = null;
+      });
+    })();
   }
 }
 
