@@ -73,6 +73,18 @@ handlers.push({
 });
 
 handlers.push({
+  shortDescription: "Focus",
+  longDescription: "Focus the input element",
+  isSupported(target: HTMLElement) {
+    return target.tagName === "INPUT";
+  },
+  handle(target: HTMLElement) {
+    target.focus();
+    console.log(this.longDescription);
+  }
+});
+
+handlers.push({
   shortDescription: "Scroll",
   longDescription: "Focus the scrollable element",
   isSupported(target: HTMLElement) {
