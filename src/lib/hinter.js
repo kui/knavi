@@ -67,8 +67,6 @@ export default class Hinter {
 
     this.onStartHinting.emit({ context });
 
-    console.log("start hinting");
-
     await rectFetcher.fetchAllRects((holders) => {
       if (holders.length === 0) return;
 

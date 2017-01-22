@@ -88,7 +88,7 @@ export default {
       }
     }
     if (Object.keys(changes).length === 0) return;
-    console.log("Initialize settings", changes);
+    console.debug("Initialize settings", changes);
     await storage.set(changes);
   },
   async load() {},

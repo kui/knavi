@@ -152,7 +152,6 @@ function handleDescriptionsRequest(req: DescriptionsRequest, resolve) {
 
 function handleActionRequest(req: ActionRequest, resolve) {
   const { element } = rectElements[req.index];
-  console.log("Req", req);
   actionHandler.handle(element, req.options);
   resolve();
 }
