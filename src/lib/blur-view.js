@@ -14,6 +14,8 @@ export default class BlurView {
     Object.assign(overlay.style, {
       position: "absolute",
       display: "block",
+      border: "none",
+      outline: "none",
       zIndex: Z_INDEX_OFFSET.toString(),
     });
 

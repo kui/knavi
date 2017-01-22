@@ -1,10 +1,5 @@
-/* Make the whole of page to be grayscale */
-body > :not(#jp-k-ui-knavi) {
-  filter: grayscale(0.5);
-}
-
 /* base overlay */
-#jp-k-ui-knavi-overlay {
+#overlay {
   background-color: #999;
   opacity: 0.2;
   transition-property: left, top, width, height;
@@ -17,7 +12,7 @@ body > :not(#jp-k-ui-knavi) {
 }
 
 /* hit target overlay */
-#jp-k-ui-knavi-active-overlay {
+#active-overlay {
   background-color: white;
   opacity: 0.2;
   transition-property: left, top, width, height;
@@ -49,7 +44,7 @@ body > :not(#jp-k-ui-knavi) {
 }
 
 /* hint marker styles. */
-.jp-k-ui-knavi-hint {
+.hint {
   margin: 0px;
   padding: 3px;
   background-color: #333;
@@ -61,17 +56,17 @@ body > :not(#jp-k-ui-knavi) {
   font-size: 16px;
   font-family: monospace;
 }
-.jp-k-ui-knavi-hint[data-state="disabled"] {
+.hint[data-state="disabled"] {
   opacity: 0.6;
   z-index: 0;
 }
-.jp-k-ui-knavi-hint[data-state="candidate"] {
+.hint[data-state="candidate"] {
   background-color: yellow;
   color: black;
   border: black solid 1px;
   z-index: 1;
 }
-.jp-k-ui-knavi-hint[data-state="hit"] {
+.hint[data-state="hit"] {
   background-color: #c00;
   color: white;
   border: black solid 1px;
@@ -80,7 +75,7 @@ body > :not(#jp-k-ui-knavi) {
 }
 
 /* Action description of the hit marker. */
-.jp-k-ui-knavi-hint:after {
+.hint:after {
   content: attr(data-action-description);
   font-size: 50%;
   position: absolute;
@@ -94,7 +89,7 @@ body > :not(#jp-k-ui-knavi) {
   left: 0px;
   opacity: 0;
 }
-.jp-k-ui-knavi-hint[data-state="hit"]:after {
+.hint[data-state="hit"]:after {
   transition-delay: 100ms;
   left: calc(100% + 4px);
   opacity: 1;
