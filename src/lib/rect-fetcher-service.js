@@ -59,7 +59,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handleAllRectsRequest(req: AllRectsRequest) {
-  console.debug("AllRectsRequest", location.href);
+  console.debug("AllRectsRequest req=", req, "location=", location.href);
 
   rectFetcher = new RectFetcher;
 
@@ -96,8 +96,7 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
     const rect = frame.holder.rects[0];
     (frame.element: any).contentWindow.postMessage(({
       type: "AllRectsRequest",
-      offsetX: req.offsetX + rect.left,
-      offsetY: req.offsetY + rect.top,
+      offsetX: rect.left, offsetY: rect.top,
     }: AllRectsRequest), "*");
   }
 
