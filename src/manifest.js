@@ -16,7 +16,7 @@ export default {
   },
   background: {
     scripts: ["background.js"],
-    persistent: false
+    persistent: true,
   },
   content_scripts: [
     { matches: ["<all_urls>"],
