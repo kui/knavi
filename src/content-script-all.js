@@ -2,23 +2,17 @@
 
 import "./lib/rect-fetcher-service";
 import EventMatcher from "key-input-elements/lib/event-matcher";
-import settings from "./lib/settings";
+import settingsClient from "./lib/settings-client";
 import * as utils from "./lib/utils";
 import HinterClient from "./lib/hinter-client";
 import Blurer from "./lib/blurer";
 import BlurView from "./lib/blur-view";
 
 async function main() {
-  let hinter: HinterClient;
   let hitEventMatcher: EventMatcher;
   let blurEventMatcher: EventMatcher;
 
-  await settings.listen((settingValues) => {
-    hitEventMatcher = new EventMatcher(settingValues.magicKey);
-    hinter = new HinterClient;
-    blurEventMatcher = new EventMatcher(settingValues.blurKey);
-  });
-
+  const hinter = new HinterClient;
   const blurer = new Blurer;
   new BlurView(blurer);
 
@@ -56,9 +50,44 @@ async function main() {
     }
   }
 
-  window.addEventListener("keydown", hookKeydown, true);
-  window.addEventListener("keyup", hookKeyup, true);
-  window.addEventListener("keypress", hookKeypress, true);
+  let isEnabledKeyhooks = false;
+
+  function enableKeyhooks() {
+    if (isEnabledKeyhooks) return;
+    isEnabledKeyhooks = true;
+    window.addEventListener("keydown", hookKeydown, true);
+    window.addEventListener("keyup", hookKeyup, true);
+    window.addEventListener("keypress", hookKeypress, true);
+  }
+
+  function disableKeyhooks() {
+    if (!isEnabledKeyhooks) return;
+    isEnabledKeyhooks = false;
+    window.removeEventListener("keydown", hookKeydown, true);
+    window.removeEventListener("keyup", hookKeyup, true);
+    window.removeEventListener("keypress", hookKeypress, true);
+  }
+
+  const settings = await settingsClient.get();
+  hitEventMatcher = new EventMatcher(settings.magicKey);
+  blurEventMatcher = new EventMatcher(settings.blurKey);
+
+  if (await settingsClient.isBlackListed(location.href)) {
+    console.debug("Blacklisted page");
+  } else {
+    enableKeyhooks();
+  }
+
+  settingsClient.subscribe(async (settings) => {
+    hitEventMatcher = new EventMatcher(settings.magicKey);
+    blurEventMatcher = new EventMatcher(settings.blurKey);
+    if (await settingsClient.isBlackListed(location.href)) {
+      console.debug("Blacklisted page");
+      disableKeyhooks();
+    } else {
+      enableKeyhooks();
+    }
+  });
 }
 
 main();

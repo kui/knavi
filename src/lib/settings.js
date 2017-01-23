@@ -1,7 +1,5 @@
 // @flow
 
-import { EventEmitter } from "./event-emitter";
-
 class Storage {
   storage: ChromeStorageArea;
 
@@ -47,11 +45,12 @@ class Storage {
 const sync  = new Storage(chrome.storage.sync);
 const local = new Storage(chrome.storage.local);
 
-const DEFAULT_SETTINGS = {
+const DEFAULT_SETTINGS: Settings = {
   magicKey: "Space",
   hints: "ASDFGHJKL",
   blurKey: "",
   css: "",
+  blackList: "# Example (Start with # if you want comments)\nhttp://k-ui.jp",
 };
 
 export interface Settings {
@@ -59,17 +58,8 @@ export interface Settings {
   hints: string;
   blurKey: string;
   css: string;
+  blackList: string;
 }
-
-const onUpdated: EventEmitter<Settings> = new EventEmitter;
-let currentSettingsPromise: Promise<Settings>;
-update();
-chrome.storage.onChanged.addListener((changes, area) => {
-  console.debug("changes=", changes,
-                "area=", area,
-                "location=", location.href);
-  update();
-});
 
 export default {
   async init(): Promise<void> {
@@ -83,7 +73,7 @@ export default {
         changes.css = await fetchCss();
         break;
       default:
-        changes[name] = DEFAULT_SETTINGS[name];
+        changes[name] = (DEFAULT_SETTINGS: any)[name];
         break;
       }
     }
@@ -91,14 +81,7 @@ export default {
     console.debug("Initialize settings", changes);
     await storage.set(changes);
   },
-  async load() {},
-  /// Return a promise resolved when the first callback execution.
-  async listen(callback: (v: Settings) => void) {
-    onUpdated.listen(callback);
-    const s = await currentSettingsPromise;
-    console.debug("Init settings callback:", s, "location=", location.href);
-    callback(s);
-  },
+  async load(): Promise<Settings> { return getAll(); },
   async loadDefaults(): Promise<Settings> {
     return Object.assign({}, DEFAULT_SETTINGS, { css: await fetchCss() });
   }
@@ -106,11 +89,6 @@ export default {
 
 async function fetchCss(): Promise<string> {
   return await (await fetch("./default-style.css")).text();
-}
-
-async function update() {
-  currentSettingsPromise = getAll();
-  onUpdated.emit(await currentSettingsPromise);
 }
 
 async function getAll(storage): Promise<Settings> {

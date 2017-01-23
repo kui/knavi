@@ -1,6 +1,6 @@
 // @flow
 
-import settings from "./settings";
+import settingsClient from "./settings-client";
 import Hinter from "./hinter";
 import HintsView from "./hint-view";
 
@@ -8,9 +8,14 @@ import type { RemoveHints, HitHint } from "./hinter-client";
 
 (async () => {
   let hinter: Hinter;
-  await settings.listen((settingValues) => {
-    hinter = new Hinter(settingValues.hints);
-    new HintsView(hinter, settingValues.css);
+
+  const settings = await settingsClient.get();
+  hinter = new Hinter(settings.hints);
+  new HintsView(hinter, settings.css);
+
+  settingsClient.subscribe((settings) => {
+    hinter = new Hinter(settings.hints);
+    new HintsView(hinter, settings.css);
   });
 
   chrome.runtime.onMessage.addListener((message) => {

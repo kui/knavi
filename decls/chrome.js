@@ -1,7 +1,4 @@
 declare type ChromeStorageItems = { [key: string]: string };
-declare class ChromeStorageListenee {
-  addListener(callback: (changes: ChromeStorageItems, areaName: string) => void): void;
-}
 declare class ChromeStorageArea {
   getBytesInUse(callback: (bytesInUse: number) => void): void;
   getBytesInUse(keys: string, callback: (bytesInUse: number) => void): void;
@@ -27,7 +24,7 @@ declare class SyncChromeStorageArea extends ChromeStorageArea {
 declare class ChromeStorage {
   local: LocalChromeStorageArea;
   sync: SyncChromeStorageArea;
-  onChanged: ChromeStorageListenee;
+  onChanged: ChromeEventEmmitter<(changes: ChromeStorageItems, areaName: string) => any>;
 }
 
 //
@@ -67,6 +64,7 @@ declare type InsertCssDetails = {
 }
 
 declare class ChromeTabs {
+  query(queryInfo: any, callback: (t: ChromeTabsTab[]) => void): void;
   getCurrent(callback: (tab: ChromeTabsTab) => void): void;
   insertCSS(tabId: number, details: InsertCssDetails, callback?: () => any): void;
   insertCSS(details: InsertCssDetails, callback?: () => any): void;

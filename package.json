@@ -4,19 +4,7 @@
   "version": "0.0.1",
   "description": "Hit-a-Hint with magic key",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "manifest": "mkdir -pv build && babel-node scripts/jsonize-manifest.js > build/manifest.json",
-    "icon": "mkdir -pv build && ( for s in 16 48 128; do convert -verbose src/icon.svg -resize ${s}x build/icon${s}.png & done; wait )",
-    "js": "NODE_ENV=production webpack",
-    "js-debug": "webpack",
-    "flow": "flow src",
-    "lint": "eslint src",
-    "check": "npm run flow & npm run lint & wait",
-    "cp": "mkdir -pv build && cp -v src/*.html src/*.css build",
-    "build-debug": "npm run js-debug & npm run icon & npm run manifest & npm run cp & wait",
-    "watch": "watch 'npm run build-debug' src",
-    "build": "npm run clean && npm run check && ( npm run js & npm run icon & npm run manifest & npm run cp & wait )",
-    "clean": "rm -fr build"
+    "test": "make test"
   },
   "author": "Keiichiro Ui<keiichiro.ui@gmail.com>",
   "license": "MIT",
@@ -37,6 +25,7 @@
     "eslint-plugin-flowtype": "^2.29.2",
     "flow-bin": "^0.37.4",
     "flow-typed": "^2.0.0",
+    "glob-trie.js": "^0.2.1",
     "key-input-elements": "^1.0.0",
     "mocha": "^3.2.0",
     "storage-form": "^1.0.3",

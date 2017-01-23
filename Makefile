@@ -45,7 +45,10 @@ node_modules: package.json
 prod-build: clean node_modules check $(FILES)
 	NODE_ENV=production $(BIN)/webpack
 
-.PHONE: check
+.PHONY: test
+test: check mocha
+
+.PHONY: check
 check: flow lint
 
 .PHONY: flow
@@ -63,6 +66,10 @@ lint:
 .PHONY: watch
 watch:
 	$(BIN)/watch "make; echo '--' " src
+
+.PHONY: mocha
+mocha:
+	$(BIN)/mocha --compilers 'js:babel-register' test/**/*_test.js
 
 .PHONY: clean
 clean:
