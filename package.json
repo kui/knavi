@@ -18,6 +18,7 @@
     "babel-preset-env": "^1.1.6",
     "babel-register": "^6.18.0",
     "babili-webpack-plugin": "0.0.7",
+    "chokidar-cli": "^1.2.0",
     "codemirror": "^5.22.2",
     "eslint": "^3.13.0",
     "eslint-config-babel": "^3.0.0",
@@ -29,7 +30,6 @@
     "key-input-elements": "^1.0.0",
     "mocha": "^3.2.0",
     "storage-form": "^1.0.3",
-    "watch": "^1.0.1",
     "webpack": "^1.14.0"
   }
 }

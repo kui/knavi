@@ -65,7 +65,7 @@ lint:
 
 .PHONY: watch
 watch:
-	$(BIN)/watch "make; echo '--' " src
+	$(BIN)/chokidar 'Makefile' 'src/**/*' '!src/**/*.js' -c 'make' & $(BIN)/webpack --watch & wait
 
 .PHONY: mocha
 mocha:
