@@ -32,12 +32,12 @@ export default class RectsDetector {
 
     return this.cache.get(element, () => {
       const clientRects = getClientRects(this, element);
-      return cropVisibleRects(element, clientRects);
+      return filterVisibleRects(element, clientRects);
     });
   }
 
   getBoundingClientRect(element: HTMLElement): Rect {
-    const rects = getClientRects(this,element);
+    const rects = getClientRects(this, element);
     return buildBoundingRect(Array.from(rects));
   }
 }
@@ -63,35 +63,44 @@ class Cache<K, V> {
   }
 }
 
-function cropVisibleRects(element: HTMLElement, clientRects: Iterable<Rect>): Rect[] {
+function filterVisibleRects(element: HTMLElement, clientRects: Iterable<Rect>): Rect[] {
   const innerWidth = window.innerWidth;
   const innerHeight = window.innerHeight;
-  return Array.from(iters.flatMap(clientRects, (rect) => {
-    const { width, height, top, bottom, left, right } = rect;
-
+  const windowRect = {
+    top: 0, bottom: innerHeight,
+    left: 0, right: innerWidth,
+    height: innerHeight, width: innerWidth,
+  };
+  return Array.from(iters.filter(clientRects, (rect) => {
     // too small rects
-    if (width <= 3 && height <= 3) return [];
+    if (isSmallRect(rect)) return false;
 
     // out of display
-    if (bottom <= 3 && top >= innerHeight - 3 &&
-        right <= 3  && left >= innerWidth - 3) return [];
+    const croppedRect = cropRect(rect, windowRect, 3);
+    if (isSmallRect(croppedRect)) return false;
 
     // is clickable element?
     // Actualy isVisible needs this check only.
     // However two former checks are faster than this.
-    if (!isPointable(element, rect)) return [];
+    if (!isPointable(element, rect, windowRect)) return false;
 
-    const newTop = Math.max(top, 0);
-    const newBottom = Math.min(bottom, innerHeight);
-    const newLeft = Math.max(left, 0);
-    const newRight = Math.min(right, innerWidth);
-    return [{
-      top: newTop, bottom: newBottom,
-      left: newLeft, right: newRight,
-      height: newBottom - newTop,
-      width: newRight - newLeft,
-    }];
+    return true;
   }));
+}
+
+function cropRect(target: Rect, cropper: Rect, padding?: number = 0): Rect {
+  const top = Math.max(target.top, cropper.top + padding);
+  const bottom = Math.min(target.bottom, cropper.bottom - padding);
+  const left = Math.max(target.left, cropper.left + padding);
+  const right = Math.min(target.right, cropper.right - padding);
+  const height = bottom - top;
+  const width = right - left;
+  return { top, bottom, left, right, height, width };
+}
+
+const SMALL_THREASHOLD_PX = 3;
+function isSmallRect({ width, height }: Rect) {
+  return height <= SMALL_THREASHOLD_PX || width <= SMALL_THREASHOLD_PX;
 }
 
 function getClientRects(self: RectsDetector, element: HTMLElement): Iterable<Rect> {
@@ -156,11 +165,13 @@ function isVisibleNode(self: RectsDetector, node: Node): boolean {
 
 const RECT_POSITIONS = [[0.5, 0.5], [0.1, 0.1], [0.1, 0.9], [0.9, 0.1], [0.9, 0.9]];
 
-function isPointable(element: HTMLElement, rect: Rect): boolean {
+function isPointable(element: HTMLElement, rect: Rect, windowRect: Rect): boolean {
   const { top, bottom, left, right } = rect;
   for (const [xr, yr] of RECT_POSITIONS) {
     const x = avg(left, right, xr);
     const y = avg(top,  bottom, yr);
+
+    if (!isPointInRect(x, y, windowRect)) continue;
 
     let pointedElem = document.elementFromPoint(x, y);
     if (pointedElem == null) continue;
@@ -186,6 +197,11 @@ function buildBoundingRect(rects: Rect[]): Rect {
   const left   = Math.min(...rects.map((r) => r.left));
   const right  = Math.max(...rects.map((r) => r.right));
   return { top, bottom, left, right, height: bottom - top, width: right - left };
+}
+
+function isPointInRect(x, y, rect) {
+  return rect.top <= y && y <= rect.bottom
+    && rect.left <= x && x <= rect.right;
 }
 
 function avg(a: number, b: number, ratio: number): number {
