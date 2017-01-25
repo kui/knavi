@@ -25,7 +25,6 @@ type RegisterFrame = {
 };
 
 let frameId: number;
-let rectFetcher: RectFetcher;
 let rectElements: { element: HTMLElement, holder: RectHolder }[];
 let actionHandler: ActionHandler = new ActionHandler;
 const registeredFrames: Set<WindowProxy> = new Set;
@@ -61,7 +60,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function handleAllRectsRequest(req: AllRectsRequest) {
   console.debug("AllRectsRequest req=", req, "location=", location.href);
 
-  rectFetcher = new RectFetcher;
+  const rectFetcher = new RectFetcher;
 
   rectElements = rectFetcher.getAll().map(({ element, rects }, index) => {
     rects = addOffsets(rects, req);

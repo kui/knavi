@@ -2,14 +2,14 @@
 
 import { flatMap, traverseParent, filter, first, takeWhile, length } from "./iters";
 import { isScrollable } from "./utils";
-import RectsDetector from "./rects-detector";
+import VisibleRectDetector from "./visible-rect-detector";
 
 import type { Rect } from "./rect-fetcher-client";
 
 export default class RectFetcher {
-  detector: RectsDetector;
+  detector: VisibleRectDetector;
   constructor() {
-    this.detector = new RectsDetector;
+    this.detector = new VisibleRectDetector;
   }
 
   getAll(): { element: HTMLElement, rects: Rect[] }[] {
@@ -48,12 +48,12 @@ const HINTABLE_QUERY = [
   "[data-image-url]",
 ].map((s) => "body /deep/ " + s).join(",");
 
-function listAllTarget(rectsDetector: RectsDetector): Target[] {
+function listAllTarget(rectsDetector: VisibleRectDetector): Target[] {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
   const targets: Target[] = [];
 
   if (document.activeElement !== document.body) {
-    const rects = Array.from(document.body.getClientRects());
+    const rects = rectsDetector.get(document.body);
     targets.push({ element: document.body, rects });
   }
 
@@ -86,7 +86,7 @@ function listAllTarget(rectsDetector: RectsDetector): Target[] {
   return targets;
 }
 
-function distinctSimilarTarget(rectsDetector: RectsDetector, targets: Target[]): Target[] {
+function distinctSimilarTarget(rectsDetector: VisibleRectDetector, targets: Target[]): Target[] {
   const targetMap: Map<Element, Target> = new Map((function* () {
     for (const t of targets) yield [t.element, t];
   })());

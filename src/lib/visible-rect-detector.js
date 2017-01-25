@@ -1,6 +1,7 @@
 // @flow
 
 import * as iters from "./iters";
+import * as vp from "./viewports";
 
 export interface Rect {
   left: number;
@@ -11,34 +12,21 @@ export interface Rect {
   height: number;
 }
 
-export default class RectsDetector {
-  cachedY: number;
-  cachedX: number;
+export default class VisibleRectDetector {
   cache: Cache<HTMLElement, Rect[]>;
+  visiualVpOffsets: { x: number, y: number };
 
   constructor() {
     this.cache = new Cache();
+    this.visiualVpOffsets = getVisualVpOffsetsFromLayoutVp();
   }
 
   get(element: HTMLElement): Rect[] {
-    const scrollY = window.scrollY;
-    const scrollX = window.scrollX;
-
-    if (this.cachedY !== scrollY || this.cachedX !== scrollX) {
-      this.cache.clear();
-      this.cachedY = scrollY;
-      this.cachedX = scrollX;
-    }
-
     return this.cache.get(element, () => {
       const clientRects = getClientRects(this, element);
-      return filterVisibleRects(element, clientRects);
+      return filterVisibleRects(element, clientRects)
+        .map((r) => getRectFromVisualViewport(r, this.visiualVpOffsets));
     });
-  }
-
-  getBoundingClientRect(element: HTMLElement): Rect {
-    const rects = getClientRects(this, element);
-    return buildBoundingRect(Array.from(rects));
   }
 }
 
@@ -64,25 +52,24 @@ class Cache<K, V> {
 }
 
 function filterVisibleRects(element: HTMLElement, clientRects: Iterable<Rect>): Rect[] {
-  const innerWidth = window.innerWidth;
-  const innerHeight = window.innerHeight;
-  const windowRect = {
-    top: 0, bottom: innerHeight,
-    left: 0, right: innerWidth,
-    height: innerHeight, width: innerWidth,
+  const vpSizes = vp.layout.sizes();
+  const viewportRect = {
+    top: 0, bottom: vpSizes.height,
+    left: 0, right: vpSizes.width,
+    height: vpSizes.height, width: vpSizes.width,
   };
   return Array.from(iters.filter(clientRects, (rect) => {
     // too small rects
     if (isSmallRect(rect)) return false;
 
     // out of display
-    const croppedRect = cropRect(rect, windowRect, 3);
+    const croppedRect = cropRect(rect, viewportRect, 3);
     if (isSmallRect(croppedRect)) return false;
 
     // is clickable element?
     // Actualy isVisible needs this check only.
     // However two former checks are faster than this.
-    if (!isPointable(element, rect, windowRect)) return false;
+    if (!isPointable(element, rect, viewportRect)) return false;
 
     return true;
   }));
@@ -103,7 +90,7 @@ function isSmallRect({ width, height }: Rect) {
   return height <= SMALL_THREASHOLD_PX || width <= SMALL_THREASHOLD_PX;
 }
 
-function getClientRects(self: RectsDetector, element: HTMLElement): Iterable<Rect> {
+function getClientRects(self: VisibleRectDetector, element: HTMLElement): Iterable<Rect> {
   switch (element.tagName) {
   case "AREA": return getAreaRects((element: any));
   case "A": return getAnchorRects(self, (element: any));
@@ -146,14 +133,14 @@ function getAreaRects(element: HTMLAreaElement): Rect[] {
 }
 
 /// Return a img element client rect if the anchor contains only it.
-function getAnchorRects(self: RectsDetector, element: HTMLAnchorElement): Iterable<Rect> {
+function getAnchorRects(self: VisibleRectDetector, element: HTMLAnchorElement): Iterable<Rect> {
   const childNodes = Array.from(iters.filter(element.childNodes, (n) => isVisibleNode(self, n)));
   if (childNodes.length !== 1) return element.getClientRects();
   const child = childNodes[0];
   return (child instanceof HTMLImageElement ? child : element).getClientRects();
 }
 
-function isVisibleNode(self: RectsDetector, node: Node): boolean {
+function isVisibleNode(self: VisibleRectDetector, node: Node): boolean {
   if (node instanceof Text) return !(/^\s*$/).test(node.textContent);
   if (node instanceof HTMLElement) {
     if (self.get(node).length >= 1) return true;
@@ -165,13 +152,13 @@ function isVisibleNode(self: RectsDetector, node: Node): boolean {
 
 const RECT_POSITIONS = [[0.5, 0.5], [0.1, 0.1], [0.1, 0.9], [0.9, 0.1], [0.9, 0.9]];
 
-function isPointable(element: HTMLElement, rect: Rect, windowRect: Rect): boolean {
+function isPointable(element: HTMLElement, rect: Rect, viewportRect: Rect): boolean {
   const { top, bottom, left, right } = rect;
   for (const [xr, yr] of RECT_POSITIONS) {
     const x = avg(left, right, xr);
     const y = avg(top,  bottom, yr);
 
-    if (!isPointInRect(x, y, windowRect)) continue;
+    if (!isPointInRect(x, y, viewportRect)) continue;
 
     let pointedElem = document.elementFromPoint(x, y);
     if (pointedElem == null) continue;
@@ -191,14 +178,6 @@ function isPointable(element: HTMLElement, rect: Rect, windowRect: Rect): boolea
   return false;
 }
 
-function buildBoundingRect(rects: Rect[]): Rect {
-  const top    = Math.min(...rects.map((r) => r.top));
-  const bottom = Math.max(...rects.map((r) => r.bottom));
-  const left   = Math.min(...rects.map((r) => r.left));
-  const right  = Math.max(...rects.map((r) => r.right));
-  return { top, bottom, left, right, height: bottom - top, width: right - left };
-}
-
 function isPointInRect(x, y, rect) {
   return rect.top <= y && y <= rect.bottom
     && rect.left <= x && x <= rect.right;
@@ -206,4 +185,24 @@ function isPointInRect(x, y, rect) {
 
 function avg(a: number, b: number, ratio: number): number {
   return a * ratio + b * (1 - ratio);
+}
+
+function getVisualVpOffsetsFromLayoutVp() {
+  const layoutVpOffsets = vp.layout.offsets();
+  const visualVpOffsets = vp.visual.offsets();
+  return {
+    x: visualVpOffsets.x - layoutVpOffsets.x,
+    y: visualVpOffsets.y - layoutVpOffsets.y,
+  };
+}
+
+function getRectFromVisualViewport(r: Rect, offsets: { x: number, y: number }) {
+  return {
+    top: r.top - offsets.y,
+    bottom: r.bottom - offsets.y,
+    left: r.left - offsets.x,
+    right: r.right - offsets.x,
+    width: r.width,
+    height: r.height,
+  };
 }

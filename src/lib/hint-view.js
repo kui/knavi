@@ -2,6 +2,7 @@
 
 import * as iters from "./iters";
 import * as utils from "./utils";
+import * as vp from "./viewports";
 import Hinter from "./hinter";
 
 import type { Target, TargetStateChanges } from "./hinter";
@@ -80,14 +81,21 @@ export default class HintsView {
     })();
   }
 }
+
 function initStyles(container: HTMLElement,
                     overlay: HTMLElement,
                     activeOverlay: HTMLElement) {
+  const vvpOffsets = vp.visual.offsets();
+  const vvpSizes = vp.visual.sizes();
+  const bodyRect = vp.getBoundingClientRectFromRoot(document.body);
+
   Object.assign(container.style, {
     position: "absolute",
     padding: "0", margin: "0",
-    top: px(window.scrollY), left: px(window.scrollX),
-    width: "100%", height: "100%",
+    top:  px(vvpOffsets.y - bodyRect.top),
+    left: px(vvpOffsets.x - bodyRect.left),
+    width:  px(vvpSizes.width),
+    height: px(vvpSizes.height),
     background: "display",
     border: "none",
     zIndex: Z_INDEX_OFFSET.toString(),
@@ -127,18 +135,18 @@ function moveActiveOverlay(activeOverlay: HTMLDivElement, hitTarget: ?Target) {
 }
 
 function moveOverlay(overlay: HTMLDivElement, targets: Target[]) {
-  const scrollHeight = document.body.scrollHeight;
-  const scrollWidth = document.body.scrollWidth;
+  const vpSizes = vp.visual.sizes();
+
   let hasHitOrCand = false;
-  const rr = { top: scrollHeight, left: scrollWidth, bottom: 0, right: 0 };
+  const rr = { top: vpSizes.height, left: vpSizes.width, bottom: 0, right: 0 };
   for (const target of targets) {
     if (target.state === "disabled") continue;
     hasHitOrCand = true;
 
     const rect = utils.getBoundingRect(target.holder.rects);
     rr.top = Math.min(rr.top, rect.top);
-    rr.left = Math.min(rr.left, rect.left);
     rr.bottom = Math.max(rr.bottom, rect.bottom);
+    rr.left = Math.min(rr.left, rect.left);
     rr.right = Math.max(rr.right, rect.right);
   }
 
@@ -149,9 +157,9 @@ function moveOverlay(overlay: HTMLDivElement, targets: Target[]) {
 
   // padding
   rr.top = Math.max(rr.top - OVERLAY_PADDING, 0);
+  rr.bottom = Math.min(rr.bottom + OVERLAY_PADDING, vpSizes.height);
   rr.left = Math.max(rr.left - OVERLAY_PADDING, 0);
-  rr.bottom = Math.min(rr.bottom + OVERLAY_PADDING, scrollHeight);
-  rr.right = Math.min(rr.right + OVERLAY_PADDING, scrollWidth);
+  rr.right = Math.min(rr.right + OVERLAY_PADDING, vpSizes.width);
 
   Object.assign(overlay.style, {
     top: px(rr.top),

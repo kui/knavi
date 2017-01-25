@@ -1,5 +1,6 @@
 // @flow
 
+import * as vp from "./viewports";
 import Blurer from "./blurer";
 
 const Z_INDEX_OFFSET = 2147483640;
@@ -39,10 +40,10 @@ export default class BlurView {
     blurer.onBlured.listen((element) => {
       removeOverlay();
 
-      const rect = element.getBoundingClientRect();
+      const rect = vp.getBoundingClientRectFromRoot(element);
       Object.assign(overlay.style, {
-        top:  `${window.scrollY + rect.top}px`,
-        left: `${window.scrollX + rect.left}px`,
+        top:  `${rect.top}px`,
+        left: `${rect.left}px`,
         height: `${rect.height}px`,
         width:  `${rect.width}px`,
       });
