@@ -87,13 +87,20 @@ function initStyles(container: HTMLElement,
                     activeOverlay: HTMLElement) {
   const vvpOffsets = vp.visual.offsets();
   const vvpSizes = vp.visual.sizes();
-  const bodyRect = vp.getBoundingClientRectFromRoot(document.body);
+  const bodyPosition = window.getComputedStyle(document.body).position;
+  let bodyOffsets;
+  if (bodyPosition === "static") {
+    bodyOffsets = { x: 0, y: 0 };
+  } else {
+    const bodyRect = vp.getBoundingClientRectFromRoot(document.body);
+    bodyOffsets = { y: bodyRect.top, x: bodyRect.left };
+  }
 
   Object.assign(container.style, {
     position: "absolute",
     padding: "0", margin: "0",
-    top:  px(vvpOffsets.y - bodyRect.top),
-    left: px(vvpOffsets.x - bodyRect.left),
+    top:  px(vvpOffsets.y - bodyOffsets.y),
+    left: px(vvpOffsets.x - bodyOffsets.x),
     width:  px(vvpSizes.width),
     height: px(vvpSizes.height),
     background: "display",
