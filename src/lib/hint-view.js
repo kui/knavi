@@ -31,7 +31,6 @@ export default class HintsView {
       const style = document.createElement("style");
       style.textContent = css;
 
-      let wrapper: HTMLDivElement;
       let hints: Map<Target, Hint>;
 
       // wait event setup untill document.body.firstChild is reachable.
@@ -48,15 +47,16 @@ export default class HintsView {
           }
         };
 
-        wrapper = document.createElement("div");
         hints = new Map;
-        container.contentDocument.body.appendChild(wrapper);
       });
       hinter.onNewTargets.listen(({ newTargets }) => {
-        if (wrapper == null || hints == null) return;
-        for (const [k, v] of generateHintElements(wrapper, newTargets)) {
+        if (hints == null) return;
+        const df = document.createDocumentFragment();
+        for (const [k, v] of generateHintElements(newTargets)) {
           hints.set(k, v);
+          v.elements.forEach((e) => df.appendChild(e));
         }
+        container.contentDocument.body.appendChild(df);
       });
       hinter.onEndHinting.listen(() => {
         if (!container.contentDocument) return;
@@ -73,7 +73,7 @@ export default class HintsView {
         moveActiveOverlay(activeOverlay, context.hitTarget);
       });
       hinter.onDehinted.listen(() => {
-        if (!hints || !wrapper) throw Error("Illegal state");
+        if (!hints) throw Error("Illegal state");
         if (document.body.contains(container)) {
           document.body.removeChild(container);
         }
@@ -196,11 +196,9 @@ function highligtHints(hints: Map<Target, Hint>,
   }
 }
 
-function generateHintElements(wrapper: HTMLDivElement, targets: Target[]): Map<Target, Hint> {
-  const df = document.createDocumentFragment();
+function generateHintElements(targets: Target[]): Map<Target, Hint> {
   const hints = targets.reduce((m, target) => {
     const elements = buildHintElements(target);
-    elements.forEach((e) => df.appendChild(e));
     m.set(target, { elements, target });
     return m;
   }, new Map);
@@ -208,7 +206,6 @@ function generateHintElements(wrapper: HTMLDivElement, targets: Target[]): Map<T
     o[h.target.hint] = h;
     return o;
   }, {}));
-  wrapper.appendChild(df);
   return hints;
 }
 
