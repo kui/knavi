@@ -70,7 +70,7 @@ declare class ChromeTabs {
   insertCSS(details: InsertCssDetails, callback?: () => any): void;
   sendMessage(tabId: number,
               message: any,
-              options?: { frameId?: number },
+              options?: ?{ frameId?: number },
               responseCallback?: (response: any) => any): void;
   onUpdated: ChromeEventEmmitter<(tabId: number, changeInfo: any, tab: ChromeTabsTab) => any>;
 }

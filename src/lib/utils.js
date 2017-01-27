@@ -36,6 +36,31 @@ export function getBoundingRect(rects: Rect[]): Rect {
   return { top, bottom, left, right, height: bottom - top, width: right - left };
 }
 
+export class ArrayMap<K, V> extends Map<K, V[]> {
+  add(k: K, v: V): V[] {
+    let vs = this.get(k);
+    if (vs == null) {
+      vs = [];
+      this.set(k, vs);
+    }
+    vs.push(v);
+    return vs;
+  }
+  delete(k: K, v?: V): boolean {
+    if (v == null) return super.delete(k);
+
+    const vs = this.get(k);
+    if (vs == null) return false;
+
+    const idx = vs.indexOf(v);
+    if (idx < 0) return false;
+
+    vs.splice(idx, 1);
+    if (vs.length === 0) super.delete(k);
+    return true;
+  }
+}
+
 export class SetMap<K, V> extends Map<K, Set<V>> {
   add(k: K, v: V): Set<V> {
     let vs = this.get(k);
