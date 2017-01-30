@@ -3,6 +3,7 @@
 import settingsClient from "./settings-client";
 import Hinter from "./hinter";
 import HintsView from "./hint-view";
+import { recieve } from "./message-passing";
 
 import type { RemoveHints, HitHint } from "./hinter-client";
 
@@ -18,19 +19,7 @@ import type { RemoveHints, HitHint } from "./hinter-client";
     new HintsView(hinter, settings.css);
   });
 
-  chrome.runtime.onMessage.addListener((message) => {
-    switch (message.type) {
-    case "AttachHints":
-      hinter.attachHints();
-      return true;
-    case "RemoveHints":
-      const { options }: RemoveHints = message;
-      hinter.removeHints(options);
-      return true;
-    case "HitHint":
-      const { key }: HitHint = message;
-      hinter.hitHint(key);
-      return true;
-    }
-  });
+  recieve("AttachHints", () => hinter.attachHints());
+  recieve("RemoveHints", ({ options }: RemoveHints) => hinter.removeHints(options));
+  recieve("HitHint", ({ key }: HitHint) => hinter.hitHint(key));
 })();

@@ -1,29 +1,22 @@
 // @flow
 
-import type { DescriptionsRequest } from "./rect-fetcher-client";
+import { recieve, sendTo } from "./message-passing";
 
-chrome.runtime.onMessage.addListener((message, sender, responseCallback) => {
-  if (message !== "getFrameId") return;
-  responseCallback(sender.frameId);
-  return true;
-});
+// import type { DescriptionsRequest, ActionRequest } from "./rect-fetcher-client";
+import type { RectsFragmentResponse } from "./rect-fetcher-service";
+
+recieve("GetFrameId", (m, sender, responseCallback) => responseCallback(sender.frameId));
 
 // proxy RectsFragmentResponse
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type !== "RectsFragmentResponse") return;
-  chrome.tabs.sendMessage(sender.tab.id, message, function() { sendResponse(); });
-  return true;
+recieve("RectsFragmentResponse", async (message: RectsFragmentResponse, sender, sendResponse) => {
+  await sendTo(message, sender.tab.id, message.clientFrameId);
+  sendResponse();
 });
 
 // proxy DescriptionsRequest/ActionRequest
-chrome.runtime.onMessage.addListener((message: DescriptionsRequest, sender, sendResponse) => {
-  if (!["DescriptionsRequest", "ActionRequest"].includes(message.type)) return;
-
-  chrome.tabs.sendMessage(
-    sender.tab.id,
-    message,
-    { frameId: message.frameId },
-    function(args) { sendResponse(args); },
-  );
-  return true;
+["DescriptionsRequest", "ActionRequest"].forEach((type) => {
+  recieve(type, async (message: { type: string, frameId: number }, sender, sendResponse) => {
+    const r = await sendTo(message, sender.tab.id, message.frameId);
+    sendResponse(r);
+  });
 });

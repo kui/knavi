@@ -43,7 +43,7 @@ export default class Hinter {
   onDehinted: EventEmitter<DehintEvent>;
 
   constructor(hintLetters: string) {
-    this.hintLetters = hintLetters.toLowerCase();
+    this.hintLetters = hintLetters;
 
     this.onStartHinting = new EventEmitter;
     this.onNewTargets = new EventEmitter;
@@ -94,7 +94,7 @@ export default class Hinter {
       throw Error("Ilegal state invocation: hitHint");
     }
 
-    const inputChar = key.toLowerCase();
+    const inputChar = key;
     if (!this.hintLetters.includes(inputChar)) return;
 
     const stateChanges = context.update(inputChar);

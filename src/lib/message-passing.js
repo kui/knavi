@@ -21,20 +21,26 @@ let handlers: Map<MessageType, HandlerContainer<any, any>>;
 
 function initIfRequired() {
   if (handlers) return;
-  console.debug("init message passing manager");
   handlers = new Map;
   chrome.runtime.onMessage.addListener((message: Message<any>, sender, sendResponse) => {
     const c = handlers.get(message.type);
-    if (!c || c.handlers.length === 0) return;
+    if (!c || c.handlers.length === 0) {
+      console.debug("ignore: no handler: message=", message, "location=", location.href);
+      return;
+    }
     return c.handlers.some((h) => h(message, sender, sendResponse));
   });
 }
 
-export function sendTo<T: MessageType, M: Message<T>>(message: M, tabId: number, frameId?: ?number, responseCallback?: (a: any) => void): void {
-  chrome.tabs.sendMessage(tabId, message, frameId ? { frameId } : null, responseCallback);
+export function sendTo<T: MessageType, M: Message<T>, R>(message: M, tabId: number, frameId?: ?number): Promise<R> {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, message, frameId == null ? null : { frameId }, resolve);
+  });
 }
-export function send<T: MessageType, M: Message<T>>(message: M, responseCallback?: (a: any) => void): void {
-  chrome.runtime.sendMessage(message, responseCallback);
+export function send<T: MessageType, M: Message<T>, R>(message: M): Promise<R> {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(message, resolve);
+  });
 }
 
 type Unsubscriber = () => void;

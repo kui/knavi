@@ -47,7 +47,7 @@ const local = new Storage(chrome.storage.local);
 
 const DEFAULT_SETTINGS: Settings = {
   magicKey: "Space",
-  hints: "ASDFGHJKL",
+  hints: "asdfghjkl",
   blurKey: "",
   css: "",
   blackList: "# Example (Start with # if you want comments)\nhttp://k-ui.jp",

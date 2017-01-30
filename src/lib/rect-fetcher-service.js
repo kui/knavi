@@ -3,6 +3,7 @@
 import { filter, first } from "./iters";
 import RectFetcher from "./rect-fetcher";
 import ActionHandler from "./action-handlers";
+import { recieve, send } from "./message-passing";
 
 import type {
   RectHolder,
@@ -11,25 +12,31 @@ import type {
   ActionRequest
 } from "./rect-fetcher-client";
 
-export type AllRectsResponseComplete = {
-  type: "AllRectsResponseComplete";
-};
-
-export type RectsFragmentResponse = {
-  type: "RectsFragmentResponse";
-  holders: RectHolder[];
+export type GetFrameId = {
+  type: "GetFrameId";
 };
 
 type RegisterFrame = {
   type: "RegisterFrame";
 };
 
-let frameId: number;
 let rectElements: { element: HTMLElement, holder: RectHolder }[];
 let actionHandler: ActionHandler = new ActionHandler;
 const registeredFrames: Set<WindowProxy> = new Set;
 
-chrome.runtime.sendMessage("getFrameId", (id) => frameId = id);
+const frameIdPromise = send(({ type: "GetFrameId" }: GetFrameId));
+
+recieve("DescriptionsRequest", (req: DescriptionsRequest, sender, sendResponse) => {
+  const { element } = rectElements[req.index];
+  const descs = actionHandler.getDescriptions(element);
+  sendResponse(descs);
+});
+
+recieve("ActionRequest", (req: ActionRequest, sender, sendResponse) => {
+  const { element } = rectElements[req.index];
+  actionHandler.handle(element, req.options);
+  sendResponse();
+});
 
 if (parent !== window) {
   parent.postMessage(({ type: "RegisterFrame" }: RegisterFrame), "*");
@@ -46,21 +53,21 @@ window.addEventListener("message", (event) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  switch (message.type) {
-  case "DescriptionsRequest":
-    handleDescriptionsRequest(message, sendResponse);
-    return true;
-  case "ActionRequest":
-    handleActionRequest(message, sendResponse);
-    return true;
-  }
-});
+export type AllRectsResponseComplete = {
+  type: "AllRectsResponseComplete";
+};
+
+export type RectsFragmentResponse = {
+  type: "RectsFragmentResponse";
+  holders: RectHolder[];
+  clientFrameId: number;
+};
 
 async function handleAllRectsRequest(req: AllRectsRequest) {
   console.debug("AllRectsRequest req=", req, "location=", location.href);
 
   const rectFetcher = new RectFetcher;
+  const frameId = await frameIdPromise;
 
   rectElements = rectFetcher.getAll().map(({ element, rects }, index) => {
     rects = addOffsets(rects, req);
@@ -68,12 +75,11 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
   });
 
   console.debug("rectElements", rectElements.map(({ element }) => element));
-  await new Promise((resolve) => {
-    chrome.runtime.sendMessage(({
-      type: "RectsFragmentResponse",
-      holders: rectElements.map((e) => e.holder),
-    }: RectsFragmentResponse), resolve);
-  });
+  await send(({
+    type: "RectsFragmentResponse",
+    holders: rectElements.map((e) => e.holder),
+    clientFrameId: req.clientFrameId,
+  }: RectsFragmentResponse));
 
   // Propagate requests to child frames
   // Child frames require to be visible by above rect detection, and
@@ -96,6 +102,7 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
     (frame.element: any).contentWindow.postMessage(({
       type: "AllRectsRequest",
       offsetX: rect.left, offsetY: rect.top,
+      clientFrameId: req.clientFrameId,
     }: AllRectsRequest), "*");
   }
 
@@ -140,16 +147,4 @@ function handleRegisterFrame(frame: WindowProxy) {
   if (registeredFrames.has(frame)) return;
   console.debug("New child frame", frame, "parent-location=", location.href);
   registeredFrames.add(frame);
-}
-
-function handleDescriptionsRequest(req: DescriptionsRequest, resolve) {
-  const { element } = rectElements[req.index];
-  const descs = actionHandler.getDescriptions(element);
-  resolve(descs);
-}
-
-function handleActionRequest(req: ActionRequest, resolve) {
-  const { element } = rectElements[req.index];
-  actionHandler.handle(element, req.options);
-  resolve();
 }

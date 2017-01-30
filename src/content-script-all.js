@@ -16,12 +16,42 @@ async function main() {
   const blurer = new Blurer;
   new BlurView(blurer);
 
+  let isEnabledKeyhooks = false;
+  let hintLetters: string;
+
+  const settings = await settingsClient.get();
+  hintLetters = settings.hints;
+  hitEventMatcher = new EventMatcher(settings.magicKey);
+  blurEventMatcher = new EventMatcher(settings.blurKey);
+
+  if (await settingsClient.isBlackListed(location.href)) {
+    console.debug("Blacklisted page");
+  } else {
+    enableKeyhooks();
+  }
+
+  settingsClient.subscribe(async (settings) => {
+    hintLetters = settings.hints;
+    hitEventMatcher = new EventMatcher(settings.magicKey);
+    blurEventMatcher = new EventMatcher(settings.blurKey);
+    if (await settingsClient.isBlackListed(location.href)) {
+      console.debug("Blacklisted page");
+      disableKeyhooks();
+    } else {
+      enableKeyhooks();
+    }
+  });
+
   function hookKeydown(event: KeyboardEvent) {
     if (hinter.isHinting) {
-      event.preventDefault();
-      event.stopPropagation();
-      hinter.hitHint(event.key);
-      return;
+      if (hintLetters.includes(event.key)) {
+        event.preventDefault();
+        event.stopPropagation();
+        hinter.hitHint(event.key);
+      } else if (hitEventMatcher.test(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
     } else {
       if (!utils.isEditable(event.target) && hitEventMatcher.test(event)) {
         event.preventDefault();
@@ -30,7 +60,6 @@ async function main() {
       } else if (blurEventMatcher.test(event)) {
         blurer.blur();
       }
-      return;
     }
   }
   function hookKeyup(event: KeyboardEvent) {
@@ -50,8 +79,6 @@ async function main() {
     }
   }
 
-  let isEnabledKeyhooks = false;
-
   function enableKeyhooks() {
     if (isEnabledKeyhooks) return;
     isEnabledKeyhooks = true;
@@ -59,7 +86,6 @@ async function main() {
     window.addEventListener("keyup", hookKeyup, true);
     window.addEventListener("keypress", hookKeypress, true);
   }
-
   function disableKeyhooks() {
     if (!isEnabledKeyhooks) return;
     isEnabledKeyhooks = false;
@@ -67,27 +93,6 @@ async function main() {
     window.removeEventListener("keyup", hookKeyup, true);
     window.removeEventListener("keypress", hookKeypress, true);
   }
-
-  const settings = await settingsClient.get();
-  hitEventMatcher = new EventMatcher(settings.magicKey);
-  blurEventMatcher = new EventMatcher(settings.blurKey);
-
-  if (await settingsClient.isBlackListed(location.href)) {
-    console.debug("Blacklisted page");
-  } else {
-    enableKeyhooks();
-  }
-
-  settingsClient.subscribe(async (settings) => {
-    hitEventMatcher = new EventMatcher(settings.magicKey);
-    blurEventMatcher = new EventMatcher(settings.blurKey);
-    if (await settingsClient.isBlackListed(location.href)) {
-      console.debug("Blacklisted page");
-      disableKeyhooks();
-    } else {
-      enableKeyhooks();
-    }
-  });
 }
 
 main();

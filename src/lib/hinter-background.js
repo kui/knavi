@@ -1,11 +1,11 @@
 // @flow
 
 // import type { AttachHints, RemoveHints, HitHint } from "./hinter-client";
+import { recieve, sendTo } from "./message-passing";
 
 // Proxy messages to the root frame.
-chrome.runtime.onMessage.addListener((message, sender) => {
-  if (["AttachHints", "RemoveHints", "HitHint"].includes(message.type)) {
-    chrome.tabs.sendMessage(sender.tab.id, message, { frameId: 0 });
-    return true;
-  }
+["AttachHints", "RemoveHints", "HitHint"].forEach((type) => {
+  recieve(type, (msg: { type: string }, sender) => {
+    sendTo(msg, sender.tab.id, 0);
+  });
 });

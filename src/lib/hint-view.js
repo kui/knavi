@@ -216,7 +216,7 @@ function buildHintElements(target: Target): HTMLDivElement[] {
 
   return rects.map((rect) => {
     const h = document.createElement("div");
-    h.textContent = target.hint.toUpperCase();
+    h.textContent = target.hint;
     h.dataset["hint"] = target.hint;
     Object.assign(h.style, {
       position: "absolute",

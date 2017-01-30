@@ -15,9 +15,7 @@ export type IsBlackListed = {
 
 export default {
   get(): Promise<Settings> {
-    return new Promise((resolve) => {
-      send(({ type: "GetSettings" }: GetSettings), resolve);
-    });
+    return send(({ type: "GetSettings" }: GetSettings));
   },
   subscribe(callback: (s: Settings) => any): void {
     subscribe("BroadcastNewSettings", (message: BroadcastNewSettings) => {
@@ -25,8 +23,6 @@ export default {
     });
   },
   isBlackListed(url: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      send(({ type: "IsBlackListed", url }: IsBlackListed), resolve);
-    });
+    return send(({ type: "IsBlackListed", url }: IsBlackListed));
   }
 };
