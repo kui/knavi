@@ -34,10 +34,19 @@ export default class BlurView {
 
       if (!rect) return;
 
+      const bodyPosition = window.getComputedStyle(document.body).position;
+      let bodyOffsets;
+      if (bodyPosition === "static") {
+        bodyOffsets = { x: 0, y: 0 };
+      } else {
+        const bodyRect = vp.getBoundingClientRectFromRoot(document.body);
+        bodyOffsets = { y: bodyRect.top, x: bodyRect.left };
+      }
+
       rect = rectUtils.move(rect, vp.visual.offsets());
       Object.assign(overlay.style, {
-        top:  `${rect.top}px`,
-        left: `${rect.left}px`,
+        top:  `${rect.top - bodyOffsets.y}px`,
+        left: `${rect.left - bodyOffsets.x}px`,
         height: `${rect.height}px`,
         width:  `${rect.width}px`,
       });
