@@ -8,8 +8,8 @@ import type { BroadcastNewSettings } from "./settings-background";
 export type GetSettings = {
   type: "GetSettings";
 };
-export type IsBlackListed = {
-  type: "IsBlackListed";
+export type GetMatchedBlackList = {
+  type: "GetMatchedBlackList";
   url: string;
 };
 
@@ -22,7 +22,7 @@ export default {
       callback(message.settings);
     });
   },
-  isBlackListed(url: string): Promise<boolean> {
-    return send(({ type: "IsBlackListed", url }: IsBlackListed));
+  getMatchedBlackList(url: string): Promise<string[]> {
+    return send(({ type: "GetMatchedBlackList", url }: GetMatchedBlackList));
   }
 };

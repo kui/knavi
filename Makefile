@@ -65,6 +65,7 @@ lint:
 
 .PHONY: watch
 watch:
+	make clean debug-build
 	$(BIN)/chokidar 'Makefile' 'src/**/*' '!src/**/*.js' -c 'make' & \
 	$(BIN)/chokidar 'src/**/*.js' -c 'make flow' & \
 	$(BIN)/webpack --watch & \

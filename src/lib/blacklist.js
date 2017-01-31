@@ -8,8 +8,8 @@ export default class BlackList {
   constructor(text: string) {
     this.pattern = parse(text);
   }
-  match(url: string): boolean {
-    return this.pattern.collect(url).length !== 0;
+  match(url: string): string[] {
+    return this.pattern.collect(url);
   }
 }
 
@@ -18,5 +18,5 @@ function parse(text) {
     .split(/\s*\r?\n\s*/)
     .filter((s) => !(/^#/).test(s)) // filter out comments
     .filter((s) => s)               // filter out empty patterns
-    .reduce((gt, s) => { gt.add(s, true); return gt; }, new GlobTrie);
+    .reduce((gt, s) => { gt.add(s, s); return gt; }, new GlobTrie);
 }

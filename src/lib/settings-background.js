@@ -4,7 +4,7 @@ import { recieve, sendTo } from "./message-passing";
 import settings from "./settings";
 import BlackList from "./blacklist";
 import type { Settings } from "./settings";
-import type { IsBlackListed } from "./settings-client";
+import type { GetMatchedBlackList } from "./settings-client";
 
 let settingValues: Promise<Settings>;
 let blackList: Promise<BlackList>;
@@ -20,7 +20,7 @@ export type BroadcastNewSettings = {
   settingValues.then((s) => console.log("Init load settings", s));
   blackList = settingValues.then((s) => new BlackList(s.blackList));
 
-  recieve("IsBlackListed", async ({ url }: IsBlackListed, s, sendResponse) => {
+  recieve("GetMatchedBlackList", async ({ url }: GetMatchedBlackList, s, sendResponse) => {
     sendResponse((await blackList).match(url));
   });
 

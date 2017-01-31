@@ -24,8 +24,9 @@ async function main() {
   hitEventMatcher = new EventMatcher(settings.magicKey);
   blurEventMatcher = new EventMatcher(settings.blurKey);
 
-  if (await settingsClient.isBlackListed(location.href)) {
-    console.debug("Blacklisted page");
+  const matchedBlacklist = await settingsClient.getMatchedBlackList(location.href);
+  if (matchedBlacklist.length >= 1) {
+    console.debug("Blacklisted page: ", matchedBlacklist);
   } else {
     enableKeyhooks();
   }
@@ -34,8 +35,9 @@ async function main() {
     hintLetters = settings.hints;
     hitEventMatcher = new EventMatcher(settings.magicKey);
     blurEventMatcher = new EventMatcher(settings.blurKey);
-    if (await settingsClient.isBlackListed(location.href)) {
-      console.debug("Blacklisted page");
+    const matchedBlacklist = await settingsClient.getMatchedBlackList(location.href);
+    if (matchedBlacklist.length >= 1) {
+      console.debug("Blacklisted page: ", matchedBlacklist);
       disableKeyhooks();
     } else {
       enableKeyhooks();
