@@ -25,7 +25,7 @@
       ],
       plugins: [
         "transform-flow-strip-types",
-        ["strip-funciton-call", {
+        ["strip-function-call", {
           strip: [ "console.debug" ]
         }]
       ],
