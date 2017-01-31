@@ -26,9 +26,11 @@ export const visual = {
     return { y: window.scrollY, x: window.scrollX };
   },
   sizes(): { height: number, width: number } {
+    const scale = getScale();
+    console.debug("scale", scale);
     return {
-      width:  window.innerWidth,
-      height: window.innerHeight,
+      height: Math.floor(document.documentElement.clientHeight / scale),
+      width:  Math.floor(document.documentElement.clientWidth / scale),
     };
   },
   rect(): Rect {
@@ -51,4 +53,30 @@ export function getBoundingClientRectFromRoot(element: HTMLElement): Rect {
   const layoutVpOffsets = layout.offsets();
   const rectFromLayoutVp = element.getBoundingClientRect();
   return rects.move(rectFromLayoutVp, layoutVpOffsets);
+}
+
+const iframeDummy = document.createElement("iframe");
+Object.assign(iframeDummy.style, {
+  position: "absolute",
+  width: "100%",
+  height: "100%",
+  left: "0px",
+  top: "0px",
+  border: "0",
+  visibility: "hidden",
+});
+iframeDummy.srcDoc = "<!DOCTYPE html><html><body style='margin:0px; padding:0px'></body></html>";
+function getScale() {
+  document.body.insertBefore(iframeDummy, document.body.firstChild);
+  const documentRect = document.documentElement.getBoundingClientRect();
+  Object.assign(iframeDummy.contentDocument.body.style, {
+    width: `${documentRect.width}px`,
+    height: `${documentRect.height}px`,
+  });
+  const originalOverflow = document.documentElement.style.overflow;
+  document.documentElement.style.overflow = "hidden";
+  const unscaledInnerWidth = iframeDummy.contentWindow.innerWidth;
+  document.documentElement.style.overflow = originalOverflow;
+  document.body.removeChild(iframeDummy);
+  return unscaledInnerWidth / window.innerWidth;
 }
