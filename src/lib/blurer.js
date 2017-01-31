@@ -2,7 +2,7 @@
 
 import { filter, first } from "./iters";
 import * as vp from "./viewports";
-import { send } from "./message-passing";
+import { send } from "./chrome-messages";
 import { intersection, move } from "./rects";
 
 import type { Rect } from "./rects";

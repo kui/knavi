@@ -1,6 +1,6 @@
 // @flow
 
-import { send } from "./message-passing";
+import { send } from "./chrome-messages";
 import { ActionOptions } from "./action-handlers";
 
 export type AttachHints = {

@@ -1,6 +1,6 @@
 // @flow
 
-import { recieve, sendTo } from "./message-passing";
+import { recieve, sendTo } from "./chrome-messages";
 
 import type { Blured } from "./blurer";
 

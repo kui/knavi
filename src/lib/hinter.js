@@ -1,6 +1,6 @@
 // @flow
 
-import { send } from "./message-passing";
+import { send } from "./chrome-messages";
 import * as rectFetcher from "./rect-fetcher-client";
 
 import type { ActionOptions } from "./action-handlers";

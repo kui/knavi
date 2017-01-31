@@ -1,6 +1,6 @@
 // @flow
 
-import { send, subscribe } from "./message-passing";
+import { send, subscribe } from "./chrome-messages";
 
 import type { Settings } from "./settings";
 import type { BroadcastNewSettings } from "./settings-background";

@@ -3,7 +3,7 @@
 import * as utils from "./utils";
 import * as vp from "./viewports";
 import settingsClient from "./settings-client";
-import { subscribe } from "./message-passing";
+import { subscribe } from "./chrome-messages";
 
 import type {
   Target,

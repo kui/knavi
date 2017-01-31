@@ -3,7 +3,7 @@
 import { filter, first } from "./iters";
 import RectFetcher from "./rect-fetcher";
 import ActionHandler from "./action-handlers";
-import { recieve, send } from "./message-passing";
+import { recieve, send } from "./chrome-messages";
 
 import type {
   RectHolder,

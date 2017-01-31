@@ -1,7 +1,7 @@
 // @flow
 
 // import type { AttachHints, RemoveHints, HitHint } from "./hinter-client";
-import { recieve, sendTo } from "./message-passing";
+import { recieve, sendTo } from "./chrome-messages";
 
 // Proxy messages to the root frame from hinter-client.
 ["AttachHints", "RemoveHints", "HitHint"].forEach((type) => {

@@ -3,7 +3,7 @@
 import settingsClient from "./settings-client";
 import Hinter from "./hinter";
 import HintsView from "./hint-view";
-import { recieve } from "./message-passing";
+import { recieve } from "./chrome-messages";
 
 import type {
   // AttachHints,

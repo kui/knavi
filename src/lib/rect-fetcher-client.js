@@ -1,6 +1,6 @@
 // @flow
 
-import { send, recieve } from "./message-passing";
+import { send, recieve } from "./chrome-messages";
 
 import type { RectsFragmentResponse } from "./rect-fetcher-service";
 import type { ActionOptions } from "./action-handlers";

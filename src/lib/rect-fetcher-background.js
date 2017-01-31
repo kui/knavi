@@ -1,6 +1,6 @@
 // @flow
 
-import { recieve, sendTo } from "./message-passing";
+import { recieve, sendTo } from "./chrome-messages";
 
 // import type { DescriptionsRequest, ActionRequest } from "./rect-fetcher-client";
 import type { RectsFragmentResponse } from "./rect-fetcher-service";

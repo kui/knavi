@@ -2,7 +2,7 @@
 
 import * as vp from "./viewports";
 import * as rectUtils from "./rects";
-import { subscribe } from "./message-passing";
+import { subscribe } from "./chrome-messages";
 
 import type { Blured } from "./blurer";
 

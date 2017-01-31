@@ -1,6 +1,6 @@
 // @flow
 
-import { recieve, sendTo } from "./message-passing";
+import { recieve, sendTo } from "./chrome-messages";
 import settings from "./settings";
 import BlackList from "./blacklist";
 import type { Settings } from "./settings";
