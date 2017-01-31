@@ -15,6 +15,7 @@ async function init() {
 
   initClearButton();
   initRevertButton();
+  initBytesDisplay();
 }
 
 async function initRevertButton() {
@@ -89,6 +90,53 @@ async function initCodeMirror() {
       if (cssValue !== t.value) cm.setValue(cssValue = t.value);
     }
   })();
+}
+
+async function initBytesDisplay() {
+  for (const bytesDisplay of document.querySelectorAll(".js-bytes-display")) {
+    const itemName = bytesDisplay.dataset.name;
+    if (!itemName) continue;
+
+    const update = async () => {
+      bytesDisplay.textContent = new Intl.NumberFormat("en").format(await getBytesInUse(itemName));
+    };
+    update();
+    chrome.storage.onChanged.addListener(() => update());
+  }
+
+  for (const bytesMaxDisplay of document.querySelectorAll(".js-bytes-max-display")) {
+    const update = async () => {
+      bytesMaxDisplay.textContent = new Intl.NumberFormat("en").format(await getMaxBytes());
+    };
+    update();
+    chrome.storage.onChanged.addListener(() => update());
+  }
+
+  for (const bytesPercentDisplay of document.querySelectorAll(".js-bytes-percent-display")) {
+    const itemName = bytesPercentDisplay.dataset.name;
+    if (!itemName) continue;
+
+    const update = async () => {
+      const bytes = await getBytesInUse(itemName);
+      const max = await getMaxBytes();
+      const formater = new Intl.NumberFormat("en", { style: "percent" });
+      bytesPercentDisplay.textContent = formater.format(bytes / max);
+    };
+    update();
+    chrome.storage.onChanged.addListener(() => update());
+  }
+}
+
+async function getMaxBytes() {
+  return await settings.isLocal() ?
+    chrome.storage.local.QUOTA_BYTES :
+    chrome.storage.sync.QUOTA_BYTES_PER_ITEM;
+}
+
+async function getBytesInUse(name: string) {
+  return await settings.isLocal() ?
+    settings.getTotalBytesInUse() :
+    settings.getBytesInUse(name);
 }
 
 if (document.readyState === "loading") {

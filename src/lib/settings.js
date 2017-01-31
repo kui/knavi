@@ -40,6 +40,19 @@ class Storage {
   async setSingle(name: string, value: string): Promise<void> {
     await this.set({[name]: value});
   }
+
+  getBytes(names?: string | string[]): Promise<number> {
+    return new Promise((resolve, reject) => {
+      this.storage.getBytesInUse(names, (b) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          reject(Error(err.message));
+          return;
+        }
+        resolve(b);
+      });
+    });
+  }
 }
 
 const sync  = new Storage(chrome.storage.sync);
@@ -84,7 +97,18 @@ export default {
   async load(): Promise<Settings> { return getAll(); },
   async loadDefaults(): Promise<Settings> {
     return Object.assign({}, DEFAULT_SETTINGS, { css: await fetchCss() });
-  }
+  },
+  async getBytesInUse(name: string): Promise<number> {
+    const storage = await getStorage();
+    return await storage.getBytes(name);
+  },
+  async getTotalBytesInUse(): Promise<number> {
+    const storage = await getStorage();
+    return await storage.getBytes();
+  },
+  async isLocal() {
+    return await isLocal();
+  },
 };
 
 async function fetchCss(): Promise<string> {
@@ -101,11 +125,11 @@ async function getAll(storage): Promise<Settings> {
   );
 }
 
-async function getStorage(): Promise<Storage> {
+async function isLocal() {
   const a = await local.getSingle("_area");
-  switch (a) {
-  case "chrome-local": return local;
-  case "chrome-sync":  return sync;
-  default:             return sync;
-  }
+  return a === "chrome-local";
+}
+
+async function getStorage(): Promise<Storage> {
+  return await isLocal() ? local : sync;
 }

@@ -1,4 +1,9 @@
+declare class StorageChange {
+  oldValue: string;
+  newValue: string;
+}
 declare type ChromeStorageItems = { [key: string]: string };
+declare type ChromeChanges = { [key: string]: StorageChange };
 declare class ChromeStorageArea {
   getBytesInUse(callback: (bytesInUse: number) => void): void;
   getBytesInUse(keys: string, callback: (bytesInUse: number) => void): void;
@@ -8,9 +13,11 @@ declare class ChromeStorageArea {
   remove(keys: string, callback?: () => void): void;
   remove(keys: string[], callback?: () => void): void;
   get(callback: (items: ChromeStorageItems) => void): void;
-  get(callback: (items: ChromeStorageItems) => void): void;
   get(keys: ?string, callback: (items: ChromeStorageItems) => void): void;
   get(keys: ?string[], callback: (items: ChromeStorageItems) => void): void;
+  getBytesInUse(callback: (bytesInUse: number) => void): void;
+  getBytesInUse(keys: ?string, callback: (bytesInUse: number) => void): void;
+  getBytesInUse(keys: ?string[], callback: (bytesInUse: number) => void): void;
 }
 declare class LocalChromeStorageArea extends ChromeStorageArea {
   QUOTA_BYTES: number;
@@ -24,7 +31,7 @@ declare class SyncChromeStorageArea extends ChromeStorageArea {
 declare class ChromeStorage {
   local: LocalChromeStorageArea;
   sync: SyncChromeStorageArea;
-  onChanged: ChromeEventEmmitter<(changes: ChromeStorageItems, areaName: string) => any>;
+  onChanged: ChromeEventEmmitter<(changes: ChromeChanges, areaName: string) => any>;
 }
 
 //
