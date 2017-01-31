@@ -3,11 +3,14 @@
 import * as rects from "./rects";
 import type { Rect } from "./rects";
 
+let layoutVPOffsetsCache = null;
+
 export const layout = {
   /// get the coordinates of the top-left of the layout viewport.
   offsets(): { y: number, x: number } {
+    if (layoutVPOffsetsCache) return layoutVPOffsetsCache;
     const rootRect = document.documentElement.getBoundingClientRect();
-    return { y: - rootRect.top, x: - rootRect.left };
+    return layoutVPOffsetsCache = { y: - rootRect.top, x: - rootRect.left };
   },
   sizes(): { height: number, width: number } {
     return {
@@ -20,15 +23,26 @@ export const layout = {
   }
 };
 
+let visualVPSizesCache = null;
+let prevInnerWidth;
+let prevInnerHeight;
+
 export const visual = {
   /// get the coordinates from the top-left of the visual viewport.
   offsets(): { y: number, x: number } {
     return { y: window.scrollY, x: window.scrollX };
   },
   sizes(): { height: number, width: number } {
+    const innerWidth = window.innerWidth;
+    const innerHeight = window.innerHeight;
+    if (prevInnerWidth === innerWidth &&
+        prevInnerHeight === innerWidth &&
+        visualVPSizesCache) return visualVPSizesCache;
+    prevInnerWidth = innerWidth;
+    prevInnerHeight = innerHeight;
     const scale = getScale();
     console.debug("scale", scale);
-    return {
+    return visualVPSizesCache = {
       height: Math.floor(document.documentElement.clientHeight / scale),
       width:  Math.floor(document.documentElement.clientWidth / scale),
     };
@@ -37,6 +51,15 @@ export const visual = {
     return rects.rectByOffsetsAndSizes(this.offsets, this.sizes);
   }
 };
+
+window.addEventListener("scroll", () => {
+  layoutVPOffsetsCache = null;
+}, { passive: true });
+
+window.addEventListener("resize", () => {
+  layoutVPOffsetsCache = null;
+  visualVPSizesCache = null;
+}, { passive: true });
 
 export function getClientRectsFromVisualVP(element: HTMLElement): Rect[] {
   const layoutVpOffsets = layout.offsets();
