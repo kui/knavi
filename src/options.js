@@ -73,7 +73,10 @@ async function initCodeMirror() {
     if (!textarea) continue;
     if (!(textarea instanceof HTMLTextAreaElement)) continue;
     textarea.style.display = "none";
-    const mode = cmWrapper.dataset.mode;
+    let mode = cmWrapper.dataset.mode;
+    if (mode === "json") {
+      mode = { name: "javascript", json: true };
+    }
     const cm = CodeMirror(cmWrapper, { value: textarea.value, mode });
 
     // for styling

@@ -63,6 +63,7 @@ export default class HintView {
       });
       subscribe("NewTargets", ({ newTargets }: NewTargets) => {
         if (hints == null) return;
+        if (!container.contentDocument) return;
         const df = document.createDocumentFragment();
         for (const hint of generateHintElements(newTargets)) {
           hints.add(hint);

@@ -27,6 +27,7 @@
     "flow-bin": "^0.37.4",
     "flow-typed": "^2.0.0",
     "glob-trie.js": "^0.2.1",
+    "json5": "^0.5.1",
     "key-input-elements": "^1.0.0",
     "mocha": "^3.2.0",
     "storage-form": "^1.0.3",

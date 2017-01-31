@@ -8,13 +8,16 @@ import type { Rect } from "./rect-fetcher-client";
 
 export default class RectFetcher {
   detector: VisibleRectDetector;
-  constructor() {
+  additionalSelectors: string[];
+
+  constructor(additionalSelectors: string[]) {
     this.detector = new VisibleRectDetector;
+    this.additionalSelectors = additionalSelectors;
   }
 
   getAll(): { element: HTMLElement, rects: Rect[] }[] {
     console.time("List all target elements");
-    const t = listAllTarget(this.detector);
+    const t = listAllTarget(this.detector, this.additionalSelectors);
     console.timeEnd("List all target elements");
     return distinctSimilarTarget(this.detector, t);
   }
@@ -48,8 +51,13 @@ const HINTABLE_QUERY = [
   "[data-image-url]",
 ].map((s) => "body /deep/ " + s).join(",");
 
-function listAllTarget(rectsDetector: VisibleRectDetector): Target[] {
+function listAllTarget(rectsDetector: VisibleRectDetector, additionalSelectors: string[]): Target[] {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
+  if (additionalSelectors.length >= 1) {
+    const q = additionalSelectors.map((s) => "body /deep/ " + s).join(",");
+    for (const e of document.querySelectorAll(q)) selecteds.add(e);
+  }
+
   const targets: Target[] = [];
 
   if (document.activeElement !== document.body) {

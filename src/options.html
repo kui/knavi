@@ -63,8 +63,16 @@
         (<span class="js-bytes-percent-display" data-name="blackList"></span>)
       </p>
 
-      <h2>Addtional Selector</h2>
-
+      <h2>Additional Selectors</h2>
+      <p>Additional hintable element selectors in the specific pages. A JSON key is an URL pattern used in wildcard matching (<a href="https://github.com/rbranson/glob-trie.js#expression-support">glob-trie.js</a>). A JSON value is CSS selector or array. This JSON is serialized as <a href="https://github.com/json5/json5#example">JSON5</a>.</p>
+      <textarea id="additional-selectors" name="additionalSelectors"></textarea>
+      <div class="js-cm-wrapper" data-target="#additional-selectors" data-mode="json"></div>
+      <p>
+        <span class="js-bytes-display" data-name="additionalSelectors"></span> bytes
+        /
+        <span class="js-bytes-max-display"></span> bytes
+        (<span class="js-bytes-percent-display" data-name="additionalSelectors"></span>)
+      </p>
 
       <details name="advanced-configs">
         <summary>Advanced settings</summary>

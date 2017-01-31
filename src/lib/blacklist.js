@@ -3,13 +3,14 @@
 import GlobTrie from "glob-trie.js";
 
 export default class BlackList {
-  pattern: GlobTrie;
+  patterns: GlobTrie;
 
   constructor(text: string) {
-    this.pattern = parse(text);
+    this.patterns = parse(text);
   }
+
   match(url: string): string[] {
-    return this.pattern.collect(url);
+    return this.patterns.collect(url);
   }
 }
 

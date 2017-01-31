@@ -4,6 +4,7 @@ import { filter, first } from "./iters";
 import RectFetcher from "./rect-fetcher";
 import ActionHandler from "./action-handlers";
 import { recieve, send } from "./chrome-messages";
+import settingsClient from "./settings-client";
 
 import type {
   RectHolder,
@@ -38,6 +39,10 @@ recieve("ActionRequest", (req: ActionRequest, sender, sendResponse) => {
   sendResponse();
 });
 
+let additionalSelectorsPromise = settingsClient.getMatchedSelectors(location.href);
+additionalSelectorsPromise
+  .then((s) => { if (s.length >= 1) console.debug("mached additional selectors", s); });
+
 if (parent !== window) {
   parent.postMessage(({ type: "RegisterFrame" }: RegisterFrame), "*");
 }
@@ -66,7 +71,7 @@ export type RectsFragmentResponse = {
 async function handleAllRectsRequest(req: AllRectsRequest) {
   console.debug("AllRectsRequest req=", req, "location=", location.href);
 
-  const rectFetcher = new RectFetcher;
+  const rectFetcher = new RectFetcher(await additionalSelectorsPromise);
   const frameId = await frameIdPromise;
 
   rectElements = rectFetcher.getAll().map(({ element, rects }, index) => {

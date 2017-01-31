@@ -12,6 +12,10 @@ export type GetMatchedBlackList = {
   type: "GetMatchedBlackList";
   url: string;
 };
+export type GetMatchedSelectors = {
+  type: "GetMatchedSelectors";
+  url: string;
+};
 
 export default {
   get(): Promise<Settings> {
@@ -24,5 +28,8 @@ export default {
   },
   getMatchedBlackList(url: string): Promise<string[]> {
     return send(({ type: "GetMatchedBlackList", url }: GetMatchedBlackList));
-  }
+  },
+  getMatchedSelectors(url: string): Promise<string[]> {
+    return send(({ type: "GetMatchedSelectors", url }: GetMatchedSelectors));
+  },
 };

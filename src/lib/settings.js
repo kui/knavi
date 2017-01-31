@@ -58,12 +58,32 @@ class Storage {
 const sync  = new Storage(chrome.storage.sync);
 const local = new Storage(chrome.storage.local);
 
+const DEFAULT_BLACK_LIST = `# Example (Start with # if you want comments)
+http://k-ui.jp/*
+`;
+const DEFAULT_ADDITIONAL_SELECTORS = `{
+  // Example 1
+  "https://example.com/*/foo/*": [
+    ".some-of",
+    "#additional-css-selector",
+  ],
+  // Example 2
+  "http://example.com/*": "you-can-use-just-one-string",
+
+  // Tumblr
+  "https://www.tumblr.com/dashboard*": [
+    // Reaction buttons in tumblr dashbord
+    ".note_link_current",
+  ],
+}`;
+
 const DEFAULT_SETTINGS: Settings = {
   magicKey: "Space",
   hints: "asdfghjkl",
   blurKey: "",
-  css: "",
-  blackList: "# Example (Start with # if you want comments)\nhttp://k-ui.jp",
+  css: "", // load from an external file
+  blackList: DEFAULT_BLACK_LIST,
+  additionalSelectors: DEFAULT_ADDITIONAL_SELECTORS,
 };
 
 export interface Settings {
@@ -72,6 +92,7 @@ export interface Settings {
   blurKey: string;
   css: string;
   blackList: string;
+  additionalSelectors: string;
 }
 
 export default {
