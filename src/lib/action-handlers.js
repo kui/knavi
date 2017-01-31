@@ -20,7 +20,6 @@ const handlers: Handler[] = [];
 
 export default class ActionHandlerDelegater {
   handle(target: HTMLElement, options: ActionOptions) {
-    console.log("hit", target);
     this.getHandler(target).handle(target, options);
   }
 
@@ -45,7 +44,7 @@ handlers.push({
   handle() {
     const activeElement = document.activeElement;
     activeElement.blur();
-    console.log(this.longDescription, activeElement);
+    console.debug(this.longDescription, activeElement);
   }
 });
 
@@ -56,7 +55,7 @@ handlers.push({
   },
   handle(target: HTMLElement) {
     target.focus();
-    console.log("Focus iframe");
+    console.debug("Focus iframe");
   }
 });
 
@@ -68,7 +67,7 @@ handlers.push({
   },
   handle(target: HTMLElement) {
     target.focus();
-    console.log(this.longDescription);
+    console.debug(this.longDescription);
   }
 });
 
@@ -82,7 +81,7 @@ handlers.push({
   handle(target: HTMLElement, options: ActionOptions) {
     target.focus();
     simulateClick(target, options);
-    console.log(this.longDescription);
+    console.debug(this.longDescription);
   }
 });
 
@@ -94,7 +93,7 @@ handlers.push({
   },
   handle(target: HTMLElement) {
     target.focus();
-    console.log(this.longDescription);
+    console.debug(this.longDescription);
   }
 });
 
@@ -106,7 +105,7 @@ handlers.push({
   },
   handle(target: HTMLElement) {
     target.focus();
-    console.log(this.longDescription);
+    console.debug(this.longDescription);
   }
 });
 
@@ -126,7 +125,7 @@ handlers.push({
       });
     }
     element.focus();
-    console.log(this.longDescription);
+    console.debug(this.longDescription);
   }
 });
 
@@ -135,7 +134,7 @@ handlers.push({
   isSupported() { return true; },
   handle(target: HTMLElement, options: ActionOptions) {
     simulateClick(target, options);
-    console.log("click");
+    console.debug("click");
   }
 });
 
