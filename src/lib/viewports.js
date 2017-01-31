@@ -1,13 +1,7 @@
 // @flow
 
-interface Rect {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-  width: number;
-  height: number;
-}
+import * as rects from "./rects";
+import type { Rect } from "./rects";
 
 export const layout = {
   /// get the coordinates of the top-left of the layout viewport.
@@ -20,6 +14,9 @@ export const layout = {
       height: document.documentElement.clientHeight,
       width: document.documentElement.clientWidth,
     };
+  },
+  rect(): Rect {
+    return rects.rectByOffsetsAndSizes(this.offsets, this.sizes);
   }
 };
 
@@ -33,18 +30,25 @@ export const visual = {
       width:  window.innerWidth,
       height: window.innerHeight,
     };
+  },
+  rect(): Rect {
+    return rects.rectByOffsetsAndSizes(this.offsets, this.sizes);
   }
 };
+
+export function getClientRectsFromVisualVP(element: HTMLElement): Rect[] {
+  const layoutVpOffsets = layout.offsets();
+  const visualVpOffsets = visual.offsets();
+  const delta = {
+    y: layoutVpOffsets.y - visualVpOffsets.y,
+    x: layoutVpOffsets.x - visualVpOffsets.x,
+  };
+  return Array.from(element.getClientRects())
+    .map((r) => rects.move(r, delta));
+}
 
 export function getBoundingClientRectFromRoot(element: HTMLElement): Rect {
   const layoutVpOffsets = layout.offsets();
   const rectFromLayoutVp = element.getBoundingClientRect();
-  return {
-    top:    rectFromLayoutVp.top    + layoutVpOffsets.y,
-    bottom: rectFromLayoutVp.bottom + layoutVpOffsets.y,
-    left:   rectFromLayoutVp.left   + layoutVpOffsets.x,
-    right:  rectFromLayoutVp.right  + layoutVpOffsets.x,
-    height: rectFromLayoutVp.height,
-    width:  rectFromLayoutVp.width,
-  };
+  return rects.move(rectFromLayoutVp, layoutVpOffsets);
 }

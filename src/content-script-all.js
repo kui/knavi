@@ -6,7 +6,6 @@ import settingsClient from "./lib/settings-client";
 import * as utils from "./lib/utils";
 import HinterClient from "./lib/hinter-client";
 import Blurer from "./lib/blurer";
-import BlurView from "./lib/blur-view";
 
 async function main() {
   let hitEventMatcher: EventMatcher;
@@ -14,7 +13,6 @@ async function main() {
 
   const hinter = new HinterClient;
   const blurer = new Blurer;
-  new BlurView(blurer);
 
   let isEnabledKeyhooks = false;
   let hintLetters: string;

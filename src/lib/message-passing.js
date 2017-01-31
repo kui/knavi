@@ -24,8 +24,9 @@ function initIfRequired() {
   handlers = new Map;
   chrome.runtime.onMessage.addListener((message: Message<any>, sender, sendResponse) => {
     const c = handlers.get(message.type);
+    console.debug("message=", message, "handlers", c, "location=", location.href);
     if (!c || c.handlers.length === 0) {
-      console.debug("ignore: no handler: message=", message, "location=", location.href);
+      console.debug(" -> ignore");
       return;
     }
     return c.handlers.some((h) => h(message, sender, sendResponse));

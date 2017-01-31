@@ -3,6 +3,10 @@ const webpack = require("webpack");
 const BabiliPlugin = require("babili-webpack-plugin");
 
 const plugins = [
+  new webpack.optimize.CommonsChunkPlugin({
+    name: "content-script-common",
+    chunks: ["content-script-root", "content-script-all"],
+  }),
   new webpack.optimize.DedupePlugin(),
   new webpack.optimize.OccurrenceOrderPlugin(),
 ];

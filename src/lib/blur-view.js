@@ -1,7 +1,10 @@
 // @flow
 
 import * as vp from "./viewports";
-import Blurer from "./blurer";
+import * as rectUtils from "./rects";
+import { subscribe } from "./message-passing";
+
+import type { Blured } from "./blurer";
 
 const Z_INDEX_OFFSET = 2147483640;
 
@@ -10,7 +13,7 @@ declare class Object {
 }
 
 export default class BlurView {
-  constructor(blurer: Blurer) {
+  constructor() {
     const overlay = document.createElement("div");
     Object.assign(overlay.style, {
       position: "absolute",
@@ -26,21 +29,12 @@ export default class BlurView {
       }
     }
 
-    function animate() {
-      // $FlowFixMe
-      const animation = overlay.animate([
-        { boxShadow: "0 0   0    0 rgba(128,128,128,0.15), 0 0   0    0 rgba(0,0,128,0.1)" },
-        { boxShadow: "0 0 3px 72px rgba(128,128,128,   0), 0 0 3px 80px rgba(0,0,128,  0)" },
-      ], {
-        duration: 200,
-      });
-      animation.addEventListener("finish", removeOverlay);
-    }
-
-    blurer.onBlured.listen((element) => {
+    subscribe("Blured", ({ rect }: Blured) => {
       removeOverlay();
 
-      const rect = vp.getBoundingClientRectFromRoot(element);
+      if (!rect) return;
+
+      rect = rectUtils.move(rect, vp.visual.offsets());
       Object.assign(overlay.style, {
         top:  `${rect.top}px`,
         left: `${rect.left}px`,
@@ -49,7 +43,14 @@ export default class BlurView {
       });
       document.body.insertBefore(overlay, document.body.firstChild);
 
-      animate();
+      // $FlowFixMe
+      const animation = overlay.animate([
+        { boxShadow: "0 0   0    0 rgba(128,128,128,0.15), 0 0   0    0 rgba(0,0,128,0.1)" },
+        { boxShadow: "0 0 3px 72px rgba(128,128,128,   0), 0 0 3px 80px rgba(0,0,128,  0)" },
+      ], {
+        duration: 400,
+      });
+      animation.addEventListener("finish", removeOverlay);
     });
   }
 }

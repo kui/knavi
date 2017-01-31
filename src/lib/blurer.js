@@ -1,39 +1,48 @@
 // @flow
 
-import { EventEmitter } from "./event-emitter";
+import { filter, first } from "./iters";
+import * as vp from "./viewports";
+import { send } from "./message-passing";
+import { intersection, move } from "./rects";
+
+import type { Rect } from "./rects";
 
 /// a message from a child frame indicates to blur.
-const BLUR_MESSAGE = "jp-k-ui-knavi-blur";
+const BLUR_MESSAGE = "jp-k-ui-knavi-Blur";
+
+export type Blured = {
+  type: "Blured";
+  rect: ?Rect;
+};
 
 export default class Blurer {
-  onBlured: EventEmitter<HTMLElement>;
-  messageHandler: (e: MessageEvent) => void;
-
   constructor() {
-    this.onBlured = new EventEmitter;
-
     // Blur request from a child frame
-    window.addEventListener("message", this.messageHandler = (e) => {
-      if (e.data === BLUR_MESSAGE) this.blur();
+    window.addEventListener("message", (e) => {
+      if (e.data.type !== BLUR_MESSAGE) return;
+      console.debug("blur", e.data, "location=", location.href);
+      if (e.source === window) {
+        document.activeElement.blur();
+        send(({ type: "Blured", rect: e.data.rect }: Blured));
+        return;
+      }
+
+      const sourceIframe = first(filter(document.querySelectorAll("iframe"),
+                                        (i) => e.source === (i: any).contentWindow));
+      if (!sourceIframe) return;
+      const sourceRect = vp.getClientRectsFromVisualVP(sourceIframe)[0];
+      const offsettedRect = move(e.data.rect, { x: sourceRect.left, y: sourceRect.top });
+
+      const rect = intersection(sourceRect, offsettedRect);
+      window.parent.postMessage({ type: BLUR_MESSAGE, rect }, "*");
     });
   }
 
-  destruct() {
-    window.removeEventListener("message", this.messageHandler);
-  }
-
   blur(): boolean {
-    if (isBlurable()) {
-      console.debug("blur", document.activeElement);
-      this.onBlured.emit(document.activeElement);
-      document.activeElement.blur();
-      return true;
-    } else if (isInFrame()) {
-      console.debug("blur form the current frame", window.document.body);
-      window.parent.postMessage(BLUR_MESSAGE, "*");
-      return true;
-    }
-    return false;
+    if (isInRootFrame() && !isBlurable()) return false;
+    const rect = vp.getClientRectsFromVisualVP(document.activeElement)[0];
+    window.parent.postMessage({ type: BLUR_MESSAGE, rect }, "*");
+    return true;
   }
 }
 
@@ -41,7 +50,7 @@ function isBlurable() {
   return document.activeElement !== document.body;
 }
 
-function isInFrame() {
-  return window.parent !== window;
+function isInRootFrame() {
+  return window.parent === window;
 }
 
