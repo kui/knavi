@@ -11,16 +11,14 @@ import type {
   HitHint,
 } from "./hinter-client";
 
+new HintsView();
+
 (async () => {
   let hinter: Hinter;
-
   const settings = await settingsClient.get();
   hinter = new Hinter(settings.hints);
-  new HintsView(hinter);
-
   settingsClient.subscribe((settings) => {
     hinter = new Hinter(settings.hints);
-    new HintsView(hinter);
   });
 
   recieve("AttachHints", () => hinter.attachHints());

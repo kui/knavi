@@ -3,9 +3,17 @@
 import * as utils from "./utils";
 import * as vp from "./viewports";
 import settingsClient from "./settings-client";
-import Hinter from "./hinter";
+import { subscribe } from "./message-passing";
 
-import type { Target, TargetStateChange } from "./hinter";
+import type {
+  Target,
+  TargetStateChange,
+  // StartHinting,
+  NewTargets,
+  // EndHinting,
+  AfterHitHint,
+  // AfterRemoveHints,
+} from "./hinter";
 
 const OVERLAY_PADDING = 8;
 const CONTAINER_ID = "jp-k-ui-knavi-container";
@@ -20,7 +28,7 @@ declare type Hint = {
 };
 
 export default class HintView {
-  constructor(hinter: Hinter) {
+  constructor() {
     (async () => {
       const container = document.createElement("iframe");
       container.id = CONTAINER_ID;
@@ -41,7 +49,7 @@ export default class HintView {
       // wait event setup untill document.body.firstChild is reachable.
       while (!(document.body && document.body.firstChild)) await utils.nextAnimationFrame();
 
-      hinter.onStartHinting.listen(() => {
+      subscribe("StartHinting", () => {
         initStyles(container, overlay, activeOverlay);
         document.body.insertBefore(container, document.body.firstChild);
         container.contentDocument.head.appendChild(style);
@@ -51,10 +59,9 @@ export default class HintView {
             return false;
           }
         };
-
         hints = new Hints;
       });
-      hinter.onNewTargets.listen(({ newTargets }) => {
+      subscribe("NewTargets", ({ newTargets }: NewTargets) => {
         if (hints == null) return;
         const df = document.createDocumentFragment();
         for (const hint of generateHintElements(newTargets)) {
@@ -63,21 +70,21 @@ export default class HintView {
         }
         container.contentDocument.body.appendChild(df);
       });
-      hinter.onEndHinting.listen(() => {
+      subscribe("EndHinting", () => {
         if (!container.contentDocument) return;
         container.style.display = "block";
         const body = container.contentDocument.body;
         body.insertBefore(activeOverlay, body.firstChild);
         body.insertBefore(overlay, body.firstChild);
       });
-      hinter.onHintHit.listen(({ context, stateChanges, actionDescriptions }) => {
+      subscribe("AfterHitHint", ({ context, stateChanges, actionDescriptions }: AfterHitHint) => {
         if (!hints) throw Error("Illegal state");
         const shortDescription = actionDescriptions && actionDescriptions.short;
         highligtHints(hints, stateChanges, shortDescription);
         moveOverlay(overlay, context.targets);
         moveActiveOverlay(activeOverlay, context.hitTarget);
       });
-      hinter.onDehinted.listen(() => {
+      subscribe("AfterRemoveHints", () => {
         if (!hints) throw Error("Illegal state");
         if (document.body.contains(container)) {
           document.body.removeChild(container);

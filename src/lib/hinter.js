@@ -1,62 +1,33 @@
 // @flow
 
-import { EventEmitter } from "./event-emitter";
+import { send } from "./message-passing";
 import * as rectFetcher from "./rect-fetcher-client";
 
 import type { ActionOptions } from "./action-handlers";
 import type { RectHolder, Descriptions } from "./rect-fetcher-client";
 
-declare interface StartHintingEvent {
-  context: HintContext;
-}
-
-declare interface NewTargetsEvent {
-  context: HintContext;
-  newTargets: Target[];
-}
-
-declare interface EndHintingEvent {
-  context: HintContext;
-}
-
-declare interface HitEvent {
-  context: HintContext;
-  input: string;
-  stateChanges: TargetStateChange[];
-  actionDescriptions: ?Descriptions;
-}
-
-declare interface DehintEvent {
-  context: HintContext;
-  options: ActionOptions;
-}
-
 export type StartHinting = {
   type: "StartHinting";
   context: HintContext;
 };
-
 export type NewTargets = {
   type: "NewTargets";
   context: HintContext;
   newTargets: Target[];
 };
-
 export type EndHinting = {
   type: "EndHinting";
   context: HintContext;
 };
-
-export type HitHint = {
-  type: "HitHint";
+export type AfterHitHint = {
+  type: "AfterHitHint";
   context: HintContext;
   input: string;
   stateChanges: TargetStateChange[];
   actionDescriptions: ?Descriptions;
 };
-
-export type Dehint = {
-  type: "Dehint";
+export type AfterRemoveHints = {
+  type: "AfterRemoveHints";
   context: HintContext;
   options: ActionOptions;
 };
@@ -66,20 +37,8 @@ export default class Hinter {
   context: ?HintContext;
   hintTextGenerator: Iterator<string>
 
-  onStartHinting: EventEmitter<StartHintingEvent>;
-  onNewTargets: EventEmitter<NewTargetsEvent>;
-  onEndHinting: EventEmitter<EndHintingEvent>;
-  onHintHit: EventEmitter<HitEvent>;
-  onDehinted: EventEmitter<DehintEvent>;
-
   constructor(hintLetters: string) {
     this.hintLetters = hintLetters;
-
-    this.onStartHinting = new EventEmitter;
-    this.onNewTargets = new EventEmitter;
-    this.onEndHinting = new EventEmitter;
-    this.onHintHit = new EventEmitter;
-    this.onDehinted = new EventEmitter;
   }
 
   isHinting() {
@@ -95,7 +54,7 @@ export default class Hinter {
     const context = new HintContext;
     this.context = context;
 
-    this.onStartHinting.emit({ context });
+    send(({ type: "StartHinting", context }: StartHinting));
 
     await rectFetcher.fetchAllRects((holders) => {
       if (holders.length === 0) return;
@@ -113,9 +72,10 @@ export default class Hinter {
         return new Target(t, holder);
       });
       context.targets.splice(-1, 0, ...newTargets);
-      this.onNewTargets.emit({ context, newTargets });
+      send(({ type: "NewTargets", context, newTargets }: NewTargets));
     });
-    this.onEndHinting.emit({ context });
+
+    send(({ type: "EndHinting", context }: EndHinting));
   }
 
   async hitHint(key: string) {
@@ -134,8 +94,13 @@ export default class Hinter {
       actionDescriptions = await rectFetcher.getDescriptions(context.hitTarget.holder);
     }
 
-    this.onHintHit.emit({ context, input: inputChar, stateChanges, actionDescriptions });
-    return;
+    send(({
+      type: "AfterHitHint",
+      context,
+      input: inputChar,
+      stateChanges,
+      actionDescriptions
+    }: AfterHitHint));
   }
 
   removeHints(options: ActionOptions) {
@@ -148,7 +113,8 @@ export default class Hinter {
     if (context.hitTarget != null) {
       rectFetcher.action(context.hitTarget.holder, options);
     }
-    this.onDehinted.emit({ context, options });
+
+    send(({ type: "AfterRemoveHints", context, options }: AfterRemoveHints));
   }
 }
 
