@@ -5,18 +5,22 @@ import Hinter from "./hinter";
 import HintsView from "./hint-view";
 import { recieve } from "./message-passing";
 
-import type { RemoveHints, HitHint } from "./hinter-client";
+import type {
+  // AttachHints,
+  RemoveHints,
+  HitHint,
+} from "./hinter-client";
 
 (async () => {
   let hinter: Hinter;
 
   const settings = await settingsClient.get();
   hinter = new Hinter(settings.hints);
-  new HintsView(hinter, settings.css);
+  new HintsView(hinter);
 
   settingsClient.subscribe((settings) => {
     hinter = new Hinter(settings.hints);
-    new HintsView(hinter, settings.css);
+    new HintsView(hinter);
   });
 
   recieve("AttachHints", () => hinter.attachHints());

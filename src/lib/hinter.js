@@ -22,7 +22,7 @@ declare interface EndHintingEvent {
 declare interface HitEvent {
   context: HintContext;
   input: string;
-  stateChanges: TargetStateChanges;
+  stateChanges: TargetStateChange[];
   actionDescriptions: ?Descriptions;
 }
 
@@ -30,6 +30,36 @@ declare interface DehintEvent {
   context: HintContext;
   options: ActionOptions;
 }
+
+export type StartHinting = {
+  type: "StartHinting";
+  context: HintContext;
+};
+
+export type NewTargets = {
+  type: "NewTargets";
+  context: HintContext;
+  newTargets: Target[];
+};
+
+export type EndHinting = {
+  type: "EndHinting";
+  context: HintContext;
+};
+
+export type HitHint = {
+  type: "HitHint";
+  context: HintContext;
+  input: string;
+  stateChanges: TargetStateChange[];
+  actionDescriptions: ?Descriptions;
+};
+
+export type Dehint = {
+  type: "Dehint";
+  context: HintContext;
+  options: ActionOptions;
+};
 
 export default class Hinter {
   hintLetters: string;
@@ -123,7 +153,7 @@ export default class Hinter {
 }
 
 export type TargetState = "disabled" | "candidate" | "hit" | "init";
-export type TargetStateChanges = Map<Target, { oldState: TargetState, newState: TargetState }>;
+export type TargetStateChange = { target: Target, oldState: TargetState, newState: TargetState };
 export class Target {
   state: TargetState;
   hint: string;
@@ -157,18 +187,18 @@ class HintContext {
     this.inputSequence = [];
   }
 
-  update(inputChar: string): TargetStateChanges {
+  update(inputChar: string): TargetStateChange[] {
     this.inputSequence.push(inputChar);
     const inputs = this.inputSequence.join("");
 
     this.hitTarget = null;
-    return this.targets.reduce((m, t) => {
+    return this.targets.reduce((changes, t) => {
       const oldState = t.state;
       const newState = t.updateState(inputs);
       if (newState === "hit") this.hitTarget = t;
-      if (oldState !== newState) m.set(t, { oldState, newState });
-      return m;
-    }, new Map);
+      if (oldState !== newState) changes.push({ target: t, oldState, newState });
+      return changes;
+    }, []);
   }
 }
 

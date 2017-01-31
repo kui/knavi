@@ -1,11 +1,11 @@
 // @flow
 
-import * as iters from "./iters";
 import * as utils from "./utils";
 import * as vp from "./viewports";
+import settingsClient from "./settings-client";
 import Hinter from "./hinter";
 
-import type { Target, TargetStateChanges } from "./hinter";
+import type { Target, TargetStateChange } from "./hinter";
 
 const OVERLAY_PADDING = 8;
 const CONTAINER_ID = "jp-k-ui-knavi-container";
@@ -17,10 +17,10 @@ const Z_INDEX_OFFSET = 2147483640;
 declare type Hint = {
   elements: HTMLDivElement[];
   target: Target;
-}
+};
 
-export default class HintsView {
-  constructor(hinter: Hinter, css: string) {
+export default class HintView {
+  constructor(hinter: Hinter) {
     (async () => {
       const container = document.createElement("iframe");
       container.id = CONTAINER_ID;
@@ -29,9 +29,14 @@ export default class HintsView {
       const activeOverlay = document.createElement("div");
       activeOverlay.id = ACTIVE_OVERLAY_ID;
       const style = document.createElement("style");
-      style.textContent = css;
 
-      let hints: Map<Target, Hint>;
+      const settings = await settingsClient.get();
+      style.textContent = settings.css;
+      settingsClient.subscribe((settings) => {
+        style.textContent = settings.css;
+      });
+
+      let hints: Hints;
 
       // wait event setup untill document.body.firstChild is reachable.
       while (!(document.body && document.body.firstChild)) await utils.nextAnimationFrame();
@@ -47,14 +52,14 @@ export default class HintsView {
           }
         };
 
-        hints = new Map;
+        hints = new Hints;
       });
       hinter.onNewTargets.listen(({ newTargets }) => {
         if (hints == null) return;
         const df = document.createDocumentFragment();
-        for (const [k, v] of generateHintElements(newTargets)) {
-          hints.set(k, v);
-          v.elements.forEach((e) => df.appendChild(e));
+        for (const hint of generateHintElements(newTargets)) {
+          hints.add(hint);
+          hint.elements.forEach((e) => df.appendChild(e));
         }
         container.contentDocument.body.appendChild(df);
       });
@@ -79,6 +84,30 @@ export default class HintsView {
         }
       });
     })();
+  }
+}
+
+class Hints {
+  map: Map<number, Map<number, Hint>>;
+  constructor() {
+    this.map = new Map;
+  }
+  get(t: Target) {
+    const { index, frameId } = t.holder;
+    const hmap = this.map.get(frameId);
+    if (hmap) {
+      return hmap.get(index);
+    }
+    return null;
+  }
+  add(h: Hint) {
+    const { index, frameId } = h.target.holder;
+    let hmap: ?Map<number, Hint> = this.map.get(frameId);
+    if (!hmap) {
+      hmap = new Map;
+      this.map.set(frameId, hmap);
+    }
+    hmap.set(index, h);
   }
 }
 
@@ -177,10 +206,10 @@ function moveOverlay(overlay: HTMLDivElement, targets: Target[]) {
   });
 }
 
-function highligtHints(hints: Map<Target, Hint>,
-                       changes: TargetStateChanges,
+function highligtHints(hints: Hints,
+                       changes: TargetStateChange[],
                        actionDescription: ?string) {
-  for (const [target, { oldState, newState }] of changes.entries()) {
+  for (const { target, oldState, newState } of changes) {
     const hint = hints.get(target);
     if (hint == null) continue;
     for (const e of hint.elements) {
@@ -196,16 +225,15 @@ function highligtHints(hints: Map<Target, Hint>,
   }
 }
 
-function generateHintElements(targets: Target[]): Map<Target, Hint> {
-  const hints = targets.reduce((m, target) => {
+function generateHintElements(targets: Target[]): Hint[] {
+  const hints = targets.reduce((arr, target) => {
     const elements = buildHintElements(target);
-    m.set(target, { elements, target });
-    return m;
-  }, new Map);
-  console.debug("hints[%d]: %o", hints.size, iters.reduce(hints.values(), (o, h) => {
-    o[h.target.hint] = h;
-    return o;
-  }, {}));
+    arr.push({ elements, target });
+    return arr;
+  }, []);
+  console.debug("hints[%d]: %o",
+                hints.length,
+                hints.reduce((o, h) => { o[h.target.hint] = h; return o; }, {}));
   return hints;
 }
 
