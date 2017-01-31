@@ -77,10 +77,10 @@ export interface Settings {
 export default {
   async init(): Promise<void> {
     const storage = await getStorage();
-    const s = await getAll(storage);
+    const s = await storage.get(Object.keys(DEFAULT_SETTINGS));
     const changes = {};
     for (const name of Object.keys(DEFAULT_SETTINGS)) {
-      if (name in s) continue;
+      if (s[name] != null) continue;
       switch (name) {
       case "css":
         changes.css = await fetchCss();
