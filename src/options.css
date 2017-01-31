@@ -14,7 +14,7 @@ input {
 select:focus,
 textarea:focus,
 input:focus,
-#cm-wrapper.focused {
+.js-cm-wrapper.focused {
   outline: -webkit-focus-ring-color 3px auto;
 }
 input[is^="key"] {
@@ -23,10 +23,6 @@ input[is^="key"] {
   background-position: calc(100% - 2px) center;
   background-repeat: no-repeat;
   background-size: 1.1em;
-}
-textarea[name="css"] {
-  width: 30em;
-  height: 20em;
 }
 details {
   margin: 9px 6px;
@@ -39,14 +35,13 @@ summary {
 
 /* textarea or similar elements */
 textarea,
-#cm-wrapper {
+.js-cm-wrapper {
   resize: both;
   width: 500px;
   height: 25em;
 }
 
-/* css editor */
-#cm-wrapper {
+.js-cm-wrapper {
   overflow: hidden;
   border: 1px gray solid;
   padding: 0 10px 10px 0;

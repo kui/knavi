@@ -4,6 +4,7 @@ import sf from "storage-form";
 import * as ki from "key-input-elements";
 import CodeMirror from "codemirror";
 import "codemirror/mode/css/css.js";
+import "codemirror/mode/javascript/javascript.js";
 import settings from "./lib/settings";
 import * as utils from "./lib/utils";
 
@@ -58,38 +59,40 @@ function initClearButton() {
 async function initCodeMirror() {
   const form = document.querySelector("form[is=storage-form]");
   if (form == null) throw Error("form element not found");
-  const t: HTMLTextAreaElement = (document.getElementsByName("css")[0]: any);
   await new Promise((resolve) => {
     const waitingInitSync = () => {
-      if (t.value) {
-        console.log("storage-form init sync");
-        form.removeEventListener("storage-from-sync", waitingInitSync, false);
-        resolve();
-      }
+      console.log("storage-form init sync");
+      form.removeEventListener("storage-from-sync", waitingInitSync, false);
+      resolve();
     };
     form.addEventListener("storage-form-sync", waitingInitSync, false);
   });
-  t.style.display = "none";
 
-  const w =  document.getElementById("cm-wrapper");
-  const cm = CodeMirror(w, { value: t.value });
+  for (const cmWrapper of document.querySelectorAll(".js-cm-wrapper")) {
+    const textarea = document.querySelector(cmWrapper.dataset.target);
+    if (!textarea) continue;
+    if (!(textarea instanceof HTMLTextAreaElement)) continue;
+    textarea.style.display = "none";
+    const mode = cmWrapper.dataset.mode;
+    const cm = CodeMirror(cmWrapper, { value: textarea.value, mode });
 
-  // for styling
-  cm.on("focus", () => w.classList.add("focused"));
-  cm.on("blur",  () => w.classList.remove("focused"));
+    // for styling
+    cm.on("focus", () => cmWrapper.classList.add("focused"));
+    cm.on("blur",  () => cmWrapper.classList.remove("focused"));
 
-  let cssValue = t.value;
-  // two way data binding with textarea and codemirror
-  cm.on("change", () => {
-    const v = cm.getValue();
-    if (v !== cssValue) t.value = cssValue = v;
-  });
-  (async () => {
-    while (true) {
-      await utils.nextAnimationFrame();
-      if (cssValue !== t.value) cm.setValue(cssValue = t.value);
-    }
-  })();
+    // two way data binding with textarea and codemirror
+    let value = textarea.value;
+    cm.on("change", () => {
+      const v = cm.getValue();
+      if (v !== value) textarea.value = value = v;
+    });
+    (async () => {
+      while (true) {
+        await utils.nextAnimationFrame();
+        if (value !== textarea.value) cm.setValue(value = textarea.value);
+      }
+    })();
+  }
 }
 
 async function initBytesDisplay() {
