@@ -9,7 +9,7 @@ import Blurer from "./lib/blurer";
 
 async function main() {
   let hitEventMatcher: EventMatcher;
-  let blurEventMatcher: EventMatcher;
+  let blurEventMatcher: ?EventMatcher;
 
   const hinter = new HinterClient;
   const blurer = new Blurer;
@@ -20,7 +20,7 @@ async function main() {
   const settings = await settingsClient.get();
   hintLetters = settings.hints;
   hitEventMatcher = new EventMatcher(settings.magicKey);
-  blurEventMatcher = new EventMatcher(settings.blurKey);
+  blurEventMatcher = settings.blurKey ? new EventMatcher(settings.blurKey) : null;
 
   const matchedBlacklist = await settingsClient.getMatchedBlackList(location.href);
   if (matchedBlacklist.length === 0) {
@@ -58,7 +58,7 @@ async function main() {
         event.preventDefault();
         event.stopPropagation();
         hinter.attachHints();
-      } else if (blurEventMatcher.test(event)) {
+      } else if (blurEventMatcher && blurEventMatcher.test(event)) {
         blurer.blur();
       }
     }
