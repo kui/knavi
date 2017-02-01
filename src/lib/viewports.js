@@ -36,7 +36,7 @@ export const visual = {
     const innerWidth = window.innerWidth;
     const innerHeight = window.innerHeight;
     if (prevInnerWidth === innerWidth &&
-        prevInnerHeight === innerWidth &&
+        prevInnerHeight === innerHeight &&
         visualVPSizesCache) return visualVPSizesCache;
     prevInnerWidth = innerWidth;
     prevInnerHeight = innerHeight;
