@@ -8,12 +8,12 @@ import type { Rect } from "./rects";
 
 export default class VisibleRectDetector {
   cache: Cache<HTMLElement, Rect[]>;
-  clientRectsCache: Cache<HTMLElement, ClientRect[]>;
+  clientRectsCache: Cache<HTMLElement, Rect[]>;
   styleCache: Cache<HTMLElement, CSSStyleDeclaration>;
 
   constructor(styleCache: Cache<HTMLElement, CSSStyleDeclaration>) {
     this.cache = new Cache;
-    this.clientRectsCache = new Cache((e) => e.getClientRects());
+    this.clientRectsCache = new Cache((e) => Array.from(e.getClientRects()));
     this.styleCache = styleCache;
   }
 
@@ -32,11 +32,15 @@ function getVisibleRects(self, element, viewport): Rect[] {
     if (isSmallRect(rect)) return [];
 
     // out of display
-    const croppedRect = intersection(rect, viewport);
+    let croppedRect = intersection(rect, viewport);
+    if (!croppedRect || isSmallRect(croppedRect)) return [];
+
+    // scroll out from parent element.
+    croppedRect = cropByParent(self, element, croppedRect, viewport);
     if (!croppedRect || isSmallRect(croppedRect)) return [];
 
     // no overwrapped by other elements
-    if (!isPointable(self, element, rect, viewport)) return [];
+    if (!isPointable(self, element, croppedRect, viewport)) return [];
 
     return [croppedRect];
   }));
@@ -47,7 +51,7 @@ function isSmallRect({ width, height }: Rect) {
   return height <= SMALL_THREASHOLD_PX || width <= SMALL_THREASHOLD_PX;
 }
 
-function getClientRects(self: VisibleRectDetector, element: HTMLElement): Iterable<Rect> {
+function getClientRects(self: VisibleRectDetector, element: HTMLElement): Rect[] {
   switch (element.tagName) {
   case "AREA": return getAreaRects((element: any));
   case "A": return getAnchorRects(self, (element: any));
@@ -90,7 +94,7 @@ function getAreaRects(element: HTMLAreaElement): Rect[] {
 }
 
 /// Return a element client rect if the anchor contains only it.
-function getAnchorRects(self: VisibleRectDetector, anchor: HTMLAnchorElement): Iterable<Rect> {
+function getAnchorRects(self: VisibleRectDetector, anchor: HTMLAnchorElement): Rect[] {
   const anchorRects = self.clientRectsCache.get(anchor);
   if (anchorRects.length === 0) return [];
 
@@ -166,6 +170,26 @@ function isOverwrappedRect(target: Rect, wrapper: Rect) {
     target.bottom <= wrapper.bottom &&
     target.left >= wrapper.left &&
     target.right <= target.right;
+}
+
+function cropByParent(self, element, rect, viewport): ?Rect {
+  if (element === document.body) return rect;
+
+  const parent = element.parentElement;
+  if (!(parent instanceof HTMLElement) || parent === document.body) return rect;
+
+  const elementPosition = self.styleCache.get(element).position;
+  const parentOverflow = self.styleCache.get(parent).overflow;
+  if (["absolute", "fixed"].includes(elementPosition)
+      || parentOverflow === "visible") {
+    return cropByParent(self, parent, rect, viewport);
+  }
+
+  const parentRects = self.get(parent, viewport);
+  if (parentRects.length === 0) return null;
+  const cropped = intersection(rect, parentRects[0]);
+  if (!cropped || isSmallRect(cropped)) return null;
+  return cropByParent(self, parent, cropped, viewport);
 }
 
 function avg(a: number, b: number, ratio: number): number {

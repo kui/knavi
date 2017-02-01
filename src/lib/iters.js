@@ -1,8 +1,8 @@
 // @flow
 
-export function* traverseParent(element: Element, includeSelf?: boolean): Iterator<Element> {
+export function* traverseParent(element: HTMLElement, includeSelf?: boolean): Iterator<HTMLElement> {
   let p = includeSelf ? element : element.parentElement;
-  while (p != null) {
+  while (p instanceof HTMLElement) {
     yield p;
     p = p.parentElement;
   }
