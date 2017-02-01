@@ -4,15 +4,7 @@ import { send, recieve } from "./chrome-messages";
 
 import type { RectsFragmentResponse } from "./rect-fetcher-service";
 import type { ActionOptions } from "./action-handlers";
-
-export interface Rect {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-  width: number;
-  height: number;
-}
+import type { Rect } from "./rects";
 
 export interface Element {
   frameId: number;
@@ -28,8 +20,9 @@ export interface Descriptions {
   long: ?string,
 }
 
+export const ALL_RECTS_REQUEST_TYPE = "jp-k-ui-knavi-AllRectsRequest";
 export type AllRectsRequest = {
-  type: "AllRectsRequest";
+  type: "jp-k-ui-knavi-AllRectsRequest";
   offsetX: number;
   offsetY: number;
   clientFrameId: number;
@@ -82,7 +75,7 @@ export function fetchAllRects(callback: Callback): Promise<void> {
 
     (async () => {
       window.postMessage(({
-        type: "AllRectsRequest",
+        type: ALL_RECTS_REQUEST_TYPE,
         offsetX: 0,
         offsetY: 0,
         clientFrameId: await frameIdPromise,

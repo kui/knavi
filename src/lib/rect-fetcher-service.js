@@ -5,6 +5,7 @@ import RectFetcher from "./rect-fetcher";
 import ActionHandler from "./action-handlers";
 import { recieve, send } from "./chrome-messages";
 import settingsClient from "./settings-client";
+import { ALL_RECTS_REQUEST_TYPE } from "./rect-fetcher-client";
 
 import type {
   RectHolder,
@@ -17,9 +18,8 @@ export type GetFrameId = {
   type: "GetFrameId";
 };
 
-type RegisterFrame = {
-  type: "RegisterFrame";
-};
+const REGISTE_FRAME_TYPE =   "jp-k-ui-knavi-RegisterFrame";
+type RegisterFrame = { type: "jp-k-ui-knavi-RegisterFrame" };
 
 let rectElements: { element: HTMLElement, holder: RectHolder }[];
 let actionHandler: ActionHandler = new ActionHandler;
@@ -44,15 +44,15 @@ additionalSelectorsPromise
   .then((s) => { if (s.length >= 1) console.debug("mached additional selectors", s); });
 
 if (parent !== window) {
-  parent.postMessage(({ type: "RegisterFrame" }: RegisterFrame), "*");
+  parent.postMessage(({ type: REGISTE_FRAME_TYPE }: RegisterFrame), "*");
 }
 
 window.addEventListener("message", (event) => {
   switch (event.data.type) {
-  case "AllRectsRequest":
+  case ALL_RECTS_REQUEST_TYPE:
     handleAllRectsRequest(event.data);
     return;
-  case "RegisterFrame":
+  case REGISTE_FRAME_TYPE:
     handleRegisterFrame(event.source);
     return;
   }
@@ -105,7 +105,7 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
   for (const frame of frames) {
     const rect = frame.holder.rects[0];
     (frame.element: any).contentWindow.postMessage(({
-      type: "AllRectsRequest",
+      type: ALL_RECTS_REQUEST_TYPE,
       offsetX: rect.left, offsetY: rect.top,
       clientFrameId: req.clientFrameId,
     }: AllRectsRequest), "*");
