@@ -5,15 +5,18 @@ import { isScrollable } from "./utils";
 import * as vp from "./viewports";
 import * as rectUtils from "./rects";
 import VisibleRectDetector from "./visible-rect-detector";
+import Cache from "./cache";
 
-import type { Rect } from "./rect-fetcher-client";
+import type { Rect } from "./rects";
 
 export default class RectFetcher {
   detector: VisibleRectDetector;
+  styleCache: Cache<HTMLElement, CSSStyleDeclaration>;
   additionalSelectors: string[];
 
   constructor(additionalSelectors: string[]) {
-    this.detector = new VisibleRectDetector;
+    this.styleCache = new Cache((e) => window.getComputedStyle(e));
+    this.detector = new VisibleRectDetector(this.styleCache);
     this.additionalSelectors = additionalSelectors;
   }
 
@@ -21,8 +24,8 @@ export default class RectFetcher {
     const visualViewport = vp.visual.rect();
     const layoutVpOffsets = vp.layout.offsets();
     const visualViewportFromLayoutVp = rectUtils.offsets(visualViewport, layoutVpOffsets);
-    const t = listAllTarget(this.detector, this.additionalSelectors, visualViewportFromLayoutVp);
-    return distinctSimilarTarget(this.detector, t, visualViewportFromLayoutVp);
+    const t = listAllTarget(this, visualViewportFromLayoutVp);
+    return distinctSimilarTarget(this, t, visualViewportFromLayoutVp);
   }
 }
 
@@ -31,7 +34,6 @@ declare interface Target {
   rects: Rect[];
   mightBeClickable?: boolean;
   filteredOutBy?: ?Target;
-  style?: ?CSSStyleDeclaration;
 }
 
 const HINTABLE_QUERY = [
@@ -54,17 +56,17 @@ const HINTABLE_QUERY = [
   "[data-image-url]",
 ].map((s) => "body /deep/ " + s).join(",");
 
-function listAllTarget(rectsDetector, additionalSelectors, viewport): Target[] {
+function listAllTarget(self, viewport): Target[] {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
-  if (additionalSelectors.length >= 1) {
-    const q = additionalSelectors.map((s) => "body /deep/ " + s).join(",");
+  if (self.additionalSelectors.length >= 1) {
+    const q = self.additionalSelectors.map((s) => "body /deep/ " + s).join(",");
     for (const e of document.querySelectorAll(q)) selecteds.add(e);
   }
 
   const targets: Target[] = [];
 
   if (document.activeElement !== document.body) {
-    const rects = rectsDetector.get(document.body, viewport);
+    const rects = self.detector.get(document.body, viewport);
     targets.push({ element: document.body, rects });
   }
 
@@ -81,7 +83,7 @@ function listAllTarget(rectsDetector, additionalSelectors, viewport): Target[] {
     if (selecteds.has(element)) {
       isClickableElement = true;
     } else {
-      style = window.getComputedStyle(element);
+      style = self.styleCache.get(element);
       // might be clickable
       if (["pointer", "zoom-in", "zoom-out"].includes(style.cursor)) {
         mightBeClickable = true;
@@ -93,7 +95,7 @@ function listAllTarget(rectsDetector, additionalSelectors, viewport): Target[] {
 
     if (!isClickableElement) continue;
 
-    const rects = rectsDetector.get(element, viewport);
+    const rects = self.detector.get(element, viewport);
     if (rects.length === 0) continue;
 
     targets.push({ element, rects, mightBeClickable, style });
@@ -107,7 +109,7 @@ function listAllTarget(rectsDetector, additionalSelectors, viewport): Target[] {
   return targets;
 }
 
-function distinctSimilarTarget(rectsDetector, targets, viewport): Target[] {
+function distinctSimilarTarget(self, targets, viewport): Target[] {
   const targetMap: Map<Element, Target> = new Map((function* () {
     for (const t of targets) yield [t.element, t];
   })());
@@ -117,7 +119,7 @@ function distinctSimilarTarget(rectsDetector, targets, viewport): Target[] {
     if (node instanceof Text) return !(/^\s*$/).test(node.textContent);
     // filter out invisible element.
     if (node instanceof HTMLElement) {
-      if (rectsDetector.get(node, viewport).length >= 1) return true;
+      if (self.detector.get(node, viewport).length >= 1) return true;
       return false;
     }
     return true;
@@ -141,7 +143,7 @@ function distinctSimilarTarget(rectsDetector, targets, viewport): Target[] {
     }
   }
 
-  // Filter out targets that is only one child for a parent target element.
+  // Filter out targets that is only one child for a parent that is target too.
   for (let i = 0; i < targets.length; i++) {
     const target = targets[i];
     if (!target.mightBeClickable) continue;

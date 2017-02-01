@@ -20,7 +20,7 @@ export interface Descriptions {
   long: ?string,
 }
 
-export const ALL_RECTS_REQUEST_TYPE = "jp-k-ui-knavi-AllRectsRequest";
+const ALL_RECTS_REQUEST_TYPE = "jp-k-ui-knavi-AllRectsRequest";
 export type AllRectsRequest = {
   type: "jp-k-ui-knavi-AllRectsRequest";
   offsetX: number;

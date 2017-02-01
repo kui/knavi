@@ -1,6 +1,6 @@
 // @flow
 
-import type { Rect } from "./rect-fetcher-client";
+import type { Rect } from "./rects";
 
 export function nextAnimationFrame(): Promise<number> {
   return new Promise((resolve) => requestAnimationFrame(resolve));

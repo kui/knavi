@@ -1,62 +1,44 @@
 // @flow
 
-import { filter, first, traverseParent, } from "./iters";
+import { filter, first, traverseParent, flatMap } from "./iters";
 import { intersection } from "./rects";
+import Cache from "./cache";
 
 import type { Rect } from "./rects";
 
 export default class VisibleRectDetector {
   cache: Cache<HTMLElement, Rect[]>;
+  clientRectsCache: Cache<HTMLElement, ClientRect[]>;
+  styleCache: Cache<HTMLElement, CSSStyleDeclaration>;
 
-  constructor() {
-    this.cache = new Cache();
+  constructor(styleCache: Cache<HTMLElement, CSSStyleDeclaration>) {
+    this.cache = new Cache;
+    this.clientRectsCache = new Cache((e) => e.getClientRects());
+    this.styleCache = styleCache;
   }
 
   get(element: HTMLElement, visualViewportFromLayoutVp: Rect): Rect[] {
-    return this.cache.get(element, () => {
+    return this.cache.getOr(element, () => {
       return getVisibleRects(this, element, visualViewportFromLayoutVp)
         .map((r) => getRectFromVisualViewport(r, visualViewportFromLayoutVp));
     });
   }
 }
 
-class Cache<K, V> {
-  c: Map<K, V>;
-
-  constructor() {
-    this.clear();
-  }
-
-  get(key: K, fallback: () => V): V {
-    const v = this.c.get(key);
-    if (v) return v;
-
-    const vv = fallback();
-    this.c.set(key, vv);
-    return vv;
-  }
-
-  clear() {
-    this.c = new Map;
-  }
-}
-
 function getVisibleRects(self, element, viewport): Rect[] {
   const clientRects = getClientRects(self, element);
-  return Array.from(filter(clientRects, (rect) => {
+  return Array.from(flatMap(clientRects, (rect) => {
     // too small rects
-    if (isSmallRect(rect)) return false;
+    if (isSmallRect(rect)) return [];
 
     // out of display
     const croppedRect = intersection(rect, viewport);
-    if (!croppedRect || isSmallRect(croppedRect)) return false;
+    if (!croppedRect || isSmallRect(croppedRect)) return [];
 
-    // is clickable element?
-    // Actualy isVisible needs this check only.
-    // However two former checks are faster than this.
-    if (!isPointable(self, element, rect, viewport)) return false;
+    // no overwrapped by other elements
+    if (!isPointable(self, element, rect, viewport)) return [];
 
-    return true;
+    return [croppedRect];
   }));
 }
 
@@ -69,7 +51,7 @@ function getClientRects(self: VisibleRectDetector, element: HTMLElement): Iterab
   switch (element.tagName) {
   case "AREA": return getAreaRects((element: any));
   case "A": return getAnchorRects(self, (element: any));
-  default: return element.getClientRects();
+  default: return self.clientRectsCache.get(element);
   }
 }
 
@@ -109,14 +91,15 @@ function getAreaRects(element: HTMLAreaElement): Rect[] {
 
 /// Return a img element client rect if the anchor contains only it.
 function getAnchorRects(self: VisibleRectDetector, anchor: HTMLAnchorElement): Iterable<Rect> {
-  const childNodes = Array.from(filter(anchor.childNodes, (n) => !isBlankTextNode(n)));
-  if (childNodes.length !== 1) return anchor.getClientRects();
+  const anchorRects = self.clientRectsCache.get(anchor);
 
-  const anchorRects = anchor.getClientRects();
+  const childNodes = Array.from(filter(anchor.childNodes, (n) => !isBlankTextNode(n)));
+  if (childNodes.length !== 1) return anchorRects;
+
   const child = childNodes[0];
   if (!(child instanceof HTMLImageElement)) return anchorRects;
 
-  const imgRects = child.getClientRects();
+  const imgRects = self.clientRectsCache.get(child);
   if (isOverwrappedRect(imgRects[0], anchorRects[0])) return anchorRects;
 
   return imgRects;

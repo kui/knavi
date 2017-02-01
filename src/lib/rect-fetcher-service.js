@@ -5,7 +5,6 @@ import RectFetcher from "./rect-fetcher";
 import ActionHandler from "./action-handlers";
 import { recieve, send } from "./chrome-messages";
 import settingsClient from "./settings-client";
-import { ALL_RECTS_REQUEST_TYPE } from "./rect-fetcher-client";
 
 import type {
   RectHolder,
@@ -17,6 +16,9 @@ import type {
 export type GetFrameId = {
   type: "GetFrameId";
 };
+
+// Donot import from rect-fetcher-client because it might start event listeners
+const ALL_RECTS_REQUEST_TYPE = "jp-k-ui-knavi-AllRectsRequest";
 
 const REGISTE_FRAME_TYPE =   "jp-k-ui-knavi-RegisterFrame";
 type RegisterFrame = { type: "jp-k-ui-knavi-RegisterFrame" };
