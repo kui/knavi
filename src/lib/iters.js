@@ -30,7 +30,7 @@ export function reduce<T, U>(i: Iterable<T> | Iterator<T>, m: (u: U, t: T) => U,
 }
 
 export function length<T>(i: Iterable<T> | Iterator<T>): number {
-  return reduce(i, (n) => n++, 0);
+  return reduce(i, (n) => ++n, 0);
 }
 
 export function first<T>(i: Iterator<T> | Iterable<T>): ?T {

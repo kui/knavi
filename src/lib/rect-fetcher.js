@@ -125,7 +125,7 @@ function distinctSimilarTarget(self, targets, viewport): Target[] {
     return true;
   }
 
-  // Filter out if this target is a child of <a> or <button>
+  // Filter out targets which are children of <a> or <button>
   for (let i = 0; i < targets.length; i++) {
     const target = targets[i];
     if (!target.mightBeClickable) continue;
