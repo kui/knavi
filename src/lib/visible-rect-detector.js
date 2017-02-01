@@ -89,20 +89,22 @@ function getAreaRects(element: HTMLAreaElement): Rect[] {
   return [{ left, right, top, bottom, width: right - left, height: bottom - top }];
 }
 
-/// Return a img element client rect if the anchor contains only it.
+/// Return a element client rect if the anchor contains only it.
 function getAnchorRects(self: VisibleRectDetector, anchor: HTMLAnchorElement): Iterable<Rect> {
   const anchorRects = self.clientRectsCache.get(anchor);
+  if (anchorRects.length === 0) return [];
 
   const childNodes = Array.from(filter(anchor.childNodes, (n) => !isBlankTextNode(n)));
   if (childNodes.length !== 1) return anchorRects;
 
   const child = childNodes[0];
-  if (!(child instanceof HTMLImageElement)) return anchorRects;
+  if (!(child instanceof HTMLElement)) return anchorRects;
 
-  const imgRects = self.clientRectsCache.get(child);
-  if (isOverwrappedRect(imgRects[0], anchorRects[0])) return anchorRects;
+  const childRects = self.clientRectsCache.get(child);
+  if (childRects.length === 0) return anchorRects;
+  if (isOverwrappedRect(childRects[0], anchorRects[0])) return anchorRects;
 
-  return imgRects;
+  return childRects;
 }
 
 function isBlankTextNode(n) {
