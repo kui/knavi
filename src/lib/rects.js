@@ -59,6 +59,17 @@ export function move(r: Rect, delta: Point) {
   };
 }
 
+export function offsets(r: Rect, offsets: Point) {
+  return {
+    top: r.top - offsets.y,
+    bottom: r.bottom - offsets.y,
+    left: r.left - offsets.x,
+    right: r.right - offsets.x,
+    height: r.height,
+    width: r.width,
+  };
+}
+
 export function intersection(...rects: Rect[]): ?Rect {
   const top = Math.max(...rects.map((r) => r.top));
   const bottom = Math.min(...rects.map((r) => r.bottom));

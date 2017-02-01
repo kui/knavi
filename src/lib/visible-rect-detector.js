@@ -1,31 +1,21 @@
 // @flow
 
-import * as iters from "./iters";
-import * as vp from "./viewports";
+import { filter, first, traverseParent, } from "./iters";
+import { intersection } from "./rects";
 
-export interface Rect {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-  width: number;
-  height: number;
-}
+import type { Rect } from "./rects";
 
 export default class VisibleRectDetector {
   cache: Cache<HTMLElement, Rect[]>;
-  visiualVpOffsets: { x: number, y: number };
 
   constructor() {
     this.cache = new Cache();
-    this.visiualVpOffsets = getVisualVpOffsetsFromLayoutVp();
   }
 
-  get(element: HTMLElement): Rect[] {
+  get(element: HTMLElement, visualViewportFromLayoutVp: Rect): Rect[] {
     return this.cache.get(element, () => {
-      const clientRects = getClientRects(this, element);
-      return filterVisibleRects(element, clientRects)
-        .map((r) => getRectFromVisualViewport(r, this.visiualVpOffsets));
+      return getVisibleRects(this, element, visualViewportFromLayoutVp)
+        .map((r) => getRectFromVisualViewport(r, visualViewportFromLayoutVp));
     });
   }
 }
@@ -51,38 +41,23 @@ class Cache<K, V> {
   }
 }
 
-function filterVisibleRects(element: HTMLElement, clientRects: Iterable<Rect>): Rect[] {
-  const vpSizes = vp.layout.sizes();
-  const viewportRect = {
-    top: 0, bottom: vpSizes.height,
-    left: 0, right: vpSizes.width,
-    height: vpSizes.height, width: vpSizes.width,
-  };
-  return Array.from(iters.filter(clientRects, (rect) => {
+function getVisibleRects(self, element, viewport): Rect[] {
+  const clientRects = getClientRects(self, element);
+  return Array.from(filter(clientRects, (rect) => {
     // too small rects
     if (isSmallRect(rect)) return false;
 
     // out of display
-    const croppedRect = cropRect(rect, viewportRect, 3);
-    if (isSmallRect(croppedRect)) return false;
+    const croppedRect = intersection(rect, viewport);
+    if (!croppedRect || isSmallRect(croppedRect)) return false;
 
     // is clickable element?
     // Actualy isVisible needs this check only.
     // However two former checks are faster than this.
-    if (!isPointable(element, rect, viewportRect)) return false;
+    if (!isPointable(self, element, rect, viewport)) return false;
 
     return true;
   }));
-}
-
-function cropRect(target: Rect, cropper: Rect, padding?: number = 0): Rect {
-  const top = Math.max(target.top, cropper.top + padding);
-  const bottom = Math.min(target.bottom, cropper.bottom - padding);
-  const left = Math.max(target.left, cropper.left + padding);
-  const right = Math.min(target.right, cropper.right - padding);
-  const height = bottom - top;
-  const width = right - left;
-  return { top, bottom, left, right, height, width };
 }
 
 const SMALL_THREASHOLD_PX = 3;
@@ -99,7 +74,7 @@ function getClientRects(self: VisibleRectDetector, element: HTMLElement): Iterab
 }
 
 function getAreaRects(element: HTMLAreaElement): Rect[] {
-  const map = iters.first(iters.filter(iters.traverseParent(element), (e) => e.tagName === "MAP"));
+  const map = first(filter(traverseParent(element), (e) => e.tagName === "MAP"));
   if (!(map instanceof HTMLMapElement)) return [];
 
   const img = document.querySelector(`body /deep/ img[usemap="#${map.name}"]`);
@@ -133,49 +108,66 @@ function getAreaRects(element: HTMLAreaElement): Rect[] {
 }
 
 /// Return a img element client rect if the anchor contains only it.
-function getAnchorRects(self: VisibleRectDetector, element: HTMLAnchorElement): Iterable<Rect> {
-  const childNodes = Array.from(iters.filter(element.childNodes, (n) => isVisibleNode(self, n)));
-  if (childNodes.length !== 1) return element.getClientRects();
+function getAnchorRects(self: VisibleRectDetector, anchor: HTMLAnchorElement): Iterable<Rect> {
+  const childNodes = Array.from(filter(anchor.childNodes, (n) => !isBlankTextNode(n)));
+  if (childNodes.length !== 1) return anchor.getClientRects();
+
+  const anchorRects = anchor.getClientRects();
   const child = childNodes[0];
-  return (child instanceof HTMLImageElement ? child : element).getClientRects();
+  if (!(child instanceof HTMLImageElement)) return anchorRects;
+
+  const imgRects = child.getClientRects();
+  if (isOverwrappedRect(imgRects[0], anchorRects[0])) return anchorRects;
+
+  return imgRects;
 }
 
-function isVisibleNode(self: VisibleRectDetector, node: Node): boolean {
-  if (node instanceof Text) return !(/^\s*$/).test(node.textContent);
-  if (node instanceof HTMLElement) {
-    if (self.get(node).length >= 1) return true;
-    return false;
-  }
-  // Unknown node type
-  return true;
+function isBlankTextNode(n) {
+  return (n instanceof Text) && (/^\s*$/).test(n.textContent);
 }
 
-const RECT_POSITIONS = [[0.5, 0.5], [0.1, 0.1], [0.1, 0.9], [0.9, 0.1], [0.9, 0.9]];
-
-function isPointable(element: HTMLElement, rect: Rect, viewportRect: Rect): boolean {
+function isPointable(self, element, rect, viewport): boolean {
   const { top, bottom, left, right } = rect;
-  for (const [xr, yr] of RECT_POSITIONS) {
-    const x = avg(left, right, xr);
-    const y = avg(top,  bottom, yr);
 
-    if (!isPointInRect(x, y, viewportRect)) continue;
-
-    let pointedElem = document.elementFromPoint(x, y);
-    if (pointedElem == null) continue;
-
-    // Traverse into shadow DOMs
-    while (pointedElem.shadowRoot) {
-      const elemInShadow = pointedElem.shadowRoot.elementFromPoint(x, y);
-      if (elemInShadow) {
-        pointedElem = elemInShadow;
-      } else {
-        break;
-      }
+  const x = avg(left, right, 0.5);
+  const y = avg(top, bottom, 0.5);
+  const pointedElement = deepElementFromPoint(x, y);
+  if (pointedElement) {
+    if (element === pointedElement || element.contains(pointedElement)) return true;
+    const pointedRects = self.get(pointedElement, viewport);
+    for (const pointedRect of pointedRects) {
+      if (isOverwrappedRect(rect, pointedRect)) return false;
     }
+  }
 
-    if (element === pointedElem || element.contains(pointedElem)) return true;
+  for (const [xr, yr] of [[0.1, 0.1], [0.1, 0.9], [0.9, 0.1], [0.9, 0.9]]) {
+    const x = avg(left, right, xr);
+    const y = avg(top, bottom, yr);
+
+    if (!isPointInRect(x, y, viewport)) continue;
+
+    const pointedElement = deepElementFromPoint(x, y);
+    if (pointedElement == null) continue;
+    if (element === pointedElement || element.contains(pointedElement)) return true;
   }
   return false;
+}
+
+function deepElementFromPoint(x, y) {
+  let pointedElement = document.elementFromPoint(x, y);
+  if (pointedElement == null) return null;
+
+  // Traverse into shadow DOMs
+  while (pointedElement.shadowRoot) {
+    const elemementInShadow = pointedElement.shadowRoot.elementFromPoint(x, y);
+    if (elemementInShadow) {
+      pointedElement = elemementInShadow;
+    } else {
+      return pointedElement;
+    }
+  }
+
+  return pointedElement;
 }
 
 function isPointInRect(x, y, rect) {
@@ -183,25 +175,24 @@ function isPointInRect(x, y, rect) {
     && rect.left <= x && x <= rect.right;
 }
 
+/// return true if `wrapper` COMPLETELY overwrap `target`
+function isOverwrappedRect(target: Rect, wrapper: Rect) {
+  return target.top >= wrapper.top &&
+    target.bottom <= wrapper.bottom &&
+    target.left >= wrapper.left &&
+    target.right <= target.right;
+}
+
 function avg(a: number, b: number, ratio: number): number {
   return a * ratio + b * (1 - ratio);
 }
 
-function getVisualVpOffsetsFromLayoutVp() {
-  const layoutVpOffsets = vp.layout.offsets();
-  const visualVpOffsets = vp.visual.offsets();
+function getRectFromVisualViewport(r: Rect, visualViewport: Rect) {
   return {
-    x: visualVpOffsets.x - layoutVpOffsets.x,
-    y: visualVpOffsets.y - layoutVpOffsets.y,
-  };
-}
-
-function getRectFromVisualViewport(r: Rect, offsets: { x: number, y: number }) {
-  return {
-    top: r.top - offsets.y,
-    bottom: r.bottom - offsets.y,
-    left: r.left - offsets.x,
-    right: r.right - offsets.x,
+    top: r.top - visualViewport.top,
+    bottom: r.bottom - visualViewport.top,
+    left: r.left - visualViewport.left,
+    right: r.right - visualViewport.left,
     width: r.width,
     height: r.height,
   };

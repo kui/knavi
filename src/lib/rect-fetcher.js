@@ -2,6 +2,8 @@
 
 import { flatMap, traverseParent, filter, first, takeWhile, length } from "./iters";
 import { isScrollable } from "./utils";
+import * as vp from "./viewports";
+import * as rectUtils from "./rects";
 import VisibleRectDetector from "./visible-rect-detector";
 
 import type { Rect } from "./rect-fetcher-client";
@@ -16,8 +18,11 @@ export default class RectFetcher {
   }
 
   getAll(): { element: HTMLElement, rects: Rect[] }[] {
-    const t = listAllTarget(this.detector, this.additionalSelectors);
-    return distinctSimilarTarget(this.detector, t);
+    const visualViewport = vp.visual.rect();
+    const layoutVpOffsets = vp.layout.offsets();
+    const visualViewportFromLayoutVp = rectUtils.offsets(visualViewport, layoutVpOffsets);
+    const t = listAllTarget(this.detector, this.additionalSelectors, visualViewportFromLayoutVp);
+    return distinctSimilarTarget(this.detector, t, visualViewportFromLayoutVp);
   }
 }
 
@@ -49,7 +54,7 @@ const HINTABLE_QUERY = [
   "[data-image-url]",
 ].map((s) => "body /deep/ " + s).join(",");
 
-function listAllTarget(rectsDetector: VisibleRectDetector, additionalSelectors: string[]): Target[] {
+function listAllTarget(rectsDetector, additionalSelectors, viewport): Target[] {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
   if (additionalSelectors.length >= 1) {
     const q = additionalSelectors.map((s) => "body /deep/ " + s).join(",");
@@ -59,7 +64,7 @@ function listAllTarget(rectsDetector: VisibleRectDetector, additionalSelectors: 
   const targets: Target[] = [];
 
   if (document.activeElement !== document.body) {
-    const rects = rectsDetector.get(document.body);
+    const rects = rectsDetector.get(document.body, viewport);
     targets.push({ element: document.body, rects });
   }
 
@@ -88,7 +93,7 @@ function listAllTarget(rectsDetector: VisibleRectDetector, additionalSelectors: 
 
     if (!isClickableElement) continue;
 
-    const rects = rectsDetector.get(element);
+    const rects = rectsDetector.get(element, viewport);
     if (rects.length === 0) continue;
 
     targets.push({ element, rects, mightBeClickable, style });
@@ -102,7 +107,7 @@ function listAllTarget(rectsDetector: VisibleRectDetector, additionalSelectors: 
   return targets;
 }
 
-function distinctSimilarTarget(rectsDetector: VisibleRectDetector, targets: Target[]): Target[] {
+function distinctSimilarTarget(rectsDetector, targets, viewport): Target[] {
   const targetMap: Map<Element, Target> = new Map((function* () {
     for (const t of targets) yield [t.element, t];
   })());
@@ -112,7 +117,7 @@ function distinctSimilarTarget(rectsDetector: VisibleRectDetector, targets: Targ
     if (node instanceof Text) return !(/^\s*$/).test(node.textContent);
     // filter out invisible element.
     if (node instanceof HTMLElement) {
-      if (rectsDetector.get(node).length >= 1) return true;
+      if (rectsDetector.get(node, viewport).length >= 1) return true;
       return false;
     }
     return true;

@@ -1,25 +1,25 @@
 // @flow
 
 import * as rects from "./rects";
-import type { Rect } from "./rects";
+import type { Rect, Point, Sizes } from "./rects";
 
 let layoutVPOffsetsCache = null;
 
 export const layout = {
   /// get the coordinates of the top-left of the layout viewport.
-  offsets(): { y: number, x: number } {
+  offsets(): Point {
     if (layoutVPOffsetsCache) return layoutVPOffsetsCache;
     const rootRect = document.documentElement.getBoundingClientRect();
     return layoutVPOffsetsCache = { y: - rootRect.top, x: - rootRect.left };
   },
-  sizes(): { height: number, width: number } {
+  sizes(): Sizes {
     return {
       height: document.documentElement.clientHeight,
       width: document.documentElement.clientWidth,
     };
   },
   rect(): Rect {
-    return rects.rectByOffsetsAndSizes(this.offsets, this.sizes);
+    return rects.rectByOffsetsAndSizes(this.offsets(), this.sizes());
   }
 };
 
@@ -29,10 +29,10 @@ let prevInnerHeight;
 
 export const visual = {
   /// get the coordinates from the top-left of the visual viewport.
-  offsets(): { y: number, x: number } {
+  offsets(): Point {
     return { y: window.scrollY, x: window.scrollX };
   },
-  sizes(): { height: number, width: number } {
+  sizes(): Sizes {
     const innerWidth = window.innerWidth;
     const innerHeight = window.innerHeight;
     if (prevInnerWidth === innerWidth &&
@@ -48,7 +48,7 @@ export const visual = {
     };
   },
   rect(): Rect {
-    return rects.rectByOffsetsAndSizes(this.offsets, this.sizes);
+    return rects.rectByOffsetsAndSizes(this.offsets(), this.sizes());
   }
 };
 
