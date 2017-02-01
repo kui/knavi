@@ -7,8 +7,6 @@ const plugins = [
     name: "content-script-common",
     chunks: ["content-script-root", "content-script-all"],
   }),
-  new webpack.optimize.DedupePlugin(),
-  new webpack.optimize.OccurrenceOrderPlugin(),
 ];
 
 if (!DEBUG) {
@@ -16,7 +14,6 @@ if (!DEBUG) {
 }
 
 module.exports = {
-  debug: DEBUG,
   devtool: DEBUG ? "inline-source-map" : "source-map",
   entry: {
     options: "./src/options.js",
@@ -29,8 +26,8 @@ module.exports = {
     filename: "[name].js"
   },
   module: {
-    loaders: [
-      { test: /\.js$/, exclude: /node_modules/, loader: "babel-loader" }
+    rules: [
+      { test: /\.js$/, exclude: /node_modules/, use: "babel-loader" }
     ]
   },
   plugins,
