@@ -3,12 +3,12 @@
 import { filter, first } from "./iters";
 import * as vp from "./viewports";
 import { send } from "./chrome-messages";
-import { intersection, move } from "./rects";
+import * as rectUtils from "./rects";
 
 import type { Rect } from "./rects";
 
 /// a message from a child frame indicates to blur.
-const BLUR_MESSAGE = "jp-k-ui-knavi-Blur";
+const BLUR_TYPE = "jp-k-ui-knavi-Blur";
 
 export type Blured = {
   type: "Blured";
@@ -19,7 +19,7 @@ export default class Blurer {
   constructor() {
     // Blur request from a child frame
     window.addEventListener("message", (e) => {
-      if (e.data.type !== BLUR_MESSAGE) return;
+      if (e.data.type !== BLUR_TYPE) return;
       console.debug("blur", e.data, "location=", location.href);
       if (e.source === window) {
         document.activeElement.blur();
@@ -30,18 +30,18 @@ export default class Blurer {
       const sourceIframe = first(filter(document.querySelectorAll("iframe"),
                                         (i) => e.source === (i: any).contentWindow));
       if (!sourceIframe) return;
-      const sourceRect = vp.getClientRectsFromVisualVP(sourceIframe)[0];
-      const offsettedRect = move(e.data.rect, { x: sourceRect.left, y: sourceRect.top });
+      const sourceRect = getFirstClientRectFromVisualVp(sourceIframe);
+      const offsettedRect = rectUtils.move(e.data.rect, { x: sourceRect.left, y: sourceRect.top });
 
-      const rect = intersection(sourceRect, offsettedRect);
-      window.parent.postMessage({ type: BLUR_MESSAGE, rect }, "*");
+      const rect = rectUtils.intersection(sourceRect, offsettedRect);
+      window.parent.postMessage({ type: BLUR_TYPE, rect }, "*");
     });
   }
 
   blur(): boolean {
     if (isInRootFrame() && !isBlurable()) return false;
-    const rect = vp.getClientRectsFromVisualVP(document.activeElement)[0];
-    window.parent.postMessage({ type: BLUR_MESSAGE, rect }, "*");
+    const rect = getFirstClientRectFromVisualVp(document.activeElement);
+    window.parent.postMessage({ type: BLUR_TYPE, rect }, "*");
     return true;
   }
 }
@@ -54,3 +54,14 @@ function isInRootFrame() {
   return window.parent === window;
 }
 
+function getFirstClientRectFromVisualVp(element): Rect {
+  return getRectFromVisualVp(element.getClientRects()[0]);
+}
+
+function getRectFromVisualVp(rectFromLayoutVp): Rect {
+  const layoutVpOffsets = vp.layout.offsets();
+  const visualVpOffsets = vp.visual.offsets();
+  return rectUtils.offsets(rectUtils.move(rectFromLayoutVp,
+                                          layoutVpOffsets),
+                           visualVpOffsets);
+}

@@ -61,17 +61,6 @@ window.addEventListener("resize", () => {
   visualVPSizesCache = null;
 }, { passive: true });
 
-export function getClientRectsFromVisualVP(element: HTMLElement): Rect[] {
-  const layoutVpOffsets = layout.offsets();
-  const visualVpOffsets = visual.offsets();
-  const delta = {
-    y: layoutVpOffsets.y - visualVpOffsets.y,
-    x: layoutVpOffsets.x - visualVpOffsets.x,
-  };
-  return Array.from(element.getClientRects())
-    .map((r) => rects.move(r, delta));
-}
-
 export function getBoundingClientRectFromRoot(element: HTMLElement): Rect {
   const layoutVpOffsets = layout.offsets();
   const rectFromLayoutVp = element.getBoundingClientRect();
