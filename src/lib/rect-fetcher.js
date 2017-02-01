@@ -16,9 +16,7 @@ export default class RectFetcher {
   }
 
   getAll(): { element: HTMLElement, rects: Rect[] }[] {
-    console.time("List all target elements");
     const t = listAllTarget(this.detector, this.additionalSelectors);
-    console.timeEnd("List all target elements");
     return distinctSimilarTarget(this.detector, t);
   }
 }
@@ -65,7 +63,12 @@ function listAllTarget(rectsDetector: VisibleRectDetector, additionalSelectors: 
     targets.push({ element: document.body, rects });
   }
 
+  let totalElements = 0;
+
+  const startMsec = performance.now();
   for (const element of document.querySelectorAll("body /deep/ *")) {
+    totalElements++;
+
     let isClickableElement = false;
     let mightBeClickable = false;
     let style = null;
@@ -90,6 +93,11 @@ function listAllTarget(rectsDetector: VisibleRectDetector, additionalSelectors: 
 
     targets.push({ element, rects, mightBeClickable, style });
   }
+  const elapsedMsec = performance.now() - startMsec;
+
+  console.debug("list all elements: elapsedMsec=", elapsedMsec,
+                "totalElements=", totalElements,
+                "targetElements=", targets.length);
 
   return targets;
 }
