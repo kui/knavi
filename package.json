@@ -2,7 +2,7 @@
   "private": true,
   "name": "knavi",
   "version": "0.0.1",
-  "description": "Hit-a-Hint with magic key",
+  "description": "Hit-a-Hint with magic key. Press the magic key to provide hints and press hint letters to click the link.",
   "scripts": {
     "test": "make test"
   },
