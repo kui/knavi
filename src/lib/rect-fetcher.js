@@ -5,23 +5,23 @@ import { isScrollable } from "./utils";
 import * as vp from "./viewports";
 import * as rectUtils from "./rects";
 import VisibleRectDetector from "./visible-rect-detector";
-import Cache from "./cache";
 
 import type { Rect } from "./rects";
+import type Cache from "./cache";
+import type { DomCaches } from "./rect-fetcher-service";
 
 export default class RectFetcher {
   detector: VisibleRectDetector;
   styleCache: Cache<HTMLElement, CSSStyleDeclaration>;
   additionalSelectors: string[];
 
-  constructor(additionalSelectors: string[]) {
-    this.styleCache = new Cache((e) => window.getComputedStyle(e));
-    this.detector = new VisibleRectDetector(this.styleCache);
+  constructor(additionalSelectors: string[], caches: DomCaches) {
+    this.styleCache = caches.style;
+    this.detector = new VisibleRectDetector(caches);
     this.additionalSelectors = additionalSelectors;
   }
 
-  getAll(): { element: HTMLElement, rects: Rect[] }[] {
-    const visualViewport = vp.visual.rect();
+  getAll(visualViewport: Rect): { element: HTMLElement, rects: Rect[] }[] {
     const layoutVpOffsets = vp.layout.offsets();
     const visualViewportFromLayoutVp = rectUtils.offsets(visualViewport, layoutVpOffsets);
     const t = listAllTarget(this, visualViewportFromLayoutVp);

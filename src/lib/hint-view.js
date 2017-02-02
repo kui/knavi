@@ -249,7 +249,6 @@ function buildHintElements(target: Target): HTMLDivElement[] {
   // Hinting for all client rects are annoying
   // const rects = target.rects;
   const rects = target.holder.rects.slice(0, 1);
-
   return rects.map((rect) => {
     const h = document.createElement("div");
     h.textContent = target.hint;

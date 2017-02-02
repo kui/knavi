@@ -5,16 +5,17 @@ import { intersection } from "./rects";
 import Cache from "./cache";
 
 import type { Rect } from "./rects";
+import type { DomCaches } from "./rect-fetcher-service";
 
 export default class VisibleRectDetector {
   cache: Cache<HTMLElement, Rect[]>;
   clientRectsCache: Cache<HTMLElement, Rect[]>;
   styleCache: Cache<HTMLElement, CSSStyleDeclaration>;
 
-  constructor(styleCache: Cache<HTMLElement, CSSStyleDeclaration>) {
+  constructor(caches: DomCaches) {
     this.cache = new Cache;
-    this.clientRectsCache = new Cache((e) => Array.from(e.getClientRects()));
-    this.styleCache = styleCache;
+    this.clientRectsCache = caches.clientRects;
+    this.styleCache = caches.style;
   }
 
   get(element: HTMLElement, visualViewportFromLayoutVp: Rect): Rect[] {

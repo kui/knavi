@@ -1,6 +1,8 @@
 // @flow
 
 import { send, recieve } from "./chrome-messages";
+import * as vp from "./viewports";
+import * as rectUtils from "./rects";
 
 import type { RectsFragmentResponse } from "./rect-fetcher-service";
 import type { ActionOptions } from "./action-handlers";
@@ -23,8 +25,8 @@ export interface Descriptions {
 const ALL_RECTS_REQUEST_TYPE = "jp-k-ui-knavi-AllRectsRequest";
 export type AllRectsRequest = {
   type: "jp-k-ui-knavi-AllRectsRequest";
-  offsetX: number;
-  offsetY: number;
+  offsets: { x: number, y: number };
+  viewport: Rect;
   clientFrameId: number;
 }
 
@@ -73,11 +75,14 @@ export function fetchAllRects(callback: Callback): Promise<void> {
       resolve();
     });
 
+    const offsets = { x: 0, y: 0 };
+    const visualVpSizes = vp.visual.sizes();
+
     (async () => {
       window.postMessage(({
         type: ALL_RECTS_REQUEST_TYPE,
-        offsetX: 0,
-        offsetY: 0,
+        offsets,
+        viewport: rectUtils.rectByOffsetsAndSizes(offsets, visualVpSizes),
         clientFrameId: await frameIdPromise,
       }: AllRectsRequest), "*");
     })();

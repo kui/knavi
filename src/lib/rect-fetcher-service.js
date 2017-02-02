@@ -5,6 +5,9 @@ import RectFetcher from "./rect-fetcher";
 import ActionHandler from "./action-handlers";
 import { recieve, send } from "./chrome-messages";
 import settingsClient from "./settings-client";
+import * as rectUtils from "./rects";
+import * as vp from "./viewports";
+import Cache from "./cache";
 
 import type {
   RectHolder,
@@ -12,6 +15,7 @@ import type {
   DescriptionsRequest,
   ActionRequest
 } from "./rect-fetcher-client";
+import type { Rect } from "./rects";
 
 export type GetFrameId = {
   type: "GetFrameId";
@@ -70,14 +74,26 @@ export type RectsFragmentResponse = {
   clientFrameId: number;
 };
 
+export type DomCaches = {
+  style: Cache<HTMLElement, CSSStyleDeclaration>;
+  clientRects: Cache<HTMLElement, Rect[]>;
+};
+
 async function handleAllRectsRequest(req: AllRectsRequest) {
   console.debug("AllRectsRequest req=", req, "location=", location.href);
 
-  const rectFetcher = new RectFetcher(await additionalSelectorsPromise);
+  const visualVpOffsets = vp.visual.offsets();
+  const visualViewport = rectUtils.move(req.viewport, visualVpOffsets);
+
+  const caches: DomCaches = {
+    style: new Cache((e: HTMLElement) => window.getComputedStyle(e)),
+    clientRects: new Cache((e) => Array.from(e.getClientRects())),
+  };
+  const rectFetcher = new RectFetcher(await additionalSelectorsPromise, caches);
   const frameId = await frameIdPromise;
 
-  rectElements = rectFetcher.getAll().map(({ element, rects }, index) => {
-    rects = addOffsets(rects, req);
+  rectElements = rectFetcher.getAll(visualViewport).map(({ element, rects }, index) => {
+    rects = rects.map((r) => rectUtils.move(r, req.offsets));
     return { element, holder: { index, frameId, rects } };
   });
 
@@ -91,11 +107,9 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
   // Propagate requests to child frames
   // Child frames require to be visible by above rect detection, and
   // be registered by a init "RegisterFrame" message.
-  const frames = new Set(
-    filter(filter(rectElements,
-                  ({ element }) => element.tagName === "IFRAME"),
-           ({ element }) => registeredFrames.has((element: any).contentWindow))
-  );
+  const frames = new Set(filter(rectElements, ({ element }) => {
+    return registeredFrames.has((element: any).contentWindow);
+  }));
   if (frames.size === 0) {
     console.debug("No frames", location.href);
     window.parent.postMessage({ type: "AllRectsResponseComplete" }, "*");
@@ -104,11 +118,31 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
 
   console.debug("Send request to child frames", location.href);
 
+  const layoutVpOffsets = vp.layout.offsets();
+  const visualVpOffsetsFromLayoutVp = {
+    y: visualVpOffsets.y - layoutVpOffsets.y,
+    x: visualVpOffsets.x - layoutVpOffsets.x,
+  };
   for (const frame of frames) {
-    const rect = frame.holder.rects[0];
+    const clientRect = rectUtils.move(
+      rectUtils.offsets(
+        caches.clientRects.get(frame.element)[0],
+        visualVpOffsetsFromLayoutVp
+      ),
+      req.offsets
+    );
+    const style = caches.style.get(frame.element);
+    const borderTopWidth = parsePx(style.borderTopWidth) || 0;
+    const borderLeftWidth = parsePx(style.borderLeftWidth) || 0;
+    const offsets = {
+      x: clientRect.left + borderLeftWidth,
+      y: clientRect.top + borderTopWidth,
+    };
+    const viewport = rectUtils.offsets(frame.holder.rects[0], offsets);
     (frame.element: any).contentWindow.postMessage(({
       type: ALL_RECTS_REQUEST_TYPE,
-      offsetX: rect.left, offsetY: rect.top,
+      viewport,
+      offsets,
       clientFrameId: req.clientFrameId,
     }: AllRectsRequest), "*");
   }
@@ -139,19 +173,13 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
   }, 1000);
 }
 
-function addOffsets(rects, offsets) {
-  return rects.map((r) => ({
-    top: r.top + offsets.offsetY,
-    bottom: r.bottom + offsets.offsetY,
-    left: r.left + offsets.offsetX,
-    right: r.right + offsets.offsetX,
-    height: r.height,
-    width: r.width,
-  }));
-}
-
 function handleRegisterFrame(frame: WindowProxy) {
   if (registeredFrames.has(frame)) return;
   console.debug("New child frame", frame, "parent-location=", location.href);
   registeredFrames.add(frame);
+}
+
+function parsePx(s) {
+  const m = (/(\d+)px/).exec(s);
+  return m && parseInt(m[1]);
 }
