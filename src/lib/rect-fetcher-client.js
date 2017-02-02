@@ -25,7 +25,9 @@ export interface Descriptions {
 const ALL_RECTS_REQUEST_TYPE = "jp-k-ui-knavi-AllRectsRequest";
 export type AllRectsRequest = {
   type: "jp-k-ui-knavi-AllRectsRequest";
+  /// Visual viewport offset in a child frame from the visual viewport of the root frame.
   offsets: { x: number, y: number };
+  /// Actual viewport rect in a child frame.
   viewport: Rect;
   clientFrameId: number;
 }
