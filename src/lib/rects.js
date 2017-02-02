@@ -77,3 +77,21 @@ export function intersection(...rects: Rect[]): ?Rect {
   const right = Math.min(...rects.map((r) => r.right));
   return rectByTBLR(top, bottom, left, right);
 }
+
+export type BorderWidth = {
+  [n: "left" | "right" | "top" | "bottom"]: number,
+  left: number,
+  right: number,
+  top: number,
+  bottom: number,
+};
+
+export function excludeBorders(rect: Rect, borderWidth: BorderWidth) {
+  return rectByPoints({
+    y: rect.top + borderWidth.top,
+    x: rect.left + borderWidth.left,
+  }, {
+    y: rect.bottom - borderWidth.bottom,
+    x: rect.right - borderWidth.right,
+  });
+}

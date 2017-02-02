@@ -15,7 +15,7 @@ import type {
   DescriptionsRequest,
   ActionRequest
 } from "./rect-fetcher-client";
-import type { Rect } from "./rects";
+import type { Rect, BorderWidth } from "./rects";
 
 export type GetFrameId = {
   type: "GetFrameId";
@@ -27,7 +27,8 @@ const ALL_RECTS_REQUEST_TYPE = "jp-k-ui-knavi-AllRectsRequest";
 const REGISTE_FRAME_TYPE =   "jp-k-ui-knavi-RegisterFrame";
 type RegisterFrame = { type: "jp-k-ui-knavi-RegisterFrame" };
 
-let rectElements: { element: HTMLElement, holder: RectHolder }[];
+type RectsElement = { element: HTMLElement, holder: RectHolder };
+let rectElements: RectsElement[];
 let actionHandler: ActionHandler = new ActionHandler;
 const registeredFrames: Set<WindowProxy> = new Set;
 
@@ -107,11 +108,11 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
   // Propagate requests to child frames
   // Child frames require to be visible by above rect detection, and
   // be registered by a init "RegisterFrame" message.
-  const frames = new Set(filter(rectElements, ({ element }) => {
+  const frames: Set<RectsElement> = new Set(filter(rectElements, ({ element }) => {
     return registeredFrames.has((element: any).contentWindow);
   }));
   if (frames.size === 0) {
-    console.debug("No frames", location.href);
+    console.debug("No visible frames", location.href);
     window.parent.postMessage({ type: "AllRectsResponseComplete" }, "*");
     return;
   }
@@ -119,32 +120,38 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
   console.debug("Send request to child frames", location.href);
 
   const layoutVpOffsets = vp.layout.offsets();
-  const visualVpOffsetsFromLayoutVp = {
-    y: visualVpOffsets.y - layoutVpOffsets.y,
-    x: visualVpOffsets.x - layoutVpOffsets.x,
+  const layoutVpOffsetsFromRootVisualVp = {
+    y: layoutVpOffsets.y - visualVpOffsets.y + req.offsets.y,
+    x: layoutVpOffsets.x - visualVpOffsets.x + req.offsets.x,
   };
   for (const frame of frames) {
+    const borderWidth = getBorderWidth(frame.element, caches);
     const clientRect = rectUtils.move(
-      rectUtils.offsets(
-        caches.clientRects.get(frame.element)[0],
-        visualVpOffsetsFromLayoutVp
-      ),
-      req.offsets
+      caches.clientRects.get(frame.element)[0],
+      layoutVpOffsetsFromRootVisualVp
     );
-    const style = caches.style.get(frame.element);
-    const borderTopWidth = parsePx(style.borderTopWidth) || 0;
-    const borderLeftWidth = parsePx(style.borderLeftWidth) || 0;
+    const iframeViewport = rectUtils.excludeBorders(clientRect, borderWidth);
     const offsets = {
-      x: clientRect.left + borderLeftWidth,
-      y: clientRect.top + borderTopWidth,
+      x: iframeViewport.left,
+      y: iframeViewport.top,
     };
-    const viewport = rectUtils.offsets(frame.holder.rects[0], offsets);
+    const croppedRect = frame.holder.rects[0];
+    const viewport = rectUtils.intersection(croppedRect, iframeViewport);
+    if (!viewport) {
+      frames.delete(frame);
+      continue;
+    }
     (frame.element: any).contentWindow.postMessage(({
       type: ALL_RECTS_REQUEST_TYPE,
-      viewport,
+      viewport: rectUtils.offsets(viewport, offsets),
       offsets,
       clientFrameId: req.clientFrameId,
     }: AllRectsRequest), "*");
+  }
+  if (frames.size === 0) {
+    console.debug("No visible frames", location.href);
+    window.parent.postMessage({ type: "AllRectsResponseComplete" }, "*");
+    return;
   }
 
   // Handle reqest complete
@@ -154,7 +161,7 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
     if (event.source === window) return;
     if (event.data.type !== "AllRectsResponseComplete") return;
 
-    const frame = first(filter(frames,
+    const frame = first(filter(frames.values(),
                                ({element}) => element.contentWindow === event.source));
     if (!frame) return;
     frames.delete(frame);
@@ -179,7 +186,25 @@ function handleRegisterFrame(frame: WindowProxy) {
   registeredFrames.add(frame);
 }
 
-function parsePx(s) {
-  const m = (/(\d+)px/).exec(s);
-  return m && parseInt(m[1]);
+function getBorderWidth(element: HTMLElement, caches: DomCaches): BorderWidth {
+  const rects = caches.clientRects.get(element);
+  const style = caches.style.get(element);
+
+  function f(direction, rectIndex: number | "last", sizeName) {
+    const propName = `border-${direction}-width`;
+    if (/^0(?:\D*)$|^$/.test(style.getPropertyValue(propName))) return 0;
+    const prevValue = element.style.getPropertyValue(propName);
+    element.style.setProperty(propName, "0");
+    const index = rectIndex === "last" ? rects.length - 1 : rectIndex;
+    const w = (rects[index]: any)[sizeName] - (element.getClientRects()[index]: any)[sizeName];
+    element.style.setProperty(propName, prevValue);
+    return w;
+  }
+
+  return {
+    top: f("top", 0, "height"),
+    bottom: f("bottom", 0, "height"),
+    left: f("left", 0, "width"),
+    right: f("right", "last", "width"),
+  };
 }
