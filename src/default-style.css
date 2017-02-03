@@ -1,9 +1,4 @@
-/* iframe body to contain hint markers */
-body {
-  overflow: hidden;
-}
-
-/* base overlay */
+/* hit candidates overlay */
 #overlay {
   background-color: #999;
   transition-property: left, top, width, height;

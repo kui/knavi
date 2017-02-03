@@ -30,13 +30,15 @@ declare type Hint = {
 export default class HintView {
   constructor() {
     (async () => {
-      const container = document.createElement("iframe");
+      const container = document.createElement("div");
       container.id = CONTAINER_ID;
-      const overlay = document.createElement("div");
+      // $FlowFixMe
+      const root: ShadowRoot = container.createShadowRoot();
+      const overlay = root.appendChild(document.createElement("div"));
       overlay.id = OVERLAY_ID;
-      const activeOverlay = document.createElement("div");
+      const activeOverlay = root.appendChild(document.createElement("div"));
       activeOverlay.id = ACTIVE_OVERLAY_ID;
-      const style = document.createElement("style");
+      const style = root.appendChild(document.createElement("style"));
 
       const settings = await settingsClient.get();
       style.textContent = settings.css;
@@ -46,45 +48,38 @@ export default class HintView {
 
       let hints: Hints;
 
-      // wait event setup untill document.body.firstChild is reachable.
+      // wait event setup until document.body.firstChild is reachable.
       while (!(document.body && document.body.firstChild)) await utils.nextAnimationFrame();
 
       subscribe("StartHinting", () => {
         initStyles(container, overlay, activeOverlay);
-        document.body.insertBefore(container, document.body.firstChild);
-        container.contentDocument.head.appendChild(style);
-        container.contentWindow.onfocus = () => {
-          if (document.body.contains(container)) {
-            document.body.removeChild(container);
-            return false;
-          }
-        };
         hints = new Hints;
+
+        if (document.readyState === "loading") {
+          waitUntil(() => document.body).then(() => {
+            document.body.insertBefore(container, document.body.firstChild);
+          });
+        } else {
+          document.body.appendChild(container);
+        }
       });
       subscribe("NewTargets", ({ newTargets }: NewTargets) => {
         if (hints == null) return;
-        if (!container.contentDocument) return;
         const df = document.createDocumentFragment();
         for (const hint of generateHintElements(newTargets)) {
           hints.add(hint);
           hint.elements.forEach((e) => df.appendChild(e));
         }
-        container.contentDocument.body.appendChild(df);
+        root.appendChild(df);
 
         const first = newTargets[0];
         if (first && first.holder.frameId === 0) {
           container.style.display = "block";
-          const body = container.contentDocument.body;
-          if (!body.contains(activeOverlay)) body.insertBefore(activeOverlay, body.firstChild);
-          if (!body.contains(overlay)) body.insertBefore(overlay, body.firstChild);
         }
       });
       subscribe("EndHinting", () => {
         if (!container.contentDocument) return;
         container.style.display = "block";
-        const body = container.contentDocument.body;
-        if (!body.contains(activeOverlay)) body.insertBefore(activeOverlay, body.firstChild);
-        if (!body.contains(overlay)) body.insertBefore(overlay, body.firstChild);
       });
       subscribe("AfterHitHint", ({ context, stateChanges, actionDescriptions }: AfterHitHint) => {
         if (!hints) throw Error("Illegal state");
@@ -98,6 +93,7 @@ export default class HintView {
         if (document.body.contains(container)) {
           document.body.removeChild(container);
         }
+        removeAllHints(root, hints);
       });
     })();
   }
@@ -125,6 +121,13 @@ class Hints {
     }
     hmap.set(index, h);
   }
+  *all(): Iterable<Hint> {
+    for (const [, m] of this.map) {
+      for (const [, h] of m) {
+        yield h;
+      }
+    }
+  }
 }
 
 function initStyles(container: HTMLElement,
@@ -143,13 +146,16 @@ function initStyles(container: HTMLElement,
 
   Object.assign(container.style, {
     position: "absolute",
-    padding: "0", margin: "0",
     top:  px(vvpOffsets.y - bodyOffsets.y),
     left: px(vvpOffsets.x - bodyOffsets.x),
     width:  px(vvpSizes.width),
     height: px(vvpSizes.height),
     background: "display",
-    border: "none",
+    border: "0",
+    outline: "0",
+    padding: "0",
+    margin: "0",
+    overflow: "hidden",
     zIndex: Z_INDEX_OFFSET.toString(),
     display: "none",
   });
@@ -272,4 +278,18 @@ function buildHintElements(target: Target): HTMLDivElement[] {
   });
 }
 
+function removeAllHints(root, hints) {
+  for (const h of hints.all()) {
+    for (const e of h.elements) {
+      root.removeChild(e);
+    }
+  }
+}
+
 function px(n: number) { return `${Math.round(n)}px`; }
+
+async function waitUntil(predicate) {
+  while (!predicate()) {
+    await utils.nextAnimationFrame();
+  }
+}
