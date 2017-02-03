@@ -70,13 +70,21 @@ export default class HintView {
           hint.elements.forEach((e) => df.appendChild(e));
         }
         container.contentDocument.body.appendChild(df);
+
+        const first = newTargets[0];
+        if (first && first.holder.frameId === 0) {
+          container.style.display = "block";
+          const body = container.contentDocument.body;
+          if (!body.contains(activeOverlay)) body.insertBefore(activeOverlay, body.firstChild);
+          if (!body.contains(overlay)) body.insertBefore(overlay, body.firstChild);
+        }
       });
       subscribe("EndHinting", () => {
         if (!container.contentDocument) return;
         container.style.display = "block";
         const body = container.contentDocument.body;
-        body.insertBefore(activeOverlay, body.firstChild);
-        body.insertBefore(overlay, body.firstChild);
+        if (!body.contains(activeOverlay)) body.insertBefore(activeOverlay, body.firstChild);
+        if (!body.contains(overlay)) body.insertBefore(overlay, body.firstChild);
       });
       subscribe("AfterHitHint", ({ context, stateChanges, actionDescriptions }: AfterHitHint) => {
         if (!hints) throw Error("Illegal state");
