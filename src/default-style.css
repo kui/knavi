@@ -85,6 +85,7 @@
 
 /* Action description of the hit marker. */
 .hint:after {
+  text-transform: none;
   content: attr(data-action-description);
   font-size: 50%;
   position: absolute;

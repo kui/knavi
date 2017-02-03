@@ -55,7 +55,7 @@ handlers.push({
   },
   handle(target: HTMLElement) {
     target.focus();
-    console.debug("Focus iframe");
+    console.debug("Focus iframe", target);
   }
 });
 
@@ -67,7 +67,7 @@ handlers.push({
   },
   handle(target: HTMLElement) {
     target.focus();
-    console.debug(this.longDescription);
+    console.debug(this.longDescription, target);
   }
 });
 
@@ -81,7 +81,7 @@ handlers.push({
   handle(target: HTMLElement, options: ActionOptions) {
     target.focus();
     simulateClick(target, options);
-    console.debug(this.longDescription);
+    console.debug(this.longDescription, target);
   }
 });
 
@@ -93,7 +93,7 @@ handlers.push({
   },
   handle(target: HTMLElement) {
     target.focus();
-    console.debug(this.longDescription);
+    console.debug(this.longDescription, target);
   }
 });
 
@@ -105,7 +105,7 @@ handlers.push({
   },
   handle(target: HTMLElement) {
     target.focus();
-    console.debug(this.longDescription);
+    console.debug(this.longDescription, target);
   }
 });
 
@@ -125,7 +125,7 @@ handlers.push({
       });
     }
     element.focus();
-    console.debug(this.longDescription);
+    console.debug(this.longDescription, element);
   }
 });
 
@@ -134,7 +134,7 @@ handlers.push({
   isSupported() { return true; },
   handle(target: HTMLElement, options: ActionOptions) {
     simulateClick(target, options);
-    console.debug("click");
+    console.debug("click", target);
   }
 });
 

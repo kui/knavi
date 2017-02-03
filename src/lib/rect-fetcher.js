@@ -65,11 +65,6 @@ function listAllTarget(self, viewport): Target[] {
 
   const targets: Target[] = [];
 
-  if (document.activeElement !== document.body) {
-    const rects = self.detector.get(document.body, viewport);
-    targets.push({ element: document.body, rects });
-  }
-
   let totalElements = 0;
 
   const startMsec = performance.now();
