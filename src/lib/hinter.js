@@ -59,11 +59,12 @@ export default class Hinter {
     await rectFetcher.fetchAllRects((holders) => {
       if (holders.length === 0) return;
 
-      const hintTexts = [];
-      for (let i = 0; i < holders.length; i++) {
-        hintTexts.push(hintTextGenerator.next().value);
+      const hintTexts: string[] = [];
+      while (hintTexts.length < holders.length) {
+        const h = hintTextGenerator.next().value;
+        if (h) hintTexts.push(h);
       }
-      hintTexts.sort();
+      hintTexts.sort(comparerByProvidedLetters(this.hintLetters));
 
       console.debug("hintTexts", hintTexts);
       const newTargets = holders.map((holder, index) => {
@@ -195,4 +196,21 @@ function* generateHintTexts(hintLetters: string): Iterator<string> {
     }
     index++;
   }
+}
+
+function comparerByProvidedLetters(letters) {
+  return (a, b) => {
+    const length = Math.max(a.length, b.length);
+    for (let i = 0; i < length; i++) {
+      const aLetter = a[i];
+      if (!aLetter) return -1;
+      const bLetter = b[i];
+      if (!bLetter) return 1;
+      const aIndex = letters.indexOf(aLetter);
+      const bIndex = letters.indexOf(bLetter);
+      if (aIndex > bIndex) return 1;
+      if (aIndex < bIndex) return -1;
+    }
+    return 0;
+  };
 }
