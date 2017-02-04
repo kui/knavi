@@ -110,6 +110,18 @@ handlers.push({
 });
 
 handlers.push({
+  shortDescription: "Focus",
+  longDescription: "Focus the 'tabindex'-ed element",
+  isSupported(target: HTMLElement) {
+    return target.hasAttribute("tabindex");
+  },
+  handle(target: HTMLElement) {
+    target.focus();
+    console.debug(this.longDescription, target);
+  }
+});
+
+handlers.push({
   shortDescription: "Scroll",
   longDescription: "Focus the scrollable element",
   isSupported(target: HTMLElement) {
