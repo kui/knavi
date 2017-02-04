@@ -120,10 +120,17 @@ function distinctSimilarTarget(self, targets, viewport): Target[] {
     return true;
   }
 
+  function removeFilteredOutElements() {
+    for (const [ element, target ] of targetMap.entries()) {
+      if (target.filteredOutBy) targetMap.delete(element);
+    }
+  }
+
+  let mightBeClickables = targets.filter((t) => t.mightBeClickable);
+
   // Filter out targets which are children of <a> or <button>
-  for (let i = 0; i < targets.length; i++) {
-    const target = targets[i];
-    if (!target.mightBeClickable) continue;
+  for (let i = 0; i < mightBeClickables.length; i++) {
+    const target = mightBeClickables[i];
 
     const parentTarget = first(flatMap(traverseParent(target.element), (p) => {
       const t = targetMap.get(p);
@@ -138,10 +145,12 @@ function distinctSimilarTarget(self, targets, viewport): Target[] {
     }
   }
 
+  mightBeClickables = mightBeClickables.filter((t) => !t.filteredOutBy);
+  removeFilteredOutElements();
+
   // Filter out targets that is only one child for a parent that is target too.
-  for (let i = 0; i < targets.length; i++) {
-    const target = targets[i];
-    if (!target.mightBeClickable) continue;
+  for (let i = 0; i < mightBeClickables.length; i++) {
+    const target = mightBeClickables[i];
     if (target.filteredOutBy) continue;
 
     const thinAncestors = takeWhile(traverseParent(target.element), (e) => {
@@ -159,10 +168,12 @@ function distinctSimilarTarget(self, targets, viewport): Target[] {
     }
   }
 
+  mightBeClickables = mightBeClickables.filter((t) => !t.filteredOutBy);
+  removeFilteredOutElements();
+
   // Filter out targets that contains only existing targets
-  for (let i = targets.length - 1; i >= 0; i--) {
-    const target = targets[i];
-    if (!target.mightBeClickable) continue;
+  for (let i = mightBeClickables.length - 1; i >= 0; i--) {
+    const target = mightBeClickables[i];
     if (target.filteredOutBy) continue;
 
     const childNodes = Array.from(filter(target.element.childNodes, isVisibleNode));
