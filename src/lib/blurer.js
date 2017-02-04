@@ -55,7 +55,11 @@ function isInRootFrame() {
 }
 
 function getFirstClientRectFromVisualVp(element): Rect {
-  return getRectFromVisualVp(element.getClientRects()[0]);
+  if (element.tagName === "BODY") {
+    return vp.visual.rect();
+  } else {
+    return getRectFromVisualVp(element.getClientRects()[0]);
+  }
 }
 
 function getRectFromVisualVp(rectFromLayoutVp): Rect {
