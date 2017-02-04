@@ -99,6 +99,10 @@ function getAnchorRects(self: VisibleRectDetector, anchor: HTMLAnchorElement): R
   const anchorRects = self.clientRectsCache.get(anchor);
   if (anchorRects.length === 0) return [];
 
+  const anchorStyle = self.styleCache.get(anchor);
+  const anchorDisplay = anchorStyle.display;
+  if (anchorDisplay !== "inline") return anchorRects;
+
   const childNodes = Array.from(filter(anchor.childNodes, (n) => !isBlankTextNode(n)));
   if (childNodes.length !== 1) return anchorRects;
 
@@ -181,10 +185,11 @@ function cropByParent(self, element, rect, viewport): ?Rect {
 
   const elementPosition = self.styleCache.get(element).position;
   const parentOverflow = self.styleCache.get(parent).overflow;
-  if (["absolute", "fixed"].includes(elementPosition)
-      || parentOverflow === "visible") {
+  if (elementPosition === "fixed") return rect;
+  if (elementPosition === "absolute" ||
+      elementPosition === "sticky" ||
+      parentOverflow === "visible")
     return cropByParent(self, parent, rect, viewport);
-  }
 
   const parentRects = self.get(parent, viewport);
   if (parentRects.length === 0) return null;
