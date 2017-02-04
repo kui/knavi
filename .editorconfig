@@ -8,3 +8,6 @@ indent_size = 2
 
 [*.js]
 indent_style = space
+
+[Makefile]
+indent_size = 4
