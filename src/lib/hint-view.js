@@ -83,8 +83,7 @@ export default class HintView {
       });
       subscribe("AfterHitHint", ({ context, stateChanges, actionDescriptions }: AfterHitHint) => {
         if (!hints) throw Error("Illegal state");
-        const shortDescription = actionDescriptions && actionDescriptions.short;
-        highligtHints(hints, stateChanges, shortDescription);
+        highligtHints(hints, stateChanges, actionDescriptions);
         moveOverlay(overlay, context.targets);
         moveActiveOverlay(activeOverlay, context.hitTarget);
       });
@@ -230,18 +229,21 @@ function moveOverlay(overlay: HTMLDivElement, targets: Target[]) {
 
 function highligtHints(hints: Hints,
                        changes: TargetStateChange[],
-                       actionDescription: ?string) {
+                       actionDescriptions: ?{ short: string, long: ?string }) {
   for (const { target, oldState, newState } of changes) {
     const hint = hints.get(target);
     if (hint == null) continue;
     for (const e of hint.elements) {
       e.dataset.state = newState;
 
-      if (newState === "hit" && actionDescription) {
-        e.setAttribute("data-action-description", actionDescription);
+      if (newState === "hit" && actionDescriptions) {
+        e.setAttribute("data-action-description", actionDescriptions.short);
+        if (actionDescriptions.long)
+          e.setAttribute("data-long-action-description", actionDescriptions.long);
       }
       if (oldState === "hit") {
         e.removeAttribute("data-action-description");
+        e.removeAttribute("data-long-action-description");
       }
     }
   }
