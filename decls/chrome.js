@@ -23,6 +23,7 @@ declare class LocalChromeStorageArea extends ChromeStorageArea {
   QUOTA_BYTES: number;
 }
 declare class SyncChromeStorageArea extends ChromeStorageArea {
+  QUOTA_BYTES: number;
   QUOTA_BYTES_PER_ITEM: number;
   MAX_ITEMS: number;
   MAX_WRITE_OPERATIONS_PER_HOUR: number;

@@ -112,7 +112,7 @@ async function initBytesDisplay() {
 
   for (const bytesMaxDisplay of document.querySelectorAll(".js-bytes-max-display")) {
     const update = async () => {
-      bytesMaxDisplay.textContent = new Intl.NumberFormat("en").format(await getMaxBytes());
+      bytesMaxDisplay.textContent = new Intl.NumberFormat("en").format(await getMaxBytesPerItem());
     };
     update();
     chrome.storage.onChanged.addListener(() => update());
@@ -124,25 +124,71 @@ async function initBytesDisplay() {
 
     const update = async () => {
       const bytes = await getBytesInUse(itemName);
-      const max = await getMaxBytes();
+      const max = await getMaxBytesPerItem();
+      const ratio = bytes / max;
       const formater = new Intl.NumberFormat("en", { style: "percent" });
-      bytesPercentDisplay.textContent = formater.format(bytes / max);
+      bytesPercentDisplay.textContent = formater.format(ratio);
+      styleStorageLimit(bytesPercentDisplay.parentElement, ratio);
+    };
+    update();
+    chrome.storage.onChanged.addListener(() => update());
+  }
+
+  for (const bytesDisplay of document.querySelectorAll(".js-total-bytes-display")) {
+    const update = async () => {
+      bytesDisplay.textContent = new Intl.NumberFormat("en").format(await settings.getTotalBytesInUse());
+    };
+    update();
+    chrome.storage.onChanged.addListener(() => update());
+  }
+
+  for (const bytesMaxDisplay of document.querySelectorAll(".js-total-bytes-max-display")) {
+    const update = async () => {
+      bytesMaxDisplay.textContent = new Intl.NumberFormat("en").format(await getMaxBytes());
+    };
+    update();
+    chrome.storage.onChanged.addListener(() => update());
+  }
+
+  for (const bytesPercentDisplay of document.querySelectorAll(".js-total-bytes-percent-display")) {
+    const update = async () => {
+      const bytes = await settings.getTotalBytesInUse();
+      const max = await getMaxBytesPerItem();
+      const ratio = bytes / max;
+      const formater = new Intl.NumberFormat("en", { style: "percent" });
+      bytesPercentDisplay.textContent = formater.format(ratio);
+      styleStorageLimit(bytesPercentDisplay.parentElement, ratio);
     };
     update();
     chrome.storage.onChanged.addListener(() => update());
   }
 }
 
-async function getMaxBytes() {
+async function getMaxBytesPerItem() {
   return await settings.isLocal() ?
     chrome.storage.local.QUOTA_BYTES :
     chrome.storage.sync.QUOTA_BYTES_PER_ITEM;
+}
+
+async function getMaxBytes() {
+  return await settings.isLocal() ?
+    chrome.storage.local.QUOTA_BYTES :
+    chrome.storage.sync.QUOTA_BYTES;
 }
 
 async function getBytesInUse(name: string) {
   return await settings.isLocal() ?
     settings.getTotalBytesInUse() :
     settings.getBytesInUse(name);
+}
+
+function styleStorageLimit(element, ratio) {
+  if (!element) return;
+  if (ratio > 0.9) {
+    element.classList.add("storage-limit");
+  } else {
+    element.classList.remove("storage-limit");
+  }
 }
 
 if (document.readyState === "loading") {

@@ -47,8 +47,7 @@
         <button type="button"
                 class="js-revert-button"
                 data-target="#css">Revert to Default Style</button>
-        <span class="js-bytes-display" data-name="css"></span> bytes
-        /
+        <span class="js-bytes-display" data-name="css"></span> bytes /
         <span class="js-bytes-max-display"></span> bytes
         (<span class="js-bytes-percent-display" data-name="css"></span>)
       </p>
@@ -57,8 +56,7 @@
       <p>Stop knavi on listed pages. You can use some wildcard pattern matching. See <a href="https://github.com/rbranson/glob-trie.js#expression-support">glob-trie.js docs</a>.</p>
       <textarea name="blackList"></textarea>
       <p>
-        <span class="js-bytes-display" data-name="blackList"></span> bytes
-        /
+        <span class="js-bytes-display" data-name="blackList"></span> bytes /
         <span class="js-bytes-max-display"></span> bytes
         (<span class="js-bytes-percent-display" data-name="blackList"></span>)
       </p>
@@ -68,8 +66,7 @@
       <textarea id="additional-selectors" name="additionalSelectors"></textarea>
       <div class="js-cm-wrapper" data-target="#additional-selectors" data-mode="json"></div>
       <p>
-        <span class="js-bytes-display" data-name="additionalSelectors"></span> bytes
-        /
+        <span class="js-bytes-display" data-name="additionalSelectors"></span> bytes /
         <span class="js-bytes-max-display"></span> bytes
         (<span class="js-bytes-percent-display" data-name="additionalSelectors"></span>)
       </p>
@@ -92,5 +89,12 @@
         </table>
       </details>
     </form>
+
+    <div id="total-storage-usage">
+      Total storage usage:
+      <span class="js-total-bytes-display"></span> bytes /
+      <span class="js-total-bytes-max-display"></span> bytes
+      (<span class="js-total-bytes-percent-display" data-name="blackList"></span>)
+    </div>
   </body>
 </html>
