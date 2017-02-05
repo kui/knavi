@@ -59,7 +59,7 @@ const HINTABLE_QUERY = [
 function listAllTarget(self, viewport): Target[] {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
   if (self.additionalSelectors.length >= 1) {
-    const q = self.additionalSelectors.map((s) => "body /deep/ " + s).join(",");
+    const q = self.additionalSelectors.join(",");
     for (const e of document.querySelectorAll(q)) selecteds.add(e);
   }
 
