@@ -42,7 +42,7 @@ node_modules: package.json
 	npm install
 
 .PHONY: prod-build
-prod-build: clean node_modules check $(FILES)
+prod-build: clean-js node_modules check $(FILES)
 	NODE_ENV=production $(BIN)/webpack
 
 .PHONY: test
@@ -64,8 +64,7 @@ lint:
 	$(BIN)/eslint src
 
 .PHONY: watch
-watch:
-	rm -fr $(BUILD)/**/*.js
+watch: clean-js
 	$(BIN)/chokidar 'Makefile' 'src' '!src/**/*.js' -c 'make' & \
 	$(BIN)/chokidar 'src/**/*.js' -c 'make flow' & \
 	$(BIN)/webpack --watch & \
@@ -78,3 +77,7 @@ mocha:
 .PHONY: clean
 clean:
 	rm -fr $(BUILD)
+
+.PHONY: clean-js
+clean-js:
+	rm -fr $(BUILD)/**/*.js
