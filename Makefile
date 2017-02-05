@@ -42,7 +42,7 @@ node_modules: package.json
 	npm install
 
 .PHONY: prod-build
-prod-build: clean-js node_modules check $(FILES)
+prod-build: clean-js node_modules test $(FILES)
 	NODE_ENV=production $(BIN)/webpack
 
 .PHONY: test
