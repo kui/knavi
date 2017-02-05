@@ -1,5 +1,7 @@
 SRC = src
-BUILD = build
+BUILD ?= build
+PROD-BUILD = prod-build
+ZIP = knavi.zip
 JS = $(patsubst $(SRC)/%, $(BUILD)/%, $(filter-out $(SRC)/manifest.js, $(wildcard $(SRC)/*.js)))
 STATICS = $(patsubst $(SRC)/%, $(BUILD)/%, $(wildcard $(SRC)/*.html $(SRC)/*.css))
 ICONS = $(addprefix $(BUILD)/icon, $(addsuffix .png/, 16 48 128))
@@ -17,12 +19,12 @@ debug-build: node_modules $(FILES) $(JS) check
 $(BUILD):
 	mkdir -v $(BUILD)
 
-$(BUILD)/manifest.json: $(SRC)/manifest.js
+$(BUILD)/manifest.json: $(SRC)/manifest.js package.json
 	$(BIN)/babel-node scripts/jsonize-manifest.js > $@
 
 $(BUILD)/%.js: $(SRC)/%.js $(SRC)/lib/*.js
 	@echo execute webpack for $@
-	$(BIN)/webpack
+	DEST=$(BUILD) $(BIN)/webpack
 
 $(ICONS): $(SRC)/icon.svg
 	convert -verbose src/icon.svg \
@@ -41,9 +43,14 @@ $(BUILD)/%: $(SRC)/%
 node_modules: package.json
 	npm install
 
-.PHONY: prod-build
-prod-build: clean-js node_modules test $(FILES)
-	NODE_ENV=production $(BIN)/webpack
+.PHONY: zip
+zip: $(ZIP)
+
+$(ZIP):
+	NODE_ENV=production make BUILD=$(PROD-BUILD) test
+	NODE_ENV=production make BUILD=$(PROD-BUILD) $(patsubst $(BUILD)/%.js,$(PROD-BUILD)/%.js,$(firstword $(JS)))
+	NODE_ENV=production make BUILD=$(PROD-BUILD) all
+	zip -r $(ZIP) $(PROD-BUILD)
 
 .PHONY: test
 test: check mocha
@@ -64,7 +71,8 @@ lint:
 	$(BIN)/eslint src
 
 .PHONY: watch
-watch: clean-js
+watch:
+	rm -fr $(BUILD)/**/*.js
 	$(BIN)/chokidar 'Makefile' 'src' '!src/**/*.js' -c 'make' & \
 	$(BIN)/chokidar 'src/**/*.js' -c 'make flow' & \
 	$(BIN)/webpack --watch & \
@@ -76,8 +84,4 @@ mocha:
 
 .PHONY: clean
 clean:
-	rm -fr $(BUILD)
-
-.PHONY: clean-js
-clean-js:
-	rm -fr $(BUILD)/**/*.js
+	rm -fr $(BUILD) $(PROD-BUILD) *.zip

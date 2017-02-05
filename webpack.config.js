@@ -1,4 +1,5 @@
 const DEBUG = process.env.NODE_ENV !== "production";
+const DEST = process.env.DEST || "./build";
 const webpack = require("webpack");
 const BabiliPlugin = require("babili-webpack-plugin");
 
@@ -22,7 +23,7 @@ module.exports = {
     "content-script-all": "./src/content-script-all.js",
   },
   output: {
-    path: "./build",
+    path: DEST,
     filename: "[name].js"
   },
   module: {
@@ -32,3 +33,4 @@ module.exports = {
   },
   plugins,
 };
+

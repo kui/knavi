@@ -1,5 +1,8 @@
 /build/
+/prod-build/
 /node_modules/
+
+knavi.zip
 
 .lock-wscript
 .wafpickle-N
