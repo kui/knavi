@@ -10,21 +10,22 @@
   "license": "MIT",
   "devDependencies": {
     "babel-cli": "^6.18.0",
+    "babel-core": "^6.22.1",
     "babel-eslint": "^7.1.1",
     "babel-loader": "^6.2.10",
     "babel-plugin-strip-function-call": "^1.0.2",
     "babel-plugin-transform-flow-strip-types": "^6.21.0",
-    "babel-preset-babili": "0.0.9",
+    "babel-preset-babili": "0.0.10",
     "babel-preset-env": "^1.1.6",
     "babel-register": "^6.18.0",
-    "babili-webpack-plugin": "0.0.7",
+    "babili-webpack-plugin": "0.0.9",
     "chokidar-cli": "^1.2.0",
     "codemirror": "^5.22.2",
     "eslint": "^3.13.0",
-    "eslint-config-babel": "^3.0.0",
+    "eslint-config-babel": "^6.0.0",
     "eslint-plugin-babel": "^4.0.0",
     "eslint-plugin-flowtype": "^2.29.2",
-    "flow-bin": "^0.37.4",
+    "flow-bin": "^0.38.0",
     "flow-typed": "^2.0.0",
     "glob-trie.js": "^0.2.1",
     "json5": "^0.5.1",
@@ -32,5 +33,10 @@
     "mocha": "^3.2.0",
     "storage-form": "^1.0.3",
     "webpack": "^2.2.1"
+  },
+  "repository": "git@github.com:kui/knavi.git",
+  "engines": {
+    "node": ">=6.9.2.0 <7.0.0",
+    "yarn": "^0.20.0"
   }
 }

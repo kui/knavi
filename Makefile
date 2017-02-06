@@ -41,7 +41,7 @@ $(BUILD)/%: $(SRC)/%
 	cp -v $< $@
 
 node_modules: package.json
-	npm install
+	yarn install
 
 .PHONY: zip
 zip: $(ZIP)

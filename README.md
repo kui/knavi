@@ -19,6 +19,8 @@ Hiting:
 Build
 --------
 
+Require [nvm][] and [yarn][].
+
 debug build:
 
 ```
@@ -30,3 +32,6 @@ zip for production build:
 ```
 $ make zip
 ```
+
+[nvm]: https://github.com/creationix/nvm
+[yarn]: https://yarnpkg.com/
