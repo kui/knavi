@@ -113,7 +113,7 @@ function distinctSimilarTarget(self, targets, viewport): Target[] {
     // filter out blank text nodes
     if (node instanceof Text) return !(/^\s*$/).test(node.textContent);
     // filter out invisible element.
-    if (node instanceof HTMLElement) {
+    if (node instanceof Element) {
       if (self.detector.get(node, viewport).length >= 1) return true;
       return false;
     }

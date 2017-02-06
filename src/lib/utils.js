@@ -1,7 +1,5 @@
 // @flow
 
-import type { Rect } from "./rects";
-
 export function nextAnimationFrame(): Promise<number> {
   return new Promise((resolve) => requestAnimationFrame(resolve));
 }
@@ -15,7 +13,7 @@ export function isScrollable(element: HTMLElement, style: any): boolean {
 }
 
 export function isEditable(elem: EventTarget) {
-  if (!(elem instanceof HTMLElement)) return false;
+  if (!(elem instanceof Element)) return false;
   // No-selectable <input> throws an error when "selectionStart" are referred.
   let selectionStart;
   try {
@@ -23,7 +21,7 @@ export function isEditable(elem: EventTarget) {
   } catch (e) {
     return false;
   }
-  return selectionStart != null || elem.contentEditable === "true";
+  return selectionStart != null || (elem: any).contentEditable === "true";
 }
 
 export class ArrayMap<K, V> extends Map<K, V[]> {

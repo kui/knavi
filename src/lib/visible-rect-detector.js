@@ -8,7 +8,7 @@ import type { Rect } from "./rects";
 import type { DomCaches } from "./rect-fetcher-service";
 
 export default class VisibleRectDetector {
-  cache: Cache<HTMLElement, Rect[]>;
+  cache: Cache<Element, Rect[]>;
   clientRectsCache: Cache<Element, Rect[]>;
   styleCache: Cache<Element, CSSStyleDeclaration>;
 
@@ -18,7 +18,7 @@ export default class VisibleRectDetector {
     this.styleCache = caches.style;
   }
 
-  get(element: HTMLElement, visualViewportFromLayoutVp: Rect): Rect[] {
+  get(element: Element, visualViewportFromLayoutVp: Rect): Rect[] {
     return this.cache.getOr(element, () => {
       return getVisibleRects(this, element, visualViewportFromLayoutVp)
         .map((r) => getRectFromVisualViewport(r, visualViewportFromLayoutVp));
@@ -52,7 +52,7 @@ function isSmallRect({ width, height }: Rect) {
   return height <= SMALL_THREASHOLD_PX || width <= SMALL_THREASHOLD_PX;
 }
 
-function getClientRects(self: VisibleRectDetector, element: HTMLElement): Rect[] {
+function getClientRects(self: VisibleRectDetector, element: Element): Rect[] {
   switch (element.tagName) {
     case "AREA": return getAreaRects((element: any));
     case "A": return getAnchorRects(self, (element: any));
@@ -194,7 +194,7 @@ function cropByParent(self, element, rect, viewport): ?Rect {
   if (element === document.body) return rect;
 
   const parent = element.parentElement;
-  if (!(parent instanceof HTMLElement) || parent === document.body) return rect;
+  if (!(parent instanceof Element) || parent === document.body) return rect;
 
   const elementPosition = self.styleCache.get(element).position;
   const parentOverflow = self.styleCache.get(parent).overflow;

@@ -1,15 +1,15 @@
 // @flow
 
-export function* traverseParent(element: HTMLElement, includeSelf?: boolean): Iterator<HTMLElement> {
+export function* traverseParent(element: Element, includeSelf?: boolean): Iterator<Element> {
   let p = includeSelf ? element : element.parentElement;
-  while (p instanceof HTMLElement) {
+  while (p instanceof Element) {
     yield p;
     p = p.parentElement;
   }
 }
 
-export function* traverseFirstChild(element: HTMLElement, includeSelf?: boolean): Iterator<HTMLElement> {
-  let c: HTMLElement[] | HTMLCollection<HTMLElement> = includeSelf ? [element] : element.children;
+export function* traverseFirstChild(element: Element, includeSelf?: boolean): Iterator<Element> {
+  let c: Element[] | HTMLCollection<HTMLElement> = includeSelf ? [element] : element.children;
   while (c.length >= 1) {
     yield c[0];
     c = c[0].children;
