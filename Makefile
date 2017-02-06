@@ -49,7 +49,7 @@ zip: $(ZIP)
 $(ZIP):
 	NODE_ENV=production make BUILD=$(PROD-BUILD) test
 	NODE_ENV=production make BUILD=$(PROD-BUILD) $(patsubst $(BUILD)/%.js,$(PROD-BUILD)/%.js,$(firstword $(JS)))
-	NODE_ENV=production make BUILD=$(PROD-BUILD) all
+	NODE_ENV=production make BUILD=$(PROD-BUILD) node_modules $(FILES) $(JS)
 	zip -r $(ZIP) $(PROD-BUILD)
 
 .PHONY: test
