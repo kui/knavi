@@ -35,17 +35,37 @@ export default class ActionHandlerDelegater {
   }
 }
 
+const CLICKABLE_SELECTORS = [
+  "a[href]",
+  "area[href]",
+  "button:not([disabled])",
+  "[onclick]",
+  "[onmousedown]",
+  "[onmouseup]",
+  "[role=link]",
+  "[role=button]",
+].join(",");
+handlers.push({
+  shortDescription: "Click",
+  longDescription: "Click anchor, button or other clickable elements",
+  isSupported(target: HTMLElement) {
+    return target.matches(CLICKABLE_SELECTORS);
+  },
+  handle(target: HTMLElement, options: ActionOptions) {
+    simulateClick(target, options);
+    console.debug("click", target);
+  }
+});
+
 handlers.push({
   shortDescription: "Blur",
   longDescription: "Blur the focused element",
   isSupported(target: HTMLElement) {
     return target === document.activeElement;
   },
-  handle() {
-    const activeElement = document.activeElement;
-    if (!activeElement) return;
-    activeElement.blur();
-    console.debug(this.longDescription, activeElement);
+  handle(target: HTMLElement) {
+    target.blur();
+    console.debug(this.longDescription, target);
   }
 });
 
