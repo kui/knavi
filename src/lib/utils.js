@@ -91,3 +91,9 @@ export class SetMap<K, V> extends Map<K, Set<V>> {
     return b;
   }
 }
+
+export async function waitUntil(predicate: () => boolean) {
+  while (!predicate()) {
+    await nextAnimationFrame();
+  }
+}

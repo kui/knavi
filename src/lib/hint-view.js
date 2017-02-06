@@ -4,6 +4,7 @@ import * as utils from "./utils";
 import * as vp from "./viewports";
 import settingsClient from "./settings-client";
 import { subscribe } from "./chrome-messages";
+import { waitUntil } from "./utils";
 
 import type {
   Target,
@@ -52,16 +53,14 @@ export default class HintView {
       while (!(document.body && document.body.firstChild)) await utils.nextAnimationFrame();
 
       subscribe("StartHinting", () => {
-        initStyles(container, overlay, activeOverlay);
         hints = new Hints;
 
-        if (document.readyState === "loading") {
-          waitUntil(() => document.body).then(() => {
-            document.body.insertBefore(container, document.body.firstChild);
-          });
-        } else {
-          document.body.appendChild(container);
-        }
+        waitUntil(() => Boolean(document.body)).then(() => {
+          // $FlowFixMe: already wait until document is non-null.
+          const body: HTMLElement = document.body;
+          initStyles(body, container, overlay, activeOverlay);
+          body.insertBefore(container, body.firstChild);
+        });
       });
       subscribe("NewTargets", ({ newTargets }: NewTargets) => {
         if (hints == null) return;
@@ -89,9 +88,13 @@ export default class HintView {
       });
       subscribe("AfterRemoveHints", () => {
         if (!hints) throw Error("Illegal state");
-        if (document.body.contains(container)) {
-          document.body.removeChild(container);
-        }
+        waitUntil(() => Boolean(document.body)).then(() => {
+          // $FlowFixMe: already wait until document is non-null.
+          const body: HTMLElement = document.body;
+          if (body.contains(container)) {
+            body.removeChild(container);
+          }
+        });
         removeAllHints(root, hints);
       });
     })();
@@ -129,9 +132,7 @@ class Hints {
   }
 }
 
-function initStyles(container: HTMLElement,
-                    overlay: HTMLElement,
-                    activeOverlay: HTMLElement) {
+function initStyles(body, container, overlay, activeOverlay) {
   const vvpOffsets = vp.visual.offsets();
   const vvpSizes = vp.visual.sizes();
   const bodyPosition = window.getComputedStyle(document.body).position;
@@ -139,7 +140,7 @@ function initStyles(container: HTMLElement,
   if (bodyPosition === "static") {
     bodyOffsets = { x: 0, y: 0 };
   } else {
-    const bodyRect = vp.getBoundingClientRectFromRoot(document.body);
+    const bodyRect = vp.getBoundingClientRectFromRoot(body);
     bodyOffsets = { y: bodyRect.top, x: bodyRect.left };
   }
 
@@ -227,9 +228,7 @@ function moveOverlay(overlay: HTMLDivElement, targets: Target[]) {
   });
 }
 
-function highligtHints(hints: Hints,
-                       changes: TargetStateChange[],
-                       actionDescriptions: ?{ short: string, long: ?string }) {
+function highligtHints(hints, changes, actionDescriptions) {
   for (const { target, oldState, newState } of changes) {
     const hint = hints.get(target);
     if (hint == null) continue;
@@ -289,9 +288,3 @@ function removeAllHints(root, hints) {
 }
 
 function px(n: number) { return `${Math.round(n)}px`; }
-
-async function waitUntil(predicate) {
-  while (!predicate()) {
-    await utils.nextAnimationFrame();
-  }
-}

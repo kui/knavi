@@ -22,6 +22,7 @@ export default class Blurer {
       if (e.data.type !== BLUR_TYPE) return;
       console.debug("blur", e.data, "location=", location.href);
       if (e.source === window) {
+        if (!document.activeElement) return;
         document.activeElement.blur();
         send(({ type: "Blured", rect: e.data.rect }: Blured));
         return;
@@ -39,7 +40,8 @@ export default class Blurer {
   }
 
   blur(): boolean {
-    if (isInRootFrame() && !isBlurable()) return false;
+    if (!isBlurable()) return false;
+    if (!document.activeElement) return false;
     const rect = getFirstClientRectFromVisualVp(document.activeElement);
     window.parent.postMessage({ type: BLUR_TYPE, rect }, "*");
     return true;
@@ -47,11 +49,7 @@ export default class Blurer {
 }
 
 function isBlurable() {
-  return document.activeElement !== document.body;
-}
-
-function isInRootFrame() {
-  return window.parent === window;
+  return !(window.parent === window && document.activeElement === document.body);
 }
 
 function getFirstClientRectFromVisualVp(element): Rect {

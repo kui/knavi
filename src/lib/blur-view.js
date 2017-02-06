@@ -24,12 +24,17 @@ export default class BlurView {
     });
 
     function removeOverlay() {
-      if (document.body.contains(overlay)) {
-        document.body.removeChild(overlay);
+      const body = document.body;
+      if (!body) return;
+      if (body.contains(overlay)) {
+        body.removeChild(overlay);
       }
     }
 
     subscribe("Blured", ({ rect }: Blured) => {
+      const body = document.body;
+      if (!body) return;
+
       removeOverlay();
 
       if (!rect) return;
@@ -39,7 +44,7 @@ export default class BlurView {
       if (bodyPosition === "static") {
         bodyOffsets = { x: 0, y: 0 };
       } else {
-        const bodyRect = vp.getBoundingClientRectFromRoot(document.body);
+        const bodyRect = vp.getBoundingClientRectFromRoot(body);
         bodyOffsets = { y: bodyRect.top, x: bodyRect.left };
       }
 
@@ -50,7 +55,7 @@ export default class BlurView {
         height: `${rect.height}px`,
         width:  `${rect.width}px`,
       });
-      document.body.insertBefore(overlay, document.body.firstChild);
+      body.insertBefore(overlay, body.firstChild);
 
       // $FlowFixMe
       const animation = overlay.animate([

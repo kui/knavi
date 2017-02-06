@@ -9,19 +9,22 @@ import settings from "./lib/settings";
 import * as utils from "./lib/utils";
 
 async function init() {
+  while (!document.body) await utils.nextAnimationFrame();
+  const body = document.body;
+
   initCodeMirror();
 
   sf.register();
   ki.register();
 
-  initClearButton();
-  initRevertButton();
+  initClearButton(body);
+  initRevertButton(body);
   initBytesDisplay();
 }
 
-async function initRevertButton() {
+async function initRevertButton(body) {
   const settingValues = await settings.loadDefaults();
-  for (const e of document.body.getElementsByClassName("js-revert-button")) {
+  for (const e of body.getElementsByClassName("js-revert-button")) {
     console.log("revert button: ", e);
     e.addEventListener("click", (e: MouseEvent) => {
       if (!(e.target instanceof HTMLElement)) return false;
@@ -40,8 +43,8 @@ async function initRevertButton() {
   }
 }
 
-function initClearButton() {
-  for (const e of document.body.getElementsByClassName("js-clear-button")) {
+function initClearButton(body) {
+  for (const e of body.getElementsByClassName("js-clear-button")) {
     console.log("clear button: ", e);
     e.addEventListener("click", (e: MouseEvent) => {
       if (!(e.target instanceof HTMLElement)) return false;
@@ -191,8 +194,4 @@ function styleStorageLimit(element, ratio) {
   }
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
-} else {
-  init();
-}
+init();

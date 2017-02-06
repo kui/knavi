@@ -9,13 +9,17 @@ export const layout = {
   /// get the coordinates of the top-left of the layout viewport.
   offsets(): Point {
     if (layoutVPOffsetsCache) return layoutVPOffsetsCache;
-    const rootRect = document.documentElement.getBoundingClientRect();
+    const documentElement = document.documentElement;
+    if (!documentElement) return { y: 0, x: 0 };
+    const rootRect = documentElement.getBoundingClientRect();
     return layoutVPOffsetsCache = { y: - rootRect.top, x: - rootRect.left };
   },
   sizes(): Sizes {
+    const documentElement = document.documentElement;
+    if (!documentElement) return { height: 0, width: 0 };
     return {
-      height: document.documentElement.clientHeight,
-      width: document.documentElement.clientWidth,
+      height: documentElement.clientHeight,
+      width: documentElement.clientWidth,
     };
   },
   rect(): Rect {
@@ -40,11 +44,15 @@ export const visual = {
         visualVPSizesCache) return visualVPSizesCache;
     prevInnerWidth = innerWidth;
     prevInnerHeight = innerHeight;
-    const scale = getScale();
+    const documentElement = document.documentElement;
+    if (!documentElement) return { height: 0, width: 0 };
+    const body = document.body;
+    if (!body) return { height: 0, width: 0 };
+    const scale = getScale(documentElement, body);
     console.debug("scale", scale);
     return visualVPSizesCache = {
-      height: Math.floor(document.documentElement.clientHeight / scale),
-      width:  Math.floor(document.documentElement.clientWidth / scale),
+      height: Math.floor(documentElement.clientHeight / scale),
+      width:  Math.floor(documentElement.clientWidth / scale),
     };
   },
   rect(): Rect {
@@ -78,17 +86,18 @@ Object.assign(iframeDummy.style, {
   visibility: "hidden",
 });
 iframeDummy.srcDoc = "<!DOCTYPE html><html><body style='margin:0px; padding:0px'></body></html>";
-function getScale() {
-  document.body.insertBefore(iframeDummy, document.body.firstChild);
-  const documentRect = document.documentElement.getBoundingClientRect();
+function getScale(documentElement, body) {
+  body.insertBefore(iframeDummy, body.firstChild);
+  const documentRect = documentElement.getBoundingClientRect();
+  if (!iframeDummy.contentDocument || !iframeDummy.contentDocument.body) return 1;
   Object.assign(iframeDummy.contentDocument.body.style, {
     width: `${documentRect.width}px`,
     height: `${documentRect.height}px`,
   });
-  const originalOverflow = document.documentElement.style.overflow;
-  document.documentElement.style.overflow = "hidden";
+  const originalOverflow = documentElement.style.overflow;
+  documentElement.style.overflow = "hidden";
   const unscaledInnerWidth = iframeDummy.contentWindow.innerWidth;
-  document.documentElement.style.overflow = originalOverflow;
-  document.body.removeChild(iframeDummy);
+  documentElement.style.overflow = originalOverflow;
+  body.removeChild(iframeDummy);
   return unscaledInnerWidth / window.innerWidth;
 }

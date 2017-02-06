@@ -43,6 +43,7 @@ handlers.push({
   },
   handle() {
     const activeElement = document.activeElement;
+    if (!activeElement) return;
     activeElement.blur();
     console.debug(this.longDescription, activeElement);
   }
