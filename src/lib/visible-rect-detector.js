@@ -1,7 +1,7 @@
 // @flow
 
 import { filter, first, traverseParent, flatMap } from "./iters";
-import { intersection } from "./rects";
+import { intersection, getBoundingRect } from "./rects";
 import Cache from "./cache";
 
 import type { Rect } from "./rects";
@@ -9,8 +9,8 @@ import type { DomCaches } from "./rect-fetcher-service";
 
 export default class VisibleRectDetector {
   cache: Cache<HTMLElement, Rect[]>;
-  clientRectsCache: Cache<HTMLElement, Rect[]>;
-  styleCache: Cache<HTMLElement, CSSStyleDeclaration>;
+  clientRectsCache: Cache<Element, Rect[]>;
+  styleCache: Cache<Element, CSSStyleDeclaration>;
 
   constructor(caches: DomCaches) {
     this.cache = new Cache;
@@ -54,9 +54,9 @@ function isSmallRect({ width, height }: Rect) {
 
 function getClientRects(self: VisibleRectDetector, element: HTMLElement): Rect[] {
   switch (element.tagName) {
-  case "AREA": return getAreaRects((element: any));
-  case "A": return getAnchorRects(self, (element: any));
-  default: return self.clientRectsCache.get(element);
+    case "AREA": return getAreaRects((element: any));
+    case "A": return getAnchorRects(self, (element: any));
+    default: return self.clientRectsCache.get(element);
   }
 }
 
@@ -99,25 +99,38 @@ function getAnchorRects(self: VisibleRectDetector, anchor: HTMLAnchorElement): R
   const anchorRects = self.clientRectsCache.get(anchor);
   if (anchorRects.length === 0) return [];
 
-  const anchorStyle = self.styleCache.get(anchor);
-  const anchorDisplay = anchorStyle.display;
-  if (anchorDisplay !== "inline") return anchorRects;
-
-  const childNodes = Array.from(filter(anchor.childNodes, (n) => !isBlankTextNode(n)));
+  const childNodes = Array.from(filter(anchor.childNodes,
+                                       (n) => !isBlankTextNode(n) && !isSmallElement(self, n)));
   if (childNodes.length !== 1) return anchorRects;
 
   const child = childNodes[0];
-  if (!(child instanceof HTMLElement)) return anchorRects;
+  if (!(child instanceof Element)) return anchorRects;
 
   const childRects = self.clientRectsCache.get(child);
   if (childRects.length === 0) return anchorRects;
-  if (isOverwrappedRect(childRects[0], anchorRects[0])) return anchorRects;
+  const childBoundingRect = getBoundingRect(childRects);
+  if (isOverwrappedRect(childBoundingRect, anchorRects[0])) return anchorRects;
+
+  const childStyle = self.styleCache.get(child);
+  if (childStyle.float !== "none") return childRects;
+
+  const anchorStyle = self.styleCache.get(anchor);
+  const anchorDisplay = anchorStyle.display;
+  if (anchorDisplay !== "inline") return anchorRects;
 
   return childRects;
 }
 
 function isBlankTextNode(n) {
   return (n instanceof Text) && (/^\s*$/).test(n.textContent);
+}
+
+function isSmallElement(self: VisibleRectDetector, n) {
+  if (n instanceof Element) {
+    const r = self.clientRectsCache.get(n);
+    return r.length === 0 || r.every(isSmallRect);
+  }
+  return false;
 }
 
 function isPointable(self, element, rect, viewport): boolean {

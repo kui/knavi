@@ -33,7 +33,11 @@ function initIfRequired() {
   });
 }
 
-export function sendTo<T: MessageType, M: Message<T>, R>(message: M, tabId: number, frameId?: ?number): Promise<R> {
+export function sendTo<T: MessageType, M: Message<T>, R>(
+  message: M,
+  tabId: number,
+  frameId?: ?number): Promise<R> {
+
   return new Promise((resolve) => {
     chrome.tabs.sendMessage(tabId, message, frameId == null ? null : { frameId }, resolve);
   });
@@ -64,7 +68,10 @@ export function recieve<T: MessageType, M: Message<T>>(type: T, handler: Recieve
   };
 }
 
-export function subscribe<T: MessageType, M: Message<T>>(type: T, handler: SubscribeHandler<T, M>): Unsubscriber {
+export function subscribe<T: MessageType, M: Message<T>>(
+  type: T,
+  handler: SubscribeHandler<T, M>): Unsubscriber {
+
   initIfRequired();
 
   const c = handlers.get(type) || {

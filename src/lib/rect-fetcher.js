@@ -12,7 +12,7 @@ import type { DomCaches } from "./rect-fetcher-service";
 
 export default class RectFetcher {
   detector: VisibleRectDetector;
-  styleCache: Cache<HTMLElement, CSSStyleDeclaration>;
+  styleCache: Cache<Element, CSSStyleDeclaration>;
   additionalSelectors: string[];
 
   constructor(additionalSelectors: string[], caches: DomCaches) {

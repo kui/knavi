@@ -38,7 +38,7 @@ class Storage {
   }
 
   async setSingle(name: string, value: string): Promise<void> {
-    await this.set({[name]: value});
+    await this.set({ [name]: value });
   }
 
   getBytes(names?: string | string[]): Promise<number> {
@@ -103,12 +103,12 @@ export default {
     for (const name of Object.keys(DEFAULT_SETTINGS)) {
       if (s[name] != null) continue;
       switch (name) {
-      case "css":
-        changes.css = await fetchCss();
-        break;
-      default:
-        changes[name] = (DEFAULT_SETTINGS: any)[name];
-        break;
+        case "css":
+          changes.css = await fetchCss();
+          break;
+        default:
+          changes[name] = (DEFAULT_SETTINGS: any)[name];
+          break;
       }
     }
     if (Object.keys(changes).length === 0) return;

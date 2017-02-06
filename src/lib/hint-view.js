@@ -5,6 +5,7 @@ import * as vp from "./viewports";
 import settingsClient from "./settings-client";
 import { subscribe } from "./chrome-messages";
 import { waitUntil } from "./utils";
+import { getBoundingRect } from "./rects";
 
 import type {
   Target,
@@ -181,7 +182,7 @@ function moveActiveOverlay(activeOverlay: HTMLDivElement, hitTarget: ?Target) {
     return;
   }
 
-  const rect = utils.getBoundingRect(hitTarget.holder.rects);
+  const rect = getBoundingRect(hitTarget.holder.rects);
 
   Object.assign(activeOverlay.style, {
     top: px(rect.top),
@@ -201,7 +202,7 @@ function moveOverlay(overlay: HTMLDivElement, targets: Target[]) {
     if (target.state === "disabled") continue;
     hasHitOrCand = true;
 
-    const rect = utils.getBoundingRect(target.holder.rects);
+    const rect = getBoundingRect(target.holder.rects);
     rr.top = Math.min(rr.top, rect.top);
     rr.bottom = Math.max(rr.bottom, rect.bottom);
     rr.left = Math.min(rr.left, rect.left);
@@ -228,7 +229,7 @@ function moveOverlay(overlay: HTMLDivElement, targets: Target[]) {
   });
 }
 
-function highligtHints(hints, changes, actionDescriptions) {
+function highligtHints(hints, changes: TargetStateChange[], actionDescriptions) {
   for (const { target, oldState, newState } of changes) {
     const hint = hints.get(target);
     if (hint == null) continue;

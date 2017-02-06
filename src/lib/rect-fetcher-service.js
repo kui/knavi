@@ -29,7 +29,7 @@ type RegisterFrame = { type: "jp-k-ui-knavi-RegisterFrame" };
 
 type RectsElement = { element: HTMLElement, holder: RectHolder };
 let rectElements: RectsElement[];
-let actionHandler: ActionHandler = new ActionHandler;
+const actionHandler: ActionHandler = new ActionHandler;
 const registeredFrames: Set<WindowProxy> = new Set;
 
 const frameIdPromise = send(({ type: "GetFrameId" }: GetFrameId));
@@ -46,7 +46,7 @@ recieve("ActionRequest", (req: ActionRequest, sender, sendResponse) => {
   sendResponse();
 });
 
-let additionalSelectorsPromise = settingsClient.getMatchedSelectors(location.href);
+const additionalSelectorsPromise = settingsClient.getMatchedSelectors(location.href);
 additionalSelectorsPromise
   .then((s) => { if (s.length >= 1) console.debug("mached additional selectors", s); });
 
@@ -56,12 +56,12 @@ if (parent !== window) {
 
 window.addEventListener("message", (event) => {
   switch (event.data.type) {
-  case ALL_RECTS_REQUEST_TYPE:
-    handleAllRectsRequest(event.data);
-    return;
-  case REGISTE_FRAME_TYPE:
-    handleRegisterFrame(event.source);
-    return;
+    case ALL_RECTS_REQUEST_TYPE:
+      handleAllRectsRequest(event.data);
+      return;
+    case REGISTE_FRAME_TYPE:
+      handleRegisterFrame(event.source);
+      return;
   }
 });
 
@@ -76,8 +76,8 @@ export type RectsFragmentResponse = {
 };
 
 export type DomCaches = {
-  style: Cache<HTMLElement, CSSStyleDeclaration>;
-  clientRects: Cache<HTMLElement, Rect[]>;
+  style: Cache<Element, CSSStyleDeclaration>;
+  clientRects: Cache<Element, Rect[]>;
 };
 
 async function handleAllRectsRequest(req: AllRectsRequest) {
@@ -87,7 +87,7 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
   const visualViewport = rectUtils.move(req.viewport, visualVpOffsets);
 
   const caches: DomCaches = {
-    style: new Cache((e: HTMLElement) => window.getComputedStyle(e)),
+    style: new Cache((e: Element) => window.getComputedStyle(e)),
     clientRects: new Cache((e) => Array.from(e.getClientRects())),
   };
   const rectFetcher = new RectFetcher(await additionalSelectorsPromise, caches);
@@ -156,13 +156,14 @@ async function handleAllRectsRequest(req: AllRectsRequest) {
 
   // Handle reqest complete
   let responseCompleteHandler;
+  // eslint-disable-next-line prefer-const
   let timeoutId;
   window.addEventListener("message", responseCompleteHandler = (event) => {
     if (event.source === window) return;
     if (event.data.type !== "AllRectsResponseComplete") return;
 
     const frame = first(filter(frames.values(),
-                               ({element}) => element.contentWindow === event.source));
+                               ({ element }) => element.contentWindow === event.source));
     if (!frame) return;
     frames.delete(frame);
     console.debug("Request complete: ", frame, "frames.size=", frames.size);

@@ -95,3 +95,13 @@ export function excludeBorders(rect: Rect, borderWidth: BorderWidth) {
     x: rect.right - borderWidth.right,
   });
 }
+
+export function getBoundingRect(rects: Rect[]): Rect {
+  if (rects.length === 1) return rects[0];
+
+  const top    = Math.min(...rects.map((r) => r.top));
+  const bottom = Math.max(...rects.map((r) => r.bottom));
+  const left   = Math.min(...rects.map((r) => r.left));
+  const right  = Math.max(...rects.map((r) => r.right));
+  return { top, bottom, left, right, height: bottom - top, width: right - left };
+}

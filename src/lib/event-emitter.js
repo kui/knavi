@@ -1,7 +1,5 @@
 // @flow
 
-import * as utils from "./utils";
-
 declare type Callback<T> = (value: T) => void;
 
 export class EventEmitter<T> {

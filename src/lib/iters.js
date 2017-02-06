@@ -56,7 +56,7 @@ export function* map<T, U>(i: Iterable<T> | Iterator<T>, m: (t: T) => U): Iterab
 }
 
 export function* flatMap<T, U>(i: Iterable<T> | Iterator<T>,
-                               m: (t: T) => Iterable<U> | Iterator<U>): Iterable<U> {
+  m: (t: T) => Iterable<U> | Iterator<U>): Iterable<U> {
   for (const e of i) for (const u of m(e)) yield u;
 }
 
