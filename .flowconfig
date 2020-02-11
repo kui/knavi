@@ -3,6 +3,7 @@
 .*/build/.*
 .*/prod-build/.*
 .*/node_modules/storage-form/src/.*
+.*/node_modules/@babel/.*
 
 [include]
 

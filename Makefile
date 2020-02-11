@@ -4,7 +4,7 @@ PROD-BUILD = prod-build
 ZIP = knavi.zip
 JS = $(patsubst $(SRC)/%, $(BUILD)/%, $(filter-out $(SRC)/manifest.js, $(wildcard $(SRC)/*.js)))
 STATICS = $(patsubst $(SRC)/%, $(BUILD)/%, $(wildcard $(SRC)/*.html $(SRC)/*.css))
-ICONS = $(addprefix $(BUILD)/icon, $(addsuffix .png/, 16 48 128))
+ICONS = $(addprefix $(BUILD)/icon, $(addsuffix .png, 16 48 128))
 PNG = $(patsubst $(SRC)/%.svg, $(BUILD)/%.png, $(wildcard $(SRC)/*.svg))
 BIN = node_modules/.bin
 
@@ -41,7 +41,7 @@ $(BUILD)/%: $(SRC)/%
 	cp -v $< $@
 
 node_modules: package.json
-	yarn install
+	npm install
 
 .PHONY: zip
 zip: $(ZIP)

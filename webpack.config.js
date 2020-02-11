@@ -1,5 +1,6 @@
+const path = require("path");
 const DEBUG = process.env.NODE_ENV !== "production";
-const DEST = process.env.DEST || "./build";
+const DEST = path.resolve(__dirname, process.env.DEST || "./build");
 const webpack = require("webpack");
 const BabiliPlugin = require("babili-webpack-plugin");
 
