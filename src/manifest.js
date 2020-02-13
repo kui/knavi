@@ -37,6 +37,11 @@ export default {
     // because new option UI style grubs escape key events to close the modal.
     open_in_tab: true
   },
-  permissions: ["storage", "tabs", "activeTab", "<all_urls>"],
+  permissions: [
+    // To store configs.
+    "storage",
+    // To insert hints for all sites.
+    "<all_urls>"
+  ],
   web_accessible_resources: ["*.js.map"]
 };
