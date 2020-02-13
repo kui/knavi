@@ -1,11 +1,17 @@
-import { flatMap, traverseParent, filter, first, takeWhile, length } from "./iters";
+import {
+  flatMap,
+  traverseParent,
+  filter,
+  first,
+  takeWhile,
+  length
+} from "./iters";
 import { isScrollable } from "./utils";
 import * as vp from "./viewports";
 import * as rectUtils from "./rects";
 import VisibleRectDetector from "./visible-rect-detector";
 
 export default class RectFetcher {
-
   constructor(additionalSelectors, caches) {
     this.styleCache = caches.style;
     this.detector = new VisibleRectDetector(caches);
@@ -14,13 +20,36 @@ export default class RectFetcher {
 
   getAll(visualViewport) {
     const layoutVpOffsets = vp.layout.offsets();
-    const visualViewportFromLayoutVp = rectUtils.offsets(visualViewport, layoutVpOffsets);
+    const visualViewportFromLayoutVp = rectUtils.offsets(
+      visualViewport,
+      layoutVpOffsets
+    );
     const t = listAllTarget(this, visualViewportFromLayoutVp);
     return distinctSimilarTarget(this, t, visualViewportFromLayoutVp);
   }
 }
 
-const HINTABLE_QUERY = ["a[href]", "area[href]", "details", "textarea:not([disabled])", "button:not([disabled])", "select:not([disabled])", "input:not([type=hidden]):not([disabled])", "iframe", "[tabindex]", "[onclick]", "[onmousedown]", "[onmouseup]", "[contenteditable='']", "[contenteditable=true]", "[role=link]", "[role=button]", "[data-image-url]"].map(s => "body /deep/ " + s).join(",");
+const HINTABLE_QUERY = [
+  "a[href]",
+  "area[href]",
+  "details",
+  "textarea:not([disabled])",
+  "button:not([disabled])",
+  "select:not([disabled])",
+  "input:not([type=hidden]):not([disabled])",
+  "iframe",
+  "[tabindex]",
+  "[onclick]",
+  "[onmousedown]",
+  "[onmouseup]",
+  "[contenteditable='']",
+  "[contenteditable=true]",
+  "[role=link]",
+  "[role=button]",
+  "[data-image-url]"
+]
+  .map(s => "body /deep/ " + s)
+  .join(",");
 
 function listAllTarget(self, viewport) {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
@@ -63,15 +92,24 @@ function listAllTarget(self, viewport) {
   }
   const elapsedMsec = performance.now() - startMsec;
 
-  console.debug("list all elements: elapsedMsec=", elapsedMsec, "totalElements=", totalElements, "targetElements=", targets.length);
+  console.debug(
+    "list all elements: elapsedMsec=",
+    elapsedMsec,
+    "totalElements=",
+    totalElements,
+    "targetElements=",
+    targets.length
+  );
 
   return targets;
 }
 
 function distinctSimilarTarget(self, targets, viewport) {
-  const targetMap = new Map(function* () {
-    for (const t of targets) yield [t.element, t];
-  }());
+  const targetMap = new Map(
+    (function*() {
+      for (const t of targets) yield [t.element, t];
+    })()
+  );
 
   function isVisibleNode(node) {
     // filter out blank text nodes
@@ -96,16 +134,21 @@ function distinctSimilarTarget(self, targets, viewport) {
   for (let i = 0; i < mightBeClickables.length; i++) {
     const target = mightBeClickables[i];
 
-    const parentTarget = first(flatMap(traverseParent(target.element), p => {
-      const t = targetMap.get(p);
-      if (t == null) return [];
-      if (t.filteredOutBy) return [t.filteredOutBy];
-      if (["A", "BUTTON"].includes(t.element.tagName)) return [t];
-      return [];
-    }));
+    const parentTarget = first(
+      flatMap(traverseParent(target.element), p => {
+        const t = targetMap.get(p);
+        if (t == null) return [];
+        if (t.filteredOutBy) return [t.filteredOutBy];
+        if (["A", "BUTTON"].includes(t.element.tagName)) return [t];
+        return [];
+      })
+    );
     if (parentTarget) {
       target.filteredOutBy = parentTarget;
-      console.debug("filter out: a child of a parent <a>/<button>: target=%o", target.element);
+      console.debug(
+        "filter out: a child of a parent <a>/<button>: target=%o",
+        target.element
+      );
     }
   }
 
@@ -120,15 +163,20 @@ function distinctSimilarTarget(self, targets, viewport) {
     const thinAncestors = takeWhile(traverseParent(target.element), e => {
       return length(filter(e.childNodes, isVisibleNode)) === 1;
     });
-    const parentTarget = first(flatMap(thinAncestors, p => {
-      const t = targetMap.get(p);
-      if (t == null) return [];
-      if (t.filteredOutBy) return [t.filteredOutBy];
-      return [t];
-    }));
+    const parentTarget = first(
+      flatMap(thinAncestors, p => {
+        const t = targetMap.get(p);
+        if (t == null) return [];
+        if (t.filteredOutBy) return [t.filteredOutBy];
+        return [t];
+      })
+    );
     if (parentTarget) {
       target.filteredOutBy = parentTarget;
-      console.debug("filter out: a child of a thin parent: target=%o", target.element);
+      console.debug(
+        "filter out: a child of a thin parent: target=%o",
+        target.element
+      );
     }
   }
 
@@ -140,11 +188,16 @@ function distinctSimilarTarget(self, targets, viewport) {
     const target = mightBeClickables[i];
     if (target.filteredOutBy) continue;
 
-    const childNodes = Array.from(filter(target.element.childNodes, isVisibleNode));
+    const childNodes = Array.from(
+      filter(target.element.childNodes, isVisibleNode)
+    );
     if (childNodes.every(c => targetMap.has(c))) {
       const child = childNodes[0];
       target.filteredOutBy = targetMap.get(child);
-      console.debug("filter out: only targets containing: target=%o", target.element);
+      console.debug(
+        "filter out: only targets containing: target=%o",
+        target.element
+      );
     }
   }
 

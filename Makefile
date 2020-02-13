@@ -14,15 +14,15 @@ FILES = $(BUILD) $(BUILD)/manifest.json $(BUILD)/codemirror.css $(STATICS) $(ICO
 all: debug-build
 
 .PHONY: debug-build
-debug-build: node_modules $(FILES) $(JS) check
+debug-build: lint $(FILES) $(JS)
 
 $(BUILD):
 	mkdir -v $(BUILD)
 
-$(BUILD)/manifest.json: $(SRC)/manifest.js package.json
+$(BUILD)/manifest.json: $(SRC)/manifest.js package.json node_modules
 	$(BIN)/babel-node scripts/jsonize-manifest.js > $@
 
-$(BUILD)/%.js: $(SRC)/%.js $(SRC)/lib/*.js
+$(BUILD)/%.js: $(SRC)/%.js $(SRC)/lib/*.js node_modules
 	@echo execute webpack for $@
 	DEST=$(BUILD) $(BIN)/webpack
 
@@ -42,6 +42,7 @@ $(BUILD)/%: $(SRC)/%
 
 node_modules: package.json
 	npm install
+	touch node_modules
 
 .PHONY: zip
 zip: $(ZIP)
@@ -53,25 +54,26 @@ $(ZIP):
 	zip -r $(ZIP) $(PROD-BUILD)
 
 .PHONY: test
-test: check mocha
-
-.PHONY: check
-check: lint
+test: lint mocha
 
 .PHONY: lint
-lint:
-	$(BIN)/eslint src
+lint: node_modules
+	$(BIN)/eslint .
+
+.PHONY: fix
+fix: node_modules
+	$(BIN)/eslint . --fix
 
 .PHONY: watch
-watch:
+watch: node_modules
 	rm -fr $(BUILD)/**/*.js
 	$(BIN)/chokidar 'Makefile' 'src' '!src/**/*.js' -c 'make' & \
 	$(BIN)/webpack --watch & \
 	wait
 
 .PHONY: mocha
-mocha:
-	$(BIN)/mocha --compilers 'js:babel-register' test/**/*_test.js
+mocha: node_modules
+	$(BIN)/mocha --require '@babel/register' test/**/*_test.js
 
 .PHONY: clean
 clean:

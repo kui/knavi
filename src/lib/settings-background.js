@@ -3,7 +3,6 @@ import settings from "./settings";
 import BlackList from "./blacklist";
 import AdditionalSelectors from "./additional-selectors";
 
-
 let settingValues;
 let blackList;
 let additionalSelectors;
@@ -24,7 +23,7 @@ let additionalSelectors;
   });
 
   recieve("GetSettings", async (m, s, sendResponse) => {
-    sendResponse((await settingValues));
+    sendResponse(await settingValues);
   });
 })();
 
@@ -45,8 +44,10 @@ chrome.storage.onChanged.addListener(async () => {
 });
 
 function buildAdditionalSelectorsPromise() {
-  return settingValues.then(s => new AdditionalSelectors(s.additionalSelectors)).catch(e => {
-    console.error(e);
-    return new AdditionalSelectors("{}");
-  });
+  return settingValues
+    .then(s => new AdditionalSelectors(s.additionalSelectors))
+    .catch(e => {
+      console.error(e);
+      return new AdditionalSelectors("{}");
+    });
 }

@@ -17,7 +17,10 @@ export default class HintView {
     (async () => {
       const container = document.createElement("div");
       container.id = CONTAINER_ID;
-      const root = container.attachShadow({ mode: "open", deletesFocus: false });
+      const root = container.attachShadow({
+        mode: "open",
+        deletesFocus: false
+      });
       const overlay = root.appendChild(document.createElement("div"));
       overlay.id = OVERLAY_ID;
       const activeOverlay = root.appendChild(document.createElement("div"));
@@ -33,13 +36,13 @@ export default class HintView {
       let hints;
 
       // wait event setup until document.body.firstChild is reachable.
-      while (!(document.body && document.body.firstChild)) await utils.nextAnimationFrame();
+      while (!(document.body && document.body.firstChild))
+        await utils.nextAnimationFrame();
 
       subscribe("StartHinting", () => {
         hints = new Hints();
 
         waitUntil(() => Boolean(document.body)).then(() => {
-          // $FlowFixMe: already wait until document is non-null.
           const body = document.body;
           initStyles(body, container, overlay, activeOverlay);
           body.insertBefore(container, body.firstChild);
@@ -63,16 +66,18 @@ export default class HintView {
         if (!container.contentDocument) return;
         container.style.display = "block";
       });
-      subscribe("AfterHitHint", ({ context, stateChanges, actionDescriptions }) => {
-        if (!hints) throw Error("Illegal state");
-        highligtHints(hints, stateChanges, actionDescriptions);
-        moveOverlay(overlay, context.targets);
-        moveActiveOverlay(activeOverlay, context.hitTarget);
-      });
+      subscribe(
+        "AfterHitHint",
+        ({ context, stateChanges, actionDescriptions }) => {
+          if (!hints) throw Error("Illegal state");
+          highligtHints(hints, stateChanges, actionDescriptions);
+          moveOverlay(overlay, context.targets);
+          moveActiveOverlay(activeOverlay, context.hitTarget);
+        }
+      );
       subscribe("AfterRemoveHints", () => {
         if (!hints) throw Error("Illegal state");
         waitUntil(() => Boolean(document.body)).then(() => {
-          // $FlowFixMe: already wait until document is non-null.
           const body = document.body;
           if (body.contains(container)) {
             body.removeChild(container);
@@ -143,16 +148,22 @@ function initStyles(body, container, overlay, activeOverlay) {
   });
   Object.assign(overlay.style, {
     position: "absolute",
-    padding: "0", margin: "0",
-    top: "0", left: "0",
-    width: "100%", height: "100%",
+    padding: "0",
+    margin: "0",
+    top: "0",
+    left: "0",
+    width: "100%",
+    height: "100%",
     display: "block"
   });
   Object.assign(activeOverlay.style, {
     position: "absolute",
-    padding: "0", margin: "0",
-    top: "0", left: "0",
-    width: "0", height: "0",
+    padding: "0",
+    margin: "0",
+    top: "0",
+    left: "0",
+    width: "0",
+    height: "0",
     display: "none"
   });
 }
@@ -219,7 +230,11 @@ function highligtHints(hints, changes, actionDescriptions) {
 
       if (newState === "hit" && actionDescriptions) {
         e.setAttribute("data-action-description", actionDescriptions.short);
-        if (actionDescriptions.long) e.setAttribute("data-long-action-description", actionDescriptions.long);
+        if (actionDescriptions.long)
+          e.setAttribute(
+            "data-long-action-description",
+            actionDescriptions.long
+          );
       }
       if (oldState === "hit") {
         e.removeAttribute("data-action-description");
@@ -235,9 +250,14 @@ function generateHintElements(targets) {
     arr.push({ elements, target });
     return arr;
   }, []);
-  console.debug("hints[%d]: %o", hints.length, hints.reduce((o, h) => {
-    o[h.target.hint] = h;return o;
-  }, {}));
+  console.debug(
+    "hints[%d]: %o",
+    hints.length,
+    hints.reduce((o, h) => {
+      o[h.target.hint] = h;
+      return o;
+    }, {})
+  );
   return hints;
 }
 

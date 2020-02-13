@@ -30,7 +30,9 @@ recieve("ActionRequest", (req, sender, sendResponse) => {
   sendResponse();
 });
 
-const additionalSelectorsPromise = settingsClient.getMatchedSelectors(location.href);
+const additionalSelectorsPromise = settingsClient.getMatchedSelectors(
+  location.href
+);
 additionalSelectorsPromise.then(s => {
   if (s.length >= 1) console.debug("mached additional selectors", s);
 });
@@ -60,15 +62,20 @@ async function handleAllRectsRequest(req) {
     style: new Cache(e => window.getComputedStyle(e)),
     clientRects: new Cache(e => Array.from(e.getClientRects()))
   };
-  const rectFetcher = new RectFetcher((await additionalSelectorsPromise), caches);
+  const rectFetcher = new RectFetcher(await additionalSelectorsPromise, caches);
   const frameId = await frameIdPromise;
 
-  rectElements = rectFetcher.getAll(visualViewport).map(({ element, rects }, index) => {
-    rects = rects.map(r => rectUtils.move(r, req.offsets));
-    return { element, holder: { index, frameId, rects } };
-  });
+  rectElements = rectFetcher
+    .getAll(visualViewport)
+    .map(({ element, rects }, index) => {
+      rects = rects.map(r => rectUtils.move(r, req.offsets));
+      return { element, holder: { index, frameId, rects } };
+    });
 
-  console.debug("rectElements", rectElements.map(({ element }) => element));
+  console.debug(
+    "rectElements",
+    rectElements.map(({ element }) => element)
+  );
   await send({
     type: "RectsFragmentResponse",
     holders: rectElements.map(e => e.holder),
@@ -78,9 +85,11 @@ async function handleAllRectsRequest(req) {
   // Propagate requests to child frames
   // Child frames require to be visible by above rect detection, and
   // be registered by a init "RegisterFrame" message.
-  const frames = new Set(filter(rectElements, ({ element }) => {
-    return registeredFrames.has(element.contentWindow);
-  }));
+  const frames = new Set(
+    filter(rectElements, ({ element }) => {
+      return registeredFrames.has(element.contentWindow);
+    })
+  );
   if (frames.size === 0) {
     console.debug("No visible frames", location.href);
     window.parent.postMessage({ type: "AllRectsResponseComplete" }, "*");
@@ -96,7 +105,10 @@ async function handleAllRectsRequest(req) {
   };
   for (const frame of frames) {
     const borderWidth = getBorderWidth(frame.element, caches);
-    const clientRect = rectUtils.move(caches.clientRects.get(frame.element)[0], layoutVpOffsetsFromRootVisualVp);
+    const clientRect = rectUtils.move(
+      caches.clientRects.get(frame.element)[0],
+      layoutVpOffsetsFromRootVisualVp
+    );
     const iframeViewport = rectUtils.excludeBorders(clientRect, borderWidth);
     const offsets = {
       x: iframeViewport.left,
@@ -108,12 +120,15 @@ async function handleAllRectsRequest(req) {
       frames.delete(frame);
       continue;
     }
-    frame.element.contentWindow.postMessage({
-      type: ALL_RECTS_REQUEST_TYPE,
-      viewport: rectUtils.offsets(viewport, offsets),
-      offsets,
-      clientFrameId: req.clientFrameId
-    }, "*");
+    frame.element.contentWindow.postMessage(
+      {
+        type: ALL_RECTS_REQUEST_TYPE,
+        viewport: rectUtils.offsets(viewport, offsets),
+        offsets,
+        clientFrameId: req.clientFrameId
+      },
+      "*"
+    );
   }
   if (frames.size === 0) {
     console.debug("No visible frames", location.href);
@@ -125,23 +140,36 @@ async function handleAllRectsRequest(req) {
   let responseCompleteHandler;
   // eslint-disable-next-line prefer-const
   let timeoutId;
-  window.addEventListener("message", responseCompleteHandler = event => {
-    if (event.source === window) return;
-    if (event.data.type !== "AllRectsResponseComplete") return;
+  window.addEventListener(
+    "message",
+    (responseCompleteHandler = event => {
+      if (event.source === window) return;
+      if (event.data.type !== "AllRectsResponseComplete") return;
 
-    const frame = first(filter(frames.values(), ({ element }) => element.contentWindow === event.source));
-    if (!frame) return;
-    frames.delete(frame);
-    console.debug("Request complete: ", frame, "frames.size=", frames.size);
-    if (frames.size === 0) {
-      window.parent.postMessage({ type: "AllRectsResponseComplete" }, "*");
-      window.removeEventListener("message", responseCompleteHandler);
-      clearTimeout(timeoutId);
-    }
-  });
+      const frame = first(
+        filter(
+          frames.values(),
+          ({ element }) => element.contentWindow === event.source
+        )
+      );
+      if (!frame) return;
+      frames.delete(frame);
+      console.debug("Request complete: ", frame, "frames.size=", frames.size);
+      if (frames.size === 0) {
+        window.parent.postMessage({ type: "AllRectsResponseComplete" }, "*");
+        window.removeEventListener("message", responseCompleteHandler);
+        clearTimeout(timeoutId);
+      }
+    })
+  );
   // Fetching complete timeout
   timeoutId = setTimeout(() => {
-    console.warn("Timeout: no response child frames=", frames, "location=", location.href);
+    console.warn(
+      "Timeout: no response child frames=",
+      frames,
+      "location=",
+      location.href
+    );
     window.parent.postMessage({ type: "AllRectsResponseComplete" }, "*");
     window.removeEventListener("message", responseCompleteHandler);
   }, 1000);
@@ -163,7 +191,8 @@ function getBorderWidth(element, caches) {
     const prevValue = element.style.getPropertyValue(propName);
     element.style.setProperty(propName, "0");
     const index = rectIndex === "last" ? rects.length - 1 : rectIndex;
-    const w = rects[index][sizeName] - element.getClientRects()[index][sizeName];
+    const w =
+      rects[index][sizeName] - element.getClientRects()[index][sizeName];
     element.style.setProperty(propName, prevValue);
     return w;
   }

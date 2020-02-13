@@ -1,5 +1,4 @@
 class Storage {
-
   constructor(storage) {
     this.storage = storage;
   }
@@ -128,7 +127,11 @@ async function fetchCss() {
 
 async function getAll(storage) {
   if (!storage) storage = await getStorage();
-  return Object.assign({}, DEFAULT_SETTINGS, (await storage.get(Object.keys(DEFAULT_SETTINGS))));
+  return Object.assign(
+    {},
+    DEFAULT_SETTINGS,
+    await storage.get(Object.keys(DEFAULT_SETTINGS))
+  );
 }
 
 async function isLocal() {

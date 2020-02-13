@@ -19,7 +19,16 @@ export default class ActionHandlerDelegater {
   }
 }
 
-const CLICKABLE_SELECTORS = ["a[href]", "area[href]", "button:not([disabled])", "[onclick]", "[onmousedown]", "[onmouseup]", "[role=link]", "[role=button]"].join(",");
+const CLICKABLE_SELECTORS = [
+  "a[href]",
+  "area[href]",
+  "button:not([disabled])",
+  "[onclick]",
+  "[onmousedown]",
+  "[onmouseup]",
+  "[role=link]",
+  "[role=button]"
+].join(",");
 handlers.push({
   shortDescription: "Click",
   longDescription: "Click anchor, button or other clickable elements",
@@ -71,7 +80,12 @@ handlers.push({
   shortDescription: "Click",
   longDescription: "Click the <input> element",
   isSupported(target) {
-    return target.tagName === "INPUT" && ["checkbox", "radio", "button", "image", "submit", "reset"].includes(target.type);
+    return (
+      target.tagName === "INPUT" &&
+      ["checkbox", "radio", "button", "image", "submit", "reset"].includes(
+        target.type
+      )
+    );
   },
   handle(target, options) {
     target.focus();

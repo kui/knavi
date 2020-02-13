@@ -1,5 +1,3 @@
-
-/* eslint-env node */
 import pkg from "../package.json";
 
 /* eslint-disable camelcase */
@@ -18,14 +16,19 @@ export default {
     scripts: ["background.js"],
     persistent: true
   },
-  content_scripts: [{ matches: ["<all_urls>"],
-    js: ["content-script-common.js", "content-script-all.js"],
-    run_at: "document_start",
-    all_frames: true
-  }, { matches: ["<all_urls>"],
-    js: ["content-script-common.js", "content-script-root.js"],
-    run_at: "document_start"
-  }],
+  content_scripts: [
+    {
+      matches: ["<all_urls>"],
+      js: ["content-script-all.js"],
+      run_at: "document_start",
+      all_frames: true
+    },
+    {
+      matches: ["<all_urls>"],
+      js: ["content-script-root.js"],
+      run_at: "document_start"
+    }
+  ],
   content_security_policy: "script-src 'self'; object-src 'self'",
   options_page: "options.html",
   options_ui: {

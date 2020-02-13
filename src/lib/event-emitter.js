@@ -1,15 +1,14 @@
-
-
 export class EventEmitter {
-
   constructor() {
     this.listeners = [];
   }
 
   async emit(value) {
-    await Promise.all(this.listeners.map(async l => {
-      l.callback(value);
-    }));
+    await Promise.all(
+      this.listeners.map(async l => {
+        l.callback(value);
+      })
+    );
   }
 
   listen(callback) {
@@ -18,7 +17,6 @@ export class EventEmitter {
 }
 
 export class EventListener {
-
   constructor(eventEmitter, callback) {
     this.eventEmitter = eventEmitter;
     this.callback = callback;

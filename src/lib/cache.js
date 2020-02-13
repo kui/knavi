@@ -1,5 +1,4 @@
 export default class Cache {
-
   constructor(fallback) {
     this.f = fallback;
     this.clear();
