@@ -1,34 +1,25 @@
-// @flow
-
 import { filter, first, traverseParent, flatMap } from "./iters";
 import { intersection, getBoundingRect } from "./rects";
 import Cache from "./cache";
 
-import type { Rect } from "./rects";
-import type { DomCaches } from "./rect-fetcher-service";
-
 export default class VisibleRectDetector {
-  cache: Cache<Element, Rect[]>;
-  clientRectsCache: Cache<Element, Rect[]>;
-  styleCache: Cache<Element, CSSStyleDeclaration>;
 
-  constructor(caches: DomCaches) {
-    this.cache = new Cache;
+  constructor(caches) {
+    this.cache = new Cache();
     this.clientRectsCache = caches.clientRects;
     this.styleCache = caches.style;
   }
 
-  get(element: Element, visualViewportFromLayoutVp: Rect): Rect[] {
+  get(element, visualViewportFromLayoutVp) {
     return this.cache.getOr(element, () => {
-      return getVisibleRects(this, element, visualViewportFromLayoutVp)
-        .map((r) => getRectFromVisualViewport(r, visualViewportFromLayoutVp));
+      return getVisibleRects(this, element, visualViewportFromLayoutVp).map(r => getRectFromVisualViewport(r, visualViewportFromLayoutVp));
     });
   }
 }
 
-function getVisibleRects(self, element, viewport): Rect[] {
+function getVisibleRects(self, element, viewport) {
   const clientRects = getClientRects(self, element);
-  return Array.from(flatMap(clientRects, (rect) => {
+  return Array.from(flatMap(clientRects, rect => {
     // too small rects
     if (isSmallRect(rect)) return [];
 
@@ -48,20 +39,23 @@ function getVisibleRects(self, element, viewport): Rect[] {
 }
 
 const SMALL_THREASHOLD_PX = 3;
-function isSmallRect({ width, height }: Rect) {
+function isSmallRect({ width, height }) {
   return height <= SMALL_THREASHOLD_PX || width <= SMALL_THREASHOLD_PX;
 }
 
-function getClientRects(self: VisibleRectDetector, element: Element): Rect[] {
+function getClientRects(self, element) {
   switch (element.tagName) {
-    case "AREA": return getAreaRects((element: any));
-    case "A": return getAnchorRects(self, (element: any));
-    default: return self.clientRectsCache.get(element);
+    case "AREA":
+      return getAreaRects(element);
+    case "A":
+      return getAnchorRects(self, element);
+    default:
+      return self.clientRectsCache.get(element);
   }
 }
 
-function getAreaRects(element: HTMLAreaElement): Rect[] {
-  const map = first(filter(traverseParent(element), (e) => e.tagName === "MAP"));
+function getAreaRects(element) {
+  const map = first(filter(traverseParent(element), e => e.tagName === "MAP"));
   if (!(map instanceof HTMLMapElement)) return [];
 
   const img = document.querySelector(`body /deep/ img[usemap="#${map.name}"]`);
@@ -71,36 +65,35 @@ function getAreaRects(element: HTMLAreaElement): Rect[] {
 
   if (element.shape === "default") return [rect];
 
-  const coords = element.coords.split(",").map((c) => parseInt(c));
+  const coords = element.coords.split(",").map(c => parseInt(c));
   // filter out NaN
-  if (coords.some((c) => !(c >= 0))) return [];
+  if (coords.some(c => !(c >= 0))) return [];
 
   if (element.shape === "circle") {
     const [x, y, r] = coords;
     const d = r / Math.sqrt(2);
-    const left  = x - d + rect.left;
+    const left = x - d + rect.left;
     const right = x + d + rect.left;
-    const top    = y - d + rect.top;
+    const top = y - d + rect.top;
     const bottom = y + d + rect.top;
     return [{ left, right, top, bottom, width: right - left, height: bottom - top }];
   }
 
   // TODO poly support
   const [x1, y1, x2, y2] = coords;
-  const top    = Math.min(y1, y2) + rect.top;
+  const top = Math.min(y1, y2) + rect.top;
   const bottom = Math.max(y1, y2) + rect.top;
-  const left   = Math.min(x1, x2) + rect.left;
-  const right  = Math.max(x1, x2) + rect.left;
+  const left = Math.min(x1, x2) + rect.left;
+  const right = Math.max(x1, x2) + rect.left;
   return [{ left, right, top, bottom, width: right - left, height: bottom - top }];
 }
 
 /// Return a element client rect if the anchor contains only it.
-function getAnchorRects(self: VisibleRectDetector, anchor: HTMLAnchorElement): Rect[] {
+function getAnchorRects(self, anchor) {
   const anchorRects = self.clientRectsCache.get(anchor);
   if (anchorRects.length === 0) return [];
 
-  const childNodes = Array.from(filter(anchor.childNodes,
-                                       (n) => !isBlankTextNode(n) && !isSmallElement(self, n)));
+  const childNodes = Array.from(filter(anchor.childNodes, n => !isBlankTextNode(n) && !isSmallElement(self, n)));
   if (childNodes.length !== 1) return anchorRects;
 
   const child = childNodes[0];
@@ -122,10 +115,10 @@ function getAnchorRects(self: VisibleRectDetector, anchor: HTMLAnchorElement): R
 }
 
 function isBlankTextNode(n) {
-  return (n instanceof Text) && (/^\s*$/).test(n.textContent);
+  return n instanceof Text && /^\s*$/.test(n.textContent);
 }
 
-function isSmallElement(self: VisibleRectDetector, n) {
+function isSmallElement(self, n) {
   if (n instanceof Element) {
     const r = self.clientRectsCache.get(n);
     return r.length === 0 || r.every(isSmallRect);
@@ -133,7 +126,7 @@ function isSmallElement(self: VisibleRectDetector, n) {
   return false;
 }
 
-function isPointable(self, element, rect, viewport): boolean {
+function isPointable(self, element, rect, viewport) {
   const { top, bottom, left, right } = rect;
 
   const x = avg(left, right, 0.5);
@@ -178,19 +171,15 @@ function deepElementFromPoint(x, y) {
 }
 
 function isPointInRect(x, y, rect) {
-  return rect.top <= y && y <= rect.bottom
-    && rect.left <= x && x <= rect.right;
+  return rect.top <= y && y <= rect.bottom && rect.left <= x && x <= rect.right;
 }
 
 /// return true if `wrapper` COMPLETELY overwrap `target`
-function isOverwrappedRect(target: Rect, wrapper: Rect) {
-  return target.top >= wrapper.top &&
-    target.bottom <= wrapper.bottom &&
-    target.left >= wrapper.left &&
-    target.right <= target.right;
+function isOverwrappedRect(target, wrapper) {
+  return target.top >= wrapper.top && target.bottom <= wrapper.bottom && target.left >= wrapper.left && target.right <= target.right;
 }
 
-function cropByParent(self, element, rect, viewport): ?Rect {
+function cropByParent(self, element, rect, viewport) {
   if (element === document.body) return rect;
 
   const parent = element.parentElement;
@@ -199,10 +188,7 @@ function cropByParent(self, element, rect, viewport): ?Rect {
   const elementPosition = self.styleCache.get(element).position;
   const parentOverflow = self.styleCache.get(parent).overflow;
   if (elementPosition === "fixed") return rect;
-  if (elementPosition === "absolute" ||
-      elementPosition === "sticky" ||
-      parentOverflow === "visible")
-    return cropByParent(self, parent, rect, viewport);
+  if (elementPosition === "absolute" || elementPosition === "sticky" || parentOverflow === "visible") return cropByParent(self, parent, rect, viewport);
 
   const parentRects = self.get(parent, viewport);
   if (parentRects.length === 0) return null;
@@ -211,17 +197,17 @@ function cropByParent(self, element, rect, viewport): ?Rect {
   return cropByParent(self, parent, cropped, viewport);
 }
 
-function avg(a: number, b: number, ratio: number): number {
+function avg(a, b, ratio) {
   return a * ratio + b * (1 - ratio);
 }
 
-function getRectFromVisualViewport(r: Rect, visualViewport: Rect) {
+function getRectFromVisualViewport(r, visualViewport) {
   return {
     top: r.top - visualViewport.top,
     bottom: r.bottom - visualViewport.top,
     left: r.left - visualViewport.left,
     right: r.right - visualViewport.left,
     width: r.width,
-    height: r.height,
+    height: r.height
   };
 }

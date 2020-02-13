@@ -1,31 +1,27 @@
-// @flow
-
-export function nextAnimationFrame(): Promise<number> {
-  return new Promise((resolve) => requestAnimationFrame(resolve));
+export function nextAnimationFrame() {
+  return new Promise(resolve => requestAnimationFrame(resolve));
 }
 
-export function isScrollable(element: HTMLElement, style: any): boolean {
-  if (element.scrollHeight - element.clientHeight > 10
-      && ["auto", "scroll"].includes(style.overflowY)) return true;
-  if (element.scrollWidth - element.clientWidth > 10
-      && ["auto", "scroll"].includes(style.overflowX)) return true;
+export function isScrollable(element, style) {
+  if (element.scrollHeight - element.clientHeight > 10 && ["auto", "scroll"].includes(style.overflowY)) return true;
+  if (element.scrollWidth - element.clientWidth > 10 && ["auto", "scroll"].includes(style.overflowX)) return true;
   return false;
 }
 
-export function isEditable(elem: EventTarget) {
+export function isEditable(elem) {
   if (!(elem instanceof Element)) return false;
   // No-selectable <input> throws an error when "selectionStart" are referred.
   let selectionStart;
   try {
-    selectionStart = (elem: any).selectionStart;
+    selectionStart = elem.selectionStart;
   } catch (e) {
     return false;
   }
-  return selectionStart != null || (elem: any).contentEditable === "true";
+  return selectionStart != null || elem.contentEditable === "true";
 }
 
-export class ArrayMap<K, V> extends Map<K, V[]> {
-  add(k: K, v: V): V[] {
+export class ArrayMap extends Map {
+  add(k, v) {
     let vs = this.get(k);
     if (vs == null) {
       vs = [];
@@ -34,7 +30,7 @@ export class ArrayMap<K, V> extends Map<K, V[]> {
     vs.push(v);
     return vs;
   }
-  delete(k: K, v?: V): boolean {
+  delete(k, v) {
     if (v == null) return super.delete(k);
 
     const vs = this.get(k);
@@ -49,17 +45,17 @@ export class ArrayMap<K, V> extends Map<K, V[]> {
   }
 }
 
-export class SetMap<K, V> extends Map<K, Set<V>> {
-  add(k: K, v: V): Set<V> {
+export class SetMap extends Map {
+  add(k, v) {
     let vs = this.get(k);
     if (vs == null) {
-      vs = new Set;
+      vs = new Set();
       this.set(k, vs);
     }
     return vs.add(v);
   }
 
-  has(k: K, v?: V): boolean {
+  has(k, v) {
     if (v == null) {
       return this.has(k);
     }
@@ -69,7 +65,7 @@ export class SetMap<K, V> extends Map<K, Set<V>> {
     return vs.has(v);
   }
 
-  delete(k: K, v?: V): boolean {
+  delete(k, v) {
     if (v == null) return super.delete(k);
 
     const vs = this.get(k);
@@ -80,7 +76,7 @@ export class SetMap<K, V> extends Map<K, Set<V>> {
   }
 }
 
-export async function waitUntil(predicate: () => boolean) {
+export async function waitUntil(predicate) {
   while (!predicate()) {
     await nextAnimationFrame();
   }

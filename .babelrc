@@ -9,9 +9,6 @@
       },
     }],
   ],
-  plugins: [
-    "transform-flow-strip-types",
-  ],
   env: {
     production: {
       presets: [
@@ -24,7 +21,6 @@
         "babili",
       ],
       plugins: [
-        "transform-flow-strip-types",
         ["strip-function-call", {
           strip: [
             "console.debug",

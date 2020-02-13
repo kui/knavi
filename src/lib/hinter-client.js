@@ -1,22 +1,6 @@
-// @flow
-
 import { send } from "./chrome-messages";
-import { ActionOptions } from "./action-handlers";
-
-export type AttachHints = {
-  type: "AttachHints";
-};
-export type HitHint = {
-  type: "HitHint";
-  key: string;
-};
-export type RemoveHints = {
-  type: "RemoveHints";
-  options: ActionOptions;
-};
 
 export default class HinterClient {
-  isHinting: boolean;
 
   constructor() {
     this.isHinting = false;
@@ -25,17 +9,17 @@ export default class HinterClient {
   attachHints() {
     if (this.isHinting) throw Error("Illegal state");
     this.isHinting = true;
-    send(({ type: "AttachHints" }: AttachHints));
+    send({ type: "AttachHints" });
   }
 
-  hitHint(key: string) {
+  hitHint(key) {
     if (!this.isHinting) throw Error("Illegal state");
-    send(({ type: "HitHint", key }: HitHint));
+    send({ type: "HitHint", key });
   }
 
-  removeHints(options: ActionOptions) {
+  removeHints(options) {
     if (!this.isHinting) throw Error("Illegal state");
     this.isHinting = false;
-    send(({ type: "RemoveHints", options }: RemoveHints));
+    send({ type: "RemoveHints", options });
   }
 }

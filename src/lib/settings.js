@@ -1,15 +1,12 @@
-// @flow
-
 class Storage {
-  storage: ChromeStorageArea;
 
-  constructor(storage: ChromeStorageArea) {
+  constructor(storage) {
     this.storage = storage;
   }
 
-  get(names?: string | string[]): Promise<ChromeStorageItems> {
+  get(names) {
     return new Promise((resolve, reject) => {
-      this.storage.get(names, (items) => {
+      this.storage.get(names, items => {
         const err = chrome.runtime.lastError;
         if (err) {
           reject(Error(err.message));
@@ -20,11 +17,11 @@ class Storage {
     });
   }
 
-  async getSingle(name: string): Promise<?string> {
+  async getSingle(name) {
     return (await this.get(name))[name];
   }
 
-  set(items: ChromeStorageItems): Promise<void> {
+  set(items) {
     return new Promise((resolve, reject) => {
       this.storage.set(items, () => {
         const err = chrome.runtime.lastError;
@@ -37,13 +34,13 @@ class Storage {
     });
   }
 
-  async setSingle(name: string, value: string): Promise<void> {
+  async setSingle(name, value) {
     await this.set({ [name]: value });
   }
 
-  getBytes(names?: string | string[]): Promise<number> {
+  getBytes(names) {
     return new Promise((resolve, reject) => {
-      this.storage.getBytesInUse(names, (b) => {
+      this.storage.getBytesInUse(names, b => {
         const err = chrome.runtime.lastError;
         if (err) {
           reject(Error(err.message));
@@ -55,7 +52,7 @@ class Storage {
   }
 }
 
-const sync  = new Storage(chrome.storage.sync);
+const sync = new Storage(chrome.storage.sync);
 const local = new Storage(chrome.storage.local);
 
 const DEFAULT_BLACK_LIST = `# Example (Start with # if you want comments)
@@ -77,26 +74,17 @@ const DEFAULT_ADDITIONAL_SELECTORS = `{
   ],
 }`;
 
-const DEFAULT_SETTINGS: Settings = {
+const DEFAULT_SETTINGS = {
   magicKey: "Space",
   hints: "asdfghjkl",
   blurKey: "",
   css: "", // load from an external file
   blackList: DEFAULT_BLACK_LIST,
-  additionalSelectors: DEFAULT_ADDITIONAL_SELECTORS,
+  additionalSelectors: DEFAULT_ADDITIONAL_SELECTORS
 };
 
-export interface Settings {
-  magicKey: string;
-  hints: string;
-  blurKey: string;
-  css: string;
-  blackList: string;
-  additionalSelectors: string;
-}
-
 export default {
-  async init(): Promise<void> {
+  async init() {
     const storage = await getStorage();
     const s = await storage.get(Object.keys(DEFAULT_SETTINGS));
     const changes = {};
@@ -107,7 +95,7 @@ export default {
           changes.css = await fetchCss();
           break;
         default:
-          changes[name] = (DEFAULT_SETTINGS: any)[name];
+          changes[name] = DEFAULT_SETTINGS[name];
           break;
       }
     }
@@ -115,35 +103,32 @@ export default {
     console.debug("Initialize settings", changes);
     await storage.set(changes);
   },
-  async load(): Promise<Settings> { return getAll(); },
-  async loadDefaults(): Promise<Settings> {
+  async load() {
+    return getAll();
+  },
+  async loadDefaults() {
     return Object.assign({}, DEFAULT_SETTINGS, { css: await fetchCss() });
   },
-  async getBytesInUse(name: string): Promise<number> {
+  async getBytesInUse(name) {
     const storage = await getStorage();
     return await storage.getBytes(name);
   },
-  async getTotalBytesInUse(): Promise<number> {
+  async getTotalBytesInUse() {
     const storage = await getStorage();
     return await storage.getBytes();
   },
   async isLocal() {
     return await isLocal();
-  },
+  }
 };
 
-async function fetchCss(): Promise<string> {
+async function fetchCss() {
   return await (await fetch("./default-style.css")).text();
 }
 
-async function getAll(storage): Promise<Settings> {
-  if (!storage)
-    storage = await getStorage();
-  return Object.assign(
-    {},
-    DEFAULT_SETTINGS,
-    await storage.get(Object.keys(DEFAULT_SETTINGS))
-  );
+async function getAll(storage) {
+  if (!storage) storage = await getStorage();
+  return Object.assign({}, DEFAULT_SETTINGS, (await storage.get(Object.keys(DEFAULT_SETTINGS))));
 }
 
 async function isLocal() {
@@ -151,6 +136,6 @@ async function isLocal() {
   return a === "chrome-local";
 }
 
-async function getStorage(): Promise<Storage> {
-  return await isLocal() ? local : sync;
+async function getStorage() {
+  return (await isLocal()) ? local : sync;
 }

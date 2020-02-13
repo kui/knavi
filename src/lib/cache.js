@@ -1,15 +1,11 @@
-// @flow
+export default class Cache {
 
-export default class Cache<K, V> {
-  c: Map<K, V>;
-  f: ?(k: K) => V;
-
-  constructor(fallback?: (k: K) => V) {
+  constructor(fallback) {
     this.f = fallback;
     this.clear();
   }
 
-  get(k: K): V {
+  get(k) {
     if (this.f) {
       return this.getOr(k, this.f);
     } else {
@@ -17,7 +13,7 @@ export default class Cache<K, V> {
     }
   }
 
-  getOr(k: K, f: (k: K) => V): V {
+  getOr(k, f) {
     const v = this.c.get(k);
     if (v) return v;
 
@@ -27,6 +23,6 @@ export default class Cache<K, V> {
   }
 
   clear() {
-    this.c = new Map;
+    this.c = new Map();
   }
 }

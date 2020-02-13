@@ -1,35 +1,18 @@
-// @flow
-
 import { send, subscribe } from "./chrome-messages";
 
-import type { Settings } from "./settings";
-import type { BroadcastNewSettings } from "./settings-background";
-
-export type GetSettings = {
-  type: "GetSettings";
-};
-export type GetMatchedBlackList = {
-  type: "GetMatchedBlackList";
-  url: string;
-};
-export type GetMatchedSelectors = {
-  type: "GetMatchedSelectors";
-  url: string;
-};
-
 export default {
-  get(): Promise<Settings> {
-    return send(({ type: "GetSettings" }: GetSettings));
+  get() {
+    return send({ type: "GetSettings" });
   },
-  subscribe(callback: (s: Settings) => any): void {
-    subscribe("BroadcastNewSettings", (message: BroadcastNewSettings) => {
+  subscribe(callback) {
+    subscribe("BroadcastNewSettings", message => {
       callback(message.settings);
     });
   },
-  getMatchedBlackList(url: string): Promise<string[]> {
-    return send(({ type: "GetMatchedBlackList", url }: GetMatchedBlackList));
+  getMatchedBlackList(url) {
+    return send({ type: "GetMatchedBlackList", url });
   },
-  getMatchedSelectors(url: string): Promise<string[]> {
-    return send(({ type: "GetMatchedSelectors", url }: GetMatchedSelectors));
-  },
+  getMatchedSelectors(url) {
+    return send({ type: "GetMatchedSelectors", url });
+  }
 };

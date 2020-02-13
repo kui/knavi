@@ -1,5 +1,3 @@
-// @flow
-
 import assert from "assert";
 import AdditionalSelectors from "../../src/lib/additional-selectors";
 
