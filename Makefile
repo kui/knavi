@@ -27,12 +27,16 @@ $(BUILD)/%.js: $(SRC)/%.js $(SRC)/lib/*.js node_modules
 	DEST=$(BUILD) $(BIN)/webpack
 
 $(ICONS): $(SRC)/icon.svg
-	convert -verbose src/icon.svg \
-		-resize `echo $@ | sed -nre 's/.*icon([0-9]+)\.png/\1/p'`x \
-		$@
+	rsvg-convert $< \
+		--width `echo $@ | sed -nre 's/.*icon([0-9]+)\.png/\1/p'` \
+		--keep-aspect-ratio \
+		--output $@
 
 $(BUILD)/%.png: $(SRC)/%.svg
-	convert -verbose $< -resize 40x $@
+	rsvg-convert $< \
+		--width 40 \
+		--keep-aspect-ratio \
+		--output $@
 
 $(BUILD)/codemirror.css: node_modules
 	cp -v node_modules/codemirror/lib/codemirror.css $@
