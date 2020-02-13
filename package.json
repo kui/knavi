@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "knavi",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Hit-a-Hint with magic key. You can click without the mouse by holding down the space key and hint text.",
   "scripts": {
     "test": "make test"
