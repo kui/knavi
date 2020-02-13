@@ -21,7 +21,7 @@
     "babili-webpack-plugin": "0.0.9",
     "chokidar-cli": "^1.2.0",
     "codemirror": "^5.22.2",
-    "eslint": "^3.13.0",
+    "eslint": "^6.8.0",
     "eslint-config-babel": "^6.0.0",
     "eslint-plugin-babel": "^4.0.0",
     "eslint-plugin-flowtype": "^2.29.2",
