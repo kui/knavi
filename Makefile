@@ -11,10 +11,7 @@ BIN = node_modules/.bin
 FILES = $(BUILD) $(BUILD)/manifest.json $(BUILD)/codemirror.css $(STATICS) $(ICONS) $(PNG)
 
 .PHONY: all
-all: debug-build
-
-.PHONY: debug-build
-debug-build: lint $(FILES) $(JS)
+all: $(FILES) $(JS)
 
 $(BUILD):
 	mkdir -v $(BUILD)
@@ -52,10 +49,8 @@ node_modules: package.json
 zip: $(ZIP)
 
 $(ZIP):
-	NODE_ENV=production make BUILD=$(PROD-BUILD) test
-	NODE_ENV=production make BUILD=$(PROD-BUILD) $(patsubst $(BUILD)/%.js,$(PROD-BUILD)/%.js,$(firstword $(JS)))
-	NODE_ENV=production make BUILD=$(PROD-BUILD) node_modules $(FILES) $(JS)
-	zip -r $(ZIP) $(PROD-BUILD)
+	NODE_ENV=production make BUILD=$(PROD-BUILD) test all
+	cd $(PROD-BUILD) && zip -vr ../$(ZIP) .
 
 .PHONY: test
 test: lint mocha
