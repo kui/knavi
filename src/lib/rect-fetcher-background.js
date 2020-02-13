@@ -2,8 +2,9 @@ import { recieve, sendTo } from "./chrome-messages";
 
 // import type { DescriptionsRequest, ActionRequest } from "./rect-fetcher-client";
 
-
-recieve("GetFrameId", (m, sender, responseCallback) => responseCallback(sender.frameId));
+recieve("GetFrameId", (m, sender, responseCallback) =>
+  responseCallback(sender.frameId)
+);
 
 // proxy RectsFragmentResponse
 recieve("RectsFragmentResponse", async (message, sender, sendResponse) => {

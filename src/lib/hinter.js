@@ -2,7 +2,6 @@ import { send } from "./chrome-messages";
 import * as rectFetcher from "./rect-fetcher-client";
 
 export default class Hinter {
-
   constructor(hintLetters) {
     this.hintLetters = hintLetters;
   }
@@ -58,7 +57,9 @@ export default class Hinter {
 
     let actionDescriptions;
     if (context.hitTarget) {
-      actionDescriptions = await rectFetcher.getDescriptions(context.hitTarget.holder);
+      actionDescriptions = await rectFetcher.getDescriptions(
+        context.hitTarget.holder
+      );
     }
 
     send({
@@ -86,7 +87,6 @@ export default class Hinter {
 }
 
 export class Target {
-
   constructor(hint, holder) {
     this.hint = hint;
     this.holder = holder;
@@ -106,7 +106,6 @@ export class Target {
 }
 
 class HintContext {
-
   constructor() {
     this.targets = [];
     this.inputSequence = [];
@@ -121,7 +120,8 @@ class HintContext {
       const oldState = t.state;
       const newState = t.updateState(inputs);
       if (newState === "hit") this.hitTarget = t;
-      if (oldState !== newState) changes.push({ target: t, oldState, newState });
+      if (oldState !== newState)
+        changes.push({ target: t, oldState, newState });
       return changes;
     }, []);
   }

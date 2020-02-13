@@ -1,10 +1,11 @@
-
-
 export function rectByOffsetsAndSizes(offsets, sizes) {
   return {
-    top: offsets.y, bottom: offsets.y + sizes.height,
-    left: offsets.x, right: offsets.x + sizes.width,
-    height: sizes.height, width: sizes.width
+    top: offsets.y,
+    bottom: offsets.y + sizes.height,
+    left: offsets.x,
+    right: offsets.x + sizes.width,
+    height: sizes.height,
+    width: sizes.width
   };
 }
 
@@ -25,7 +26,10 @@ export function rectByPoints(...points) {
 
 function rect(top, bottom, left, right) {
   return {
-    top, bottom, left, right,
+    top,
+    bottom,
+    left,
+    right,
     height: bottom - top,
     width: right - left
   };
@@ -62,13 +66,16 @@ export function intersection(...rects) {
 }
 
 export function excludeBorders(rect, borderWidth) {
-  return rectByPoints({
-    y: rect.top + borderWidth.top,
-    x: rect.left + borderWidth.left
-  }, {
-    y: rect.bottom - borderWidth.bottom,
-    x: rect.right - borderWidth.right
-  });
+  return rectByPoints(
+    {
+      y: rect.top + borderWidth.top,
+      x: rect.left + borderWidth.left
+    },
+    {
+      y: rect.bottom - borderWidth.bottom,
+      x: rect.right - borderWidth.right
+    }
+  );
 }
 
 export function getBoundingRect(rects) {
@@ -78,5 +85,12 @@ export function getBoundingRect(rects) {
   const bottom = Math.max(...rects.map(r => r.bottom));
   const left = Math.min(...rects.map(r => r.left));
   const right = Math.max(...rects.map(r => r.right));
-  return { top, bottom, left, right, height: bottom - top, width: right - left };
+  return {
+    top,
+    bottom,
+    left,
+    right,
+    height: bottom - top,
+    width: right - left
+  };
 }

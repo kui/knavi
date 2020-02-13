@@ -3,8 +3,16 @@ export function nextAnimationFrame() {
 }
 
 export function isScrollable(element, style) {
-  if (element.scrollHeight - element.clientHeight > 10 && ["auto", "scroll"].includes(style.overflowY)) return true;
-  if (element.scrollWidth - element.clientWidth > 10 && ["auto", "scroll"].includes(style.overflowX)) return true;
+  if (
+    element.scrollHeight - element.clientHeight > 10 &&
+    ["auto", "scroll"].includes(style.overflowY)
+  )
+    return true;
+  if (
+    element.scrollWidth - element.clientWidth > 10 &&
+    ["auto", "scroll"].includes(style.overflowX)
+  )
+    return true;
   return false;
 }
 

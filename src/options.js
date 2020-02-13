@@ -91,9 +91,9 @@ async function initCodeMirror() {
       if (v !== value) textarea.value = value = v;
     });
     (async () => {
-      while (true) {
+      for (;;) {
         await utils.nextAnimationFrame();
-        if (value !== textarea.value) cm.setValue(value = textarea.value);
+        if (value !== textarea.value) cm.setValue((value = textarea.value));
       }
     })();
   }
@@ -105,21 +105,29 @@ async function initBytesDisplay() {
     if (!itemName) continue;
 
     const update = async () => {
-      bytesDisplay.textContent = new Intl.NumberFormat("en").format((await getBytesInUse(itemName)));
+      bytesDisplay.textContent = new Intl.NumberFormat("en").format(
+        await getBytesInUse(itemName)
+      );
     };
     update();
     chrome.storage.onChanged.addListener(() => update());
   }
 
-  for (const bytesMaxDisplay of document.querySelectorAll(".js-bytes-max-display")) {
+  for (const bytesMaxDisplay of document.querySelectorAll(
+    ".js-bytes-max-display"
+  )) {
     const update = async () => {
-      bytesMaxDisplay.textContent = new Intl.NumberFormat("en").format((await getMaxBytesPerItem()));
+      bytesMaxDisplay.textContent = new Intl.NumberFormat("en").format(
+        await getMaxBytesPerItem()
+      );
     };
     update();
     chrome.storage.onChanged.addListener(() => update());
   }
 
-  for (const bytesPercentDisplay of document.querySelectorAll(".js-bytes-percent-display")) {
+  for (const bytesPercentDisplay of document.querySelectorAll(
+    ".js-bytes-percent-display"
+  )) {
     const itemName = bytesPercentDisplay.dataset.name;
     if (!itemName) continue;
 
@@ -135,23 +143,33 @@ async function initBytesDisplay() {
     chrome.storage.onChanged.addListener(() => update());
   }
 
-  for (const bytesDisplay of document.querySelectorAll(".js-total-bytes-display")) {
+  for (const bytesDisplay of document.querySelectorAll(
+    ".js-total-bytes-display"
+  )) {
     const update = async () => {
-      bytesDisplay.textContent = new Intl.NumberFormat("en").format((await settings.getTotalBytesInUse()));
+      bytesDisplay.textContent = new Intl.NumberFormat("en").format(
+        await settings.getTotalBytesInUse()
+      );
     };
     update();
     chrome.storage.onChanged.addListener(() => update());
   }
 
-  for (const bytesMaxDisplay of document.querySelectorAll(".js-total-bytes-max-display")) {
+  for (const bytesMaxDisplay of document.querySelectorAll(
+    ".js-total-bytes-max-display"
+  )) {
     const update = async () => {
-      bytesMaxDisplay.textContent = new Intl.NumberFormat("en").format((await getMaxBytes()));
+      bytesMaxDisplay.textContent = new Intl.NumberFormat("en").format(
+        await getMaxBytes()
+      );
     };
     update();
     chrome.storage.onChanged.addListener(() => update());
   }
 
-  for (const bytesPercentDisplay of document.querySelectorAll(".js-total-bytes-percent-display")) {
+  for (const bytesPercentDisplay of document.querySelectorAll(
+    ".js-total-bytes-percent-display"
+  )) {
     const update = async () => {
       const bytes = await settings.getTotalBytesInUse();
       const max = await getMaxBytesPerItem();
@@ -166,15 +184,21 @@ async function initBytesDisplay() {
 }
 
 async function getMaxBytesPerItem() {
-  return (await settings.isLocal()) ? chrome.storage.local.QUOTA_BYTES : chrome.storage.sync.QUOTA_BYTES_PER_ITEM;
+  return (await settings.isLocal())
+    ? chrome.storage.local.QUOTA_BYTES
+    : chrome.storage.sync.QUOTA_BYTES_PER_ITEM;
 }
 
 async function getMaxBytes() {
-  return (await settings.isLocal()) ? chrome.storage.local.QUOTA_BYTES : chrome.storage.sync.QUOTA_BYTES;
+  return (await settings.isLocal())
+    ? chrome.storage.local.QUOTA_BYTES
+    : chrome.storage.sync.QUOTA_BYTES;
 }
 
 async function getBytesInUse(name) {
-  return (await settings.isLocal()) ? settings.getTotalBytesInUse() : settings.getBytesInUse(name);
+  return (await settings.isLocal())
+    ? settings.getTotalBytesInUse()
+    : settings.getBytesInUse(name);
 }
 
 function styleStorageLimit(element, ratio) {

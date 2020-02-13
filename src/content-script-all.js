@@ -18,9 +18,13 @@ async function main() {
   const settings = await settingsClient.get();
   hintLetters = settings.hints;
   hitEventMatcher = new EventMatcher(settings.magicKey);
-  blurEventMatcher = settings.blurKey ? new EventMatcher(settings.blurKey) : null;
+  blurEventMatcher = settings.blurKey
+    ? new EventMatcher(settings.blurKey)
+    : null;
 
-  const matchedBlacklist = await settingsClient.getMatchedBlackList(location.href);
+  const matchedBlacklist = await settingsClient.getMatchedBlackList(
+    location.href
+  );
   if (matchedBlacklist.length === 0) {
     enableKeyhooks();
   } else {
@@ -32,7 +36,9 @@ async function main() {
     hintLetters = settings.hints;
     hitEventMatcher = new EventMatcher(settings.magicKey);
     blurEventMatcher = new EventMatcher(settings.blurKey);
-    const matchedBlacklist = await settingsClient.getMatchedBlackList(location.href);
+    const matchedBlacklist = await settingsClient.getMatchedBlackList(
+      location.href
+    );
     if (matchedBlacklist.length === 0) {
       enableKeyhooks();
     } else {

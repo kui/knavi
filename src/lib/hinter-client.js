@@ -1,7 +1,6 @@
 import { send } from "./chrome-messages";
 
 export default class HinterClient {
-
   constructor() {
     this.isHinting = false;
   }

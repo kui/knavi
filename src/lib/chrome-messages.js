@@ -5,7 +5,14 @@ function initIfRequired() {
   handlers = new Map();
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const c = handlers.get(message.type);
-    console.debug("message=", message, "handlers", c, "location=", location.href);
+    console.debug(
+      "message=",
+      message,
+      "handlers",
+      c,
+      "location=",
+      location.href
+    );
     if (!c || c.handlers.length === 0) {
       console.debug(" -> ignore");
       return;
@@ -15,9 +22,13 @@ function initIfRequired() {
 }
 
 export function sendTo(message, tabId, frameId) {
-
   return new Promise(resolve => {
-    chrome.tabs.sendMessage(tabId, message, frameId == null ? null : { frameId }, resolve);
+    chrome.tabs.sendMessage(
+      tabId,
+      message,
+      frameId == null ? null : { frameId },
+      resolve
+    );
   });
 }
 export function send(message) {
@@ -34,10 +45,12 @@ export function recieve(type, handler) {
   handlers.set(type, {
     type,
     handlerType: "reciever",
-    handlers: [(m, s, r) => {
-      handler(m, s, r);
-      return true;
-    }]
+    handlers: [
+      (m, s, r) => {
+        handler(m, s, r);
+        return true;
+      }
+    ]
   });
   return () => {
     handlers.delete(type);
@@ -45,7 +58,6 @@ export function recieve(type, handler) {
 }
 
 export function subscribe(type, handler) {
-
   initIfRequired();
 
   const c = handlers.get(type) || {

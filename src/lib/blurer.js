@@ -19,10 +19,18 @@ export default class Blurer {
         return;
       }
 
-      const sourceIframe = first(filter(document.querySelectorAll("iframe"), i => e.source === i.contentWindow));
+      const sourceIframe = first(
+        filter(
+          document.querySelectorAll("iframe"),
+          i => e.source === i.contentWindow
+        )
+      );
       if (!sourceIframe) return;
       const sourceRect = getFirstClientRectFromVisualVp(sourceIframe);
-      const offsettedRect = rectUtils.move(e.data.rect, { x: sourceRect.left, y: sourceRect.top });
+      const offsettedRect = rectUtils.move(e.data.rect, {
+        x: sourceRect.left,
+        y: sourceRect.top
+      });
 
       const rect = rectUtils.intersection(sourceRect, offsettedRect);
       window.parent.postMessage({ type: BLUR_TYPE, rect }, "*");
@@ -39,7 +47,9 @@ export default class Blurer {
 }
 
 function isBlurable() {
-  return !(window.parent === window && document.activeElement === document.body);
+  return !(
+    window.parent === window && document.activeElement === document.body
+  );
 }
 
 function getFirstClientRectFromVisualVp(element) {
@@ -53,5 +63,8 @@ function getFirstClientRectFromVisualVp(element) {
 function getRectFromVisualVp(rectFromLayoutVp) {
   const layoutVpOffsets = vp.layout.offsets();
   const visualVpOffsets = vp.visual.offsets();
-  return rectUtils.offsets(rectUtils.move(rectFromLayoutVp, layoutVpOffsets), visualVpOffsets);
+  return rectUtils.offsets(
+    rectUtils.move(rectFromLayoutVp, layoutVpOffsets),
+    visualVpOffsets
+  );
 }

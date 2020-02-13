@@ -3,7 +3,6 @@ import { intersection, getBoundingRect } from "./rects";
 import Cache from "./cache";
 
 export default class VisibleRectDetector {
-
   constructor(caches) {
     this.cache = new Cache();
     this.clientRectsCache = caches.clientRects;
@@ -12,30 +11,34 @@ export default class VisibleRectDetector {
 
   get(element, visualViewportFromLayoutVp) {
     return this.cache.getOr(element, () => {
-      return getVisibleRects(this, element, visualViewportFromLayoutVp).map(r => getRectFromVisualViewport(r, visualViewportFromLayoutVp));
+      return getVisibleRects(this, element, visualViewportFromLayoutVp).map(r =>
+        getRectFromVisualViewport(r, visualViewportFromLayoutVp)
+      );
     });
   }
 }
 
 function getVisibleRects(self, element, viewport) {
   const clientRects = getClientRects(self, element);
-  return Array.from(flatMap(clientRects, rect => {
-    // too small rects
-    if (isSmallRect(rect)) return [];
+  return Array.from(
+    flatMap(clientRects, rect => {
+      // too small rects
+      if (isSmallRect(rect)) return [];
 
-    // out of display
-    let croppedRect = intersection(rect, viewport);
-    if (!croppedRect || isSmallRect(croppedRect)) return [];
+      // out of display
+      let croppedRect = intersection(rect, viewport);
+      if (!croppedRect || isSmallRect(croppedRect)) return [];
 
-    // scroll out from parent element.
-    croppedRect = cropByParent(self, element, croppedRect, viewport);
-    if (!croppedRect || isSmallRect(croppedRect)) return [];
+      // scroll out from parent element.
+      croppedRect = cropByParent(self, element, croppedRect, viewport);
+      if (!croppedRect || isSmallRect(croppedRect)) return [];
 
-    // no overwrapped by other elements
-    if (!isPointable(self, element, croppedRect, viewport)) return [];
+      // no overwrapped by other elements
+      if (!isPointable(self, element, croppedRect, viewport)) return [];
 
-    return [croppedRect];
-  }));
+      return [croppedRect];
+    })
+  );
 }
 
 const SMALL_THREASHOLD_PX = 3;
@@ -76,7 +79,9 @@ function getAreaRects(element) {
     const right = x + d + rect.left;
     const top = y - d + rect.top;
     const bottom = y + d + rect.top;
-    return [{ left, right, top, bottom, width: right - left, height: bottom - top }];
+    return [
+      { left, right, top, bottom, width: right - left, height: bottom - top }
+    ];
   }
 
   // TODO poly support
@@ -85,7 +90,9 @@ function getAreaRects(element) {
   const bottom = Math.max(y1, y2) + rect.top;
   const left = Math.min(x1, x2) + rect.left;
   const right = Math.max(x1, x2) + rect.left;
-  return [{ left, right, top, bottom, width: right - left, height: bottom - top }];
+  return [
+    { left, right, top, bottom, width: right - left, height: bottom - top }
+  ];
 }
 
 /// Return a element client rect if the anchor contains only it.
@@ -93,7 +100,12 @@ function getAnchorRects(self, anchor) {
   const anchorRects = self.clientRectsCache.get(anchor);
   if (anchorRects.length === 0) return [];
 
-  const childNodes = Array.from(filter(anchor.childNodes, n => !isBlankTextNode(n) && !isSmallElement(self, n)));
+  const childNodes = Array.from(
+    filter(
+      anchor.childNodes,
+      n => !isBlankTextNode(n) && !isSmallElement(self, n)
+    )
+  );
   if (childNodes.length !== 1) return anchorRects;
 
   const child = childNodes[0];
@@ -133,14 +145,20 @@ function isPointable(self, element, rect, viewport) {
   const y = avg(top, bottom, 0.5);
   const pointedElement = deepElementFromPoint(x, y);
   if (pointedElement) {
-    if (element === pointedElement || element.contains(pointedElement)) return true;
+    if (element === pointedElement || element.contains(pointedElement))
+      return true;
     const pointedRects = self.get(pointedElement, viewport);
     for (const pointedRect of pointedRects) {
       if (isOverwrappedRect(rect, pointedRect)) return false;
     }
   }
 
-  for (const [xr, yr] of [[0.1, 0.1], [0.1, 0.9], [0.9, 0.1], [0.9, 0.9]]) {
+  for (const [xr, yr] of [
+    [0.1, 0.1],
+    [0.1, 0.9],
+    [0.9, 0.1],
+    [0.9, 0.9]
+  ]) {
     const x = avg(left, right, xr);
     const y = avg(top, bottom, yr);
 
@@ -148,7 +166,8 @@ function isPointable(self, element, rect, viewport) {
 
     const pointedElement = deepElementFromPoint(x, y);
     if (pointedElement == null) continue;
-    if (element === pointedElement || element.contains(pointedElement)) return true;
+    if (element === pointedElement || element.contains(pointedElement))
+      return true;
   }
   return false;
 }
@@ -176,7 +195,12 @@ function isPointInRect(x, y, rect) {
 
 /// return true if `wrapper` COMPLETELY overwrap `target`
 function isOverwrappedRect(target, wrapper) {
-  return target.top >= wrapper.top && target.bottom <= wrapper.bottom && target.left >= wrapper.left && target.right <= target.right;
+  return (
+    target.top >= wrapper.top &&
+    target.bottom <= wrapper.bottom &&
+    target.left >= wrapper.left &&
+    target.right <= target.right
+  );
 }
 
 function cropByParent(self, element, rect, viewport) {
@@ -188,7 +212,12 @@ function cropByParent(self, element, rect, viewport) {
   const elementPosition = self.styleCache.get(element).position;
   const parentOverflow = self.styleCache.get(parent).overflow;
   if (elementPosition === "fixed") return rect;
-  if (elementPosition === "absolute" || elementPosition === "sticky" || parentOverflow === "visible") return cropByParent(self, parent, rect, viewport);
+  if (
+    elementPosition === "absolute" ||
+    elementPosition === "sticky" ||
+    parentOverflow === "visible"
+  )
+    return cropByParent(self, parent, rect, viewport);
 
   const parentRects = self.get(parent, viewport);
   if (parentRects.length === 0) return null;

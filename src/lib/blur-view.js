@@ -49,10 +49,21 @@ export default class BlurView {
       });
       body.insertBefore(overlay, body.firstChild);
 
-      // $FlowFixMe
-      const animation = overlay.animate([{ boxShadow: "0 0   0    0 rgba(128,128,128,0.15), 0 0   0    0 rgba(0,0,128,0.1)" }, { boxShadow: "0 0 3px 72px rgba(128,128,128,   0), 0 0 3px 80px rgba(0,0,128,  0)" }], {
-        duration: 400
-      });
+      const animation = overlay.animate(
+        [
+          {
+            boxShadow:
+              "0 0   0    0 rgba(128,128,128,0.15), 0 0   0    0 rgba(0,0,128,0.1)"
+          },
+          {
+            boxShadow:
+              "0 0 3px 72px rgba(128,128,128,   0), 0 0 3px 80px rgba(0,0,128,  0)"
+          }
+        ],
+        {
+          duration: 400
+        }
+      );
       animation.addEventListener("finish", removeOverlay);
     });
   }

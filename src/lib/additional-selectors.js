@@ -3,7 +3,6 @@ import GlobTrie from "glob-trie.js";
 import { flatMap } from "./iters";
 
 export default class AdditionalSelectors {
-
   constructor(text) {
     this.patterns = parse(text);
   }
