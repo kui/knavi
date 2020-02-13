@@ -20,7 +20,7 @@
     "babili-webpack-plugin": "0.0.9",
     "chokidar-cli": "^1.2.0",
     "codemirror": "^5.22.2",
-    "eslint": "^3.13.0",
+    "eslint": "^4.18.2",
     "eslint-plugin-babel": "^4.0.0",
     "glob-trie.js": "^0.2.1",
     "json5": "^0.5.1",
