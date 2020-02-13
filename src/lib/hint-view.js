@@ -34,8 +34,7 @@ export default class HintView {
     (async () => {
       const container = document.createElement("div");
       container.id = CONTAINER_ID;
-      // $FlowFixMe
-      const root: ShadowRoot = container.createShadowRoot();
+      const root: ShadowRoot = container.attachShadow({ mode: "open", deletesFocus: false });
       const overlay = root.appendChild(document.createElement("div"));
       overlay.id = OVERLAY_ID;
       const activeOverlay = root.appendChild(document.createElement("div"));
