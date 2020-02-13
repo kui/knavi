@@ -177,7 +177,9 @@ async function handleAllRectsRequest(req) {
 
 function handleRegisterFrame(frame) {
   if (registeredFrames.has(frame)) return;
-  console.debug("New child frame", frame, "parent-location=", location.href);
+  // console.debug("New child frame", frame, "parent-location=", location.href);
+  // "frame" cannot be touched in this phase because of the cross-origin frame
+  console.debug("New child frame: parent-location=", location.href);
   registeredFrames.add(frame);
 }
 
