@@ -1,30 +1,25 @@
-// @flow
 
-declare type Callback<T> = (value: T) => void;
 
-export class EventEmitter<T> {
-  listeners: Array<EventListener<T>>;
+export class EventEmitter {
 
   constructor() {
     this.listeners = [];
   }
 
-  async emit(value: T) {
-    await Promise.all(this.listeners.map(async (l) => {
+  async emit(value) {
+    await Promise.all(this.listeners.map(async l => {
       l.callback(value);
     }));
   }
 
-  listen(callback: Callback<T>): EventListener<T> {
+  listen(callback) {
     return new EventListener(this, callback);
   }
 }
 
-export class EventListener<T> {
-  eventEmitter: EventEmitter<T>;
-  callback: Callback<T>;
+export class EventListener {
 
-  constructor(eventEmitter: EventEmitter<T>, callback: Callback<T>) {
+  constructor(eventEmitter, callback) {
     this.eventEmitter = eventEmitter;
     this.callback = callback;
     this.eventEmitter.listeners.push(this);

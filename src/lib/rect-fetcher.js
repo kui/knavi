@@ -1,27 +1,18 @@
-// @flow
-
 import { flatMap, traverseParent, filter, first, takeWhile, length } from "./iters";
 import { isScrollable } from "./utils";
 import * as vp from "./viewports";
 import * as rectUtils from "./rects";
 import VisibleRectDetector from "./visible-rect-detector";
 
-import type { Rect } from "./rects";
-import type Cache from "./cache";
-import type { DomCaches } from "./rect-fetcher-service";
-
 export default class RectFetcher {
-  detector: VisibleRectDetector;
-  styleCache: Cache<Element, CSSStyleDeclaration>;
-  additionalSelectors: string[];
 
-  constructor(additionalSelectors: string[], caches: DomCaches) {
+  constructor(additionalSelectors, caches) {
     this.styleCache = caches.style;
     this.detector = new VisibleRectDetector(caches);
     this.additionalSelectors = additionalSelectors;
   }
 
-  getAll(visualViewport: Rect): { element: HTMLElement, rects: Rect[] }[] {
+  getAll(visualViewport) {
     const layoutVpOffsets = vp.layout.offsets();
     const visualViewportFromLayoutVp = rectUtils.offsets(visualViewport, layoutVpOffsets);
     const t = listAllTarget(this, visualViewportFromLayoutVp);
@@ -29,41 +20,16 @@ export default class RectFetcher {
   }
 }
 
-declare interface Target {
-  element: HTMLElement;
-  rects: Rect[];
-  mightBeClickable?: boolean;
-  filteredOutBy?: ?Target;
-}
+const HINTABLE_QUERY = ["a[href]", "area[href]", "details", "textarea:not([disabled])", "button:not([disabled])", "select:not([disabled])", "input:not([type=hidden]):not([disabled])", "iframe", "[tabindex]", "[onclick]", "[onmousedown]", "[onmouseup]", "[contenteditable='']", "[contenteditable=true]", "[role=link]", "[role=button]", "[data-image-url]"].map(s => "body /deep/ " + s).join(",");
 
-const HINTABLE_QUERY = [
-  "a[href]",
-  "area[href]",
-  "details",
-  "textarea:not([disabled])",
-  "button:not([disabled])",
-  "select:not([disabled])",
-  "input:not([type=hidden]):not([disabled])",
-  "iframe",
-  "[tabindex]",
-  "[onclick]",
-  "[onmousedown]",
-  "[onmouseup]",
-  "[contenteditable='']",
-  "[contenteditable=true]",
-  "[role=link]",
-  "[role=button]",
-  "[data-image-url]",
-].map((s) => "body /deep/ " + s).join(",");
-
-function listAllTarget(self, viewport): Target[] {
+function listAllTarget(self, viewport) {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
   if (self.additionalSelectors.length >= 1) {
     const q = self.additionalSelectors.join(",");
     for (const e of document.querySelectorAll(q)) selecteds.add(e);
   }
 
-  const targets: Target[] = [];
+  const targets = [];
 
   let totalElements = 0;
 
@@ -97,21 +63,19 @@ function listAllTarget(self, viewport): Target[] {
   }
   const elapsedMsec = performance.now() - startMsec;
 
-  console.debug("list all elements: elapsedMsec=", elapsedMsec,
-                "totalElements=", totalElements,
-                "targetElements=", targets.length);
+  console.debug("list all elements: elapsedMsec=", elapsedMsec, "totalElements=", totalElements, "targetElements=", targets.length);
 
   return targets;
 }
 
-function distinctSimilarTarget(self, targets, viewport): Target[] {
-  const targetMap: Map<Element, Target> = new Map((function* () {
+function distinctSimilarTarget(self, targets, viewport) {
+  const targetMap = new Map(function* () {
     for (const t of targets) yield [t.element, t];
-  })());
+  }());
 
   function isVisibleNode(node) {
     // filter out blank text nodes
-    if (node instanceof Text) return !(/^\s*$/).test(node.textContent);
+    if (node instanceof Text) return !/^\s*$/.test(node.textContent);
     // filter out invisible element.
     if (node instanceof Element) {
       if (self.detector.get(node, viewport).length >= 1) return true;
@@ -121,18 +85,18 @@ function distinctSimilarTarget(self, targets, viewport): Target[] {
   }
 
   function removeFilteredOutElements() {
-    for (const [ element, target ] of targetMap.entries()) {
+    for (const [element, target] of targetMap.entries()) {
       if (target.filteredOutBy) targetMap.delete(element);
     }
   }
 
-  let mightBeClickables = targets.filter((t) => t.mightBeClickable);
+  let mightBeClickables = targets.filter(t => t.mightBeClickable);
 
   // Filter out targets which are children of <a> or <button>
   for (let i = 0; i < mightBeClickables.length; i++) {
     const target = mightBeClickables[i];
 
-    const parentTarget = first(flatMap(traverseParent(target.element), (p) => {
+    const parentTarget = first(flatMap(traverseParent(target.element), p => {
       const t = targetMap.get(p);
       if (t == null) return [];
       if (t.filteredOutBy) return [t.filteredOutBy];
@@ -145,7 +109,7 @@ function distinctSimilarTarget(self, targets, viewport): Target[] {
     }
   }
 
-  mightBeClickables = mightBeClickables.filter((t) => !t.filteredOutBy);
+  mightBeClickables = mightBeClickables.filter(t => !t.filteredOutBy);
   removeFilteredOutElements();
 
   // Filter out targets that is only one child for a parent that is target too.
@@ -153,10 +117,10 @@ function distinctSimilarTarget(self, targets, viewport): Target[] {
     const target = mightBeClickables[i];
     if (target.filteredOutBy) continue;
 
-    const thinAncestors = takeWhile(traverseParent(target.element), (e) => {
+    const thinAncestors = takeWhile(traverseParent(target.element), e => {
       return length(filter(e.childNodes, isVisibleNode)) === 1;
     });
-    const parentTarget = first(flatMap(thinAncestors, (p) => {
+    const parentTarget = first(flatMap(thinAncestors, p => {
       const t = targetMap.get(p);
       if (t == null) return [];
       if (t.filteredOutBy) return [t.filteredOutBy];
@@ -168,7 +132,7 @@ function distinctSimilarTarget(self, targets, viewport): Target[] {
     }
   }
 
-  mightBeClickables = mightBeClickables.filter((t) => !t.filteredOutBy);
+  mightBeClickables = mightBeClickables.filter(t => !t.filteredOutBy);
   removeFilteredOutElements();
 
   // Filter out targets that contains only existing targets
@@ -177,12 +141,12 @@ function distinctSimilarTarget(self, targets, viewport): Target[] {
     if (target.filteredOutBy) continue;
 
     const childNodes = Array.from(filter(target.element.childNodes, isVisibleNode));
-    if (childNodes.every((c) => targetMap.has((c: any)))) {
+    if (childNodes.every(c => targetMap.has(c))) {
       const child = childNodes[0];
-      target.filteredOutBy = targetMap.get((child: any));
+      target.filteredOutBy = targetMap.get(child);
       console.debug("filter out: only targets containing: target=%o", target.element);
     }
   }
 
-  return targets.filter((t) => t.filteredOutBy == null);
+  return targets.filter(t => t.filteredOutBy == null);
 }

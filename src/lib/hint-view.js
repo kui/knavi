@@ -1,21 +1,9 @@
-// @flow
-
 import * as utils from "./utils";
 import * as vp from "./viewports";
 import settingsClient from "./settings-client";
 import { subscribe } from "./chrome-messages";
 import { waitUntil } from "./utils";
 import { getBoundingRect } from "./rects";
-
-import type {
-  Target,
-  TargetStateChange,
-  // StartHinting,
-  NewTargets,
-  // EndHinting,
-  AfterHitHint,
-  // AfterRemoveHints,
-} from "./hinter";
 
 const OVERLAY_PADDING = 8;
 const CONTAINER_ID = "jp-k-ui-knavi-container";
@@ -24,17 +12,12 @@ const ACTIVE_OVERLAY_ID = "active-overlay";
 const HINT_CLASS = "hint";
 const Z_INDEX_OFFSET = 2147483640;
 
-declare type Hint = {
-  elements: HTMLDivElement[];
-  target: Target;
-};
-
 export default class HintView {
   constructor() {
     (async () => {
       const container = document.createElement("div");
       container.id = CONTAINER_ID;
-      const root: ShadowRoot = container.attachShadow({ mode: "open", deletesFocus: false });
+      const root = container.attachShadow({ mode: "open", deletesFocus: false });
       const overlay = root.appendChild(document.createElement("div"));
       overlay.id = OVERLAY_ID;
       const activeOverlay = root.appendChild(document.createElement("div"));
@@ -43,31 +26,31 @@ export default class HintView {
 
       const settings = await settingsClient.get();
       style.textContent = settings.css;
-      settingsClient.subscribe((settings) => {
+      settingsClient.subscribe(settings => {
         style.textContent = settings.css;
       });
 
-      let hints: Hints;
+      let hints;
 
       // wait event setup until document.body.firstChild is reachable.
       while (!(document.body && document.body.firstChild)) await utils.nextAnimationFrame();
 
       subscribe("StartHinting", () => {
-        hints = new Hints;
+        hints = new Hints();
 
         waitUntil(() => Boolean(document.body)).then(() => {
           // $FlowFixMe: already wait until document is non-null.
-          const body: HTMLElement = document.body;
+          const body = document.body;
           initStyles(body, container, overlay, activeOverlay);
           body.insertBefore(container, body.firstChild);
         });
       });
-      subscribe("NewTargets", ({ newTargets }: NewTargets) => {
+      subscribe("NewTargets", ({ newTargets }) => {
         if (hints == null) return;
         const df = document.createDocumentFragment();
         for (const hint of generateHintElements(newTargets)) {
           hints.add(hint);
-          hint.elements.forEach((e) => df.appendChild(e));
+          hint.elements.forEach(e => df.appendChild(e));
         }
         root.appendChild(df);
 
@@ -80,7 +63,7 @@ export default class HintView {
         if (!container.contentDocument) return;
         container.style.display = "block";
       });
-      subscribe("AfterHitHint", ({ context, stateChanges, actionDescriptions }: AfterHitHint) => {
+      subscribe("AfterHitHint", ({ context, stateChanges, actionDescriptions }) => {
         if (!hints) throw Error("Illegal state");
         highligtHints(hints, stateChanges, actionDescriptions);
         moveOverlay(overlay, context.targets);
@@ -90,7 +73,7 @@ export default class HintView {
         if (!hints) throw Error("Illegal state");
         waitUntil(() => Boolean(document.body)).then(() => {
           // $FlowFixMe: already wait until document is non-null.
-          const body: HTMLElement = document.body;
+          const body = document.body;
           if (body.contains(container)) {
             body.removeChild(container);
           }
@@ -102,11 +85,10 @@ export default class HintView {
 }
 
 class Hints {
-  map: Map<number, Map<number, Hint>>;
   constructor() {
-    this.map = new Map;
+    this.map = new Map();
   }
-  get(t: Target) {
+  get(t) {
     const { index, frameId } = t.holder;
     const hmap = this.map.get(frameId);
     if (hmap) {
@@ -114,16 +96,16 @@ class Hints {
     }
     return null;
   }
-  add(h: Hint) {
+  add(h) {
     const { index, frameId } = h.target.holder;
-    let hmap: ?Map<number, Hint> = this.map.get(frameId);
+    let hmap = this.map.get(frameId);
     if (!hmap) {
-      hmap = new Map;
+      hmap = new Map();
       this.map.set(frameId, hmap);
     }
     hmap.set(index, h);
   }
-  *all(): Iterable<Hint> {
+  *all() {
     for (const [, m] of this.map) {
       for (const [, h] of m) {
         yield h;
@@ -146,9 +128,9 @@ function initStyles(body, container, overlay, activeOverlay) {
 
   Object.assign(container.style, {
     position: "absolute",
-    top:  px(vvpOffsets.y - bodyOffsets.y),
+    top: px(vvpOffsets.y - bodyOffsets.y),
     left: px(vvpOffsets.x - bodyOffsets.x),
-    width:  px(vvpSizes.width),
+    width: px(vvpSizes.width),
     height: px(vvpSizes.height),
     background: "display",
     border: "0",
@@ -157,7 +139,7 @@ function initStyles(body, container, overlay, activeOverlay) {
     margin: "0",
     overflow: "hidden",
     zIndex: Z_INDEX_OFFSET.toString(),
-    display: "none",
+    display: "none"
   });
   Object.assign(overlay.style, {
     position: "absolute",
@@ -171,11 +153,11 @@ function initStyles(body, container, overlay, activeOverlay) {
     padding: "0", margin: "0",
     top: "0", left: "0",
     width: "0", height: "0",
-    display: "none",
+    display: "none"
   });
 }
 
-function moveActiveOverlay(activeOverlay: HTMLDivElement, hitTarget: ?Target) {
+function moveActiveOverlay(activeOverlay, hitTarget) {
   if (!hitTarget) {
     activeOverlay.style.display = "none";
     return;
@@ -188,11 +170,11 @@ function moveActiveOverlay(activeOverlay: HTMLDivElement, hitTarget: ?Target) {
     left: px(rect.left),
     height: px(rect.height),
     width: px(rect.width),
-    display: "block",
+    display: "block"
   });
 }
 
-function moveOverlay(overlay: HTMLDivElement, targets: Target[]) {
+function moveOverlay(overlay, targets) {
   const vpSizes = vp.visual.sizes();
 
   let hasHitOrCand = false;
@@ -224,11 +206,11 @@ function moveOverlay(overlay: HTMLDivElement, targets: Target[]) {
     left: px(rr.left),
     height: px(rr.bottom - rr.top),
     width: px(rr.right - rr.left),
-    display: "block",
+    display: "block"
   });
 }
 
-function highligtHints(hints, changes: TargetStateChange[], actionDescriptions) {
+function highligtHints(hints, changes, actionDescriptions) {
   for (const { target, oldState, newState } of changes) {
     const hint = hints.get(target);
     if (hint == null) continue;
@@ -237,8 +219,7 @@ function highligtHints(hints, changes: TargetStateChange[], actionDescriptions) 
 
       if (newState === "hit" && actionDescriptions) {
         e.setAttribute("data-action-description", actionDescriptions.short);
-        if (actionDescriptions.long)
-          e.setAttribute("data-long-action-description", actionDescriptions.long);
+        if (actionDescriptions.long) e.setAttribute("data-long-action-description", actionDescriptions.long);
       }
       if (oldState === "hit") {
         e.removeAttribute("data-action-description");
@@ -248,23 +229,23 @@ function highligtHints(hints, changes: TargetStateChange[], actionDescriptions) 
   }
 }
 
-function generateHintElements(targets: Target[]): Hint[] {
+function generateHintElements(targets) {
   const hints = targets.reduce((arr, target) => {
     const elements = buildHintElements(target);
     arr.push({ elements, target });
     return arr;
   }, []);
-  console.debug("hints[%d]: %o",
-                hints.length,
-                hints.reduce((o, h) => { o[h.target.hint] = h; return o; }, {}));
+  console.debug("hints[%d]: %o", hints.length, hints.reduce((o, h) => {
+    o[h.target.hint] = h;return o;
+  }, {}));
   return hints;
 }
 
-function buildHintElements(target: Target): HTMLDivElement[] {
+function buildHintElements(target) {
   // Hinting for all client rects are annoying
   // const rects = target.rects;
   const rects = target.holder.rects.slice(0, 1);
-  return rects.map((rect) => {
+  return rects.map(rect => {
     const h = document.createElement("div");
     h.textContent = target.hint;
     h.dataset["hint"] = target.hint;
@@ -272,7 +253,7 @@ function buildHintElements(target: Target): HTMLDivElement[] {
       position: "absolute",
       display: "block",
       top: px(rect.top),
-      left: px(rect.left),
+      left: px(rect.left)
     });
     h.classList.add(HINT_CLASS);
     return h;
@@ -287,4 +268,6 @@ function removeAllHints(root, hints) {
   }
 }
 
-function px(n: number) { return `${Math.round(n)}px`; }
+function px(n) {
+  return `${Math.round(n)}px`;
+}

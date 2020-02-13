@@ -1,5 +1,3 @@
-// @flow
-
 import assert from "assert";
 import * as iters from "../../src/lib/iters";
 

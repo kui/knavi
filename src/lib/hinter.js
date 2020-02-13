@@ -1,43 +1,9 @@
-// @flow
-
 import { send } from "./chrome-messages";
 import * as rectFetcher from "./rect-fetcher-client";
 
-import type { ActionOptions } from "./action-handlers";
-import type { RectHolder, Descriptions } from "./rect-fetcher-client";
-
-export type StartHinting = {
-  type: "StartHinting";
-  context: HintContext;
-};
-export type NewTargets = {
-  type: "NewTargets";
-  context: HintContext;
-  newTargets: Target[];
-};
-export type EndHinting = {
-  type: "EndHinting";
-  context: HintContext;
-};
-export type AfterHitHint = {
-  type: "AfterHitHint";
-  context: HintContext;
-  input: string;
-  stateChanges: TargetStateChange[];
-  actionDescriptions: ?Descriptions;
-};
-export type AfterRemoveHints = {
-  type: "AfterRemoveHints";
-  context: HintContext;
-  options: ActionOptions;
-};
-
 export default class Hinter {
-  hintLetters: string;
-  context: ?HintContext;
-  hintTextGenerator: Iterator<string>
 
-  constructor(hintLetters: string) {
+  constructor(hintLetters) {
     this.hintLetters = hintLetters;
   }
 
@@ -51,15 +17,15 @@ export default class Hinter {
     }
 
     const hintTextGenerator = generateHintTexts(this.hintLetters);
-    const context = new HintContext;
+    const context = new HintContext();
     this.context = context;
 
-    send(({ type: "StartHinting", context }: StartHinting));
+    send({ type: "StartHinting", context });
 
-    await rectFetcher.fetchAllRects((holders) => {
+    await rectFetcher.fetchAllRects(holders => {
       if (holders.length === 0) return;
 
-      const hintTexts: string[] = [];
+      const hintTexts = [];
       while (hintTexts.length < holders.length) {
         const h = hintTextGenerator.next().value;
         if (h) hintTexts.push(h);
@@ -73,13 +39,13 @@ export default class Hinter {
         return new Target(t, holder);
       });
       context.targets.splice(-1, 0, ...newTargets);
-      send(({ type: "NewTargets", context, newTargets }: NewTargets));
+      send({ type: "NewTargets", context, newTargets });
     });
 
-    send(({ type: "EndHinting", context }: EndHinting));
+    send({ type: "EndHinting", context });
   }
 
-  async hitHint(key: string) {
+  async hitHint(key) {
     const context = this.context;
     if (context == null) {
       throw Error("Ilegal state invocation: hitHint");
@@ -95,16 +61,16 @@ export default class Hinter {
       actionDescriptions = await rectFetcher.getDescriptions(context.hitTarget.holder);
     }
 
-    send(({
+    send({
       type: "AfterHitHint",
       context,
       input: inputChar,
       stateChanges,
       actionDescriptions
-    }: AfterHitHint));
+    });
   }
 
-  removeHints(options: ActionOptions) {
+  removeHints(options) {
     const context = this.context;
     if (context == null) {
       throw Error("Ilegal state invocation: removeHints");
@@ -115,24 +81,19 @@ export default class Hinter {
       rectFetcher.action(context.hitTarget.holder, options);
     }
 
-    send(({ type: "AfterRemoveHints", context, options }: AfterRemoveHints));
+    send({ type: "AfterRemoveHints", context, options });
   }
 }
 
-export type TargetState = "disabled" | "candidate" | "hit" | "init";
-export type TargetStateChange = { target: Target, oldState: TargetState, newState: TargetState };
 export class Target {
-  state: TargetState;
-  hint: string;
-  holder: RectHolder;
 
-  constructor(hint: string, holder: RectHolder) {
+  constructor(hint, holder) {
     this.hint = hint;
     this.holder = holder;
     this.state = "init";
   }
 
-  updateState(inputs: string): TargetState {
+  updateState(inputs) {
     if (this.hint === inputs) {
       this.state = "hit";
     } else if (this.hint.startsWith(inputs)) {
@@ -145,16 +106,13 @@ export class Target {
 }
 
 class HintContext {
-  targets: Target[];
-  hitTarget: ?Target;
-  inputSequence: string[];
 
   constructor() {
     this.targets = [];
     this.inputSequence = [];
   }
 
-  update(inputChar: string): TargetStateChange[] {
+  update(inputChar) {
     this.inputSequence.push(inputChar);
     const inputs = this.inputSequence.join("");
 
@@ -169,7 +127,7 @@ class HintContext {
   }
 }
 
-function* generateHintTexts(hintLetters: string): Iterator<string> {
+function* generateHintTexts(hintLetters) {
   const letters = Array.from(hintLetters);
   const history = [];
 

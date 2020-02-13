@@ -1,5 +1,3 @@
-// @flow
-
 import "./lib/rect-fetcher-service";
 import EventMatcher from "key-input-elements/lib/event-matcher";
 import settingsClient from "./lib/settings-client";
@@ -8,14 +6,14 @@ import HinterClient from "./lib/hinter-client";
 import Blurer from "./lib/blurer";
 
 async function main() {
-  let hitEventMatcher: EventMatcher;
-  let blurEventMatcher: ?EventMatcher;
+  let hitEventMatcher;
+  let blurEventMatcher;
 
-  const hinter = new HinterClient;
-  const blurer = new Blurer;
+  const hinter = new HinterClient();
+  const blurer = new Blurer();
 
   let isEnabledKeyhooks = false;
-  let hintLetters: string;
+  let hintLetters;
 
   const settings = await settingsClient.get();
   hintLetters = settings.hints;
@@ -30,7 +28,7 @@ async function main() {
     disableKeyhooks();
   }
 
-  settingsClient.subscribe(async (settings) => {
+  settingsClient.subscribe(async settings => {
     hintLetters = settings.hints;
     hitEventMatcher = new EventMatcher(settings.magicKey);
     blurEventMatcher = new EventMatcher(settings.blurKey);
@@ -43,7 +41,7 @@ async function main() {
     }
   });
 
-  function hookKeydown(event: KeyboardEvent) {
+  function hookKeydown(event) {
     if (hinter.isHinting) {
       if (hintLetters.includes(event.key)) {
         event.preventDefault();
@@ -63,7 +61,7 @@ async function main() {
       }
     }
   }
-  function hookKeyup(event: KeyboardEvent) {
+  function hookKeyup(event) {
     if (hinter.isHinting && hitEventMatcher.testModInsensitive(event)) {
       event.preventDefault();
       event.stopPropagation();
@@ -72,7 +70,7 @@ async function main() {
       return;
     }
   }
-  function hookKeypress(event: KeyboardEvent) {
+  function hookKeypress(event) {
     if (hinter.isHinting) {
       event.preventDefault();
       event.stopPropagation();

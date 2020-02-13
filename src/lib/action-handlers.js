@@ -1,57 +1,32 @@
-// @flow
-
 import * as utils from "./utils";
 
-export interface ActionOptions {
-  metaKey: boolean;
-  ctrlKey: boolean;
-  altKey: boolean;
-  shiftKey: boolean;
-}
-
-declare interface Handler {
-  shortDescription: string;
-  longDescription?: string;
-  isSupported(element: HTMLElement): boolean;
-  handle(element: HTMLElement, options: ActionOptions): void;
-}
-
-const handlers: Handler[] = [];
+const handlers = [];
 
 export default class ActionHandlerDelegater {
-  handle(target: HTMLElement, options: ActionOptions) {
+  handle(target, options) {
     this.getHandler(target).handle(target, options);
   }
 
-  getDescriptions(target: HTMLElement): { short: string, long: ?string } {
+  getDescriptions(target) {
     const h = this.getHandler(target);
     return { short: h.shortDescription, long: h.longDescription };
   }
 
-  getHandler(target: HTMLElement): Handler {
-    const h = handlers.find((h) => h.isSupported(target));
+  getHandler(target) {
+    const h = handlers.find(h => h.isSupported(target));
     if (h == null) throw Error("Unreachable code");
     return h;
   }
 }
 
-const CLICKABLE_SELECTORS = [
-  "a[href]",
-  "area[href]",
-  "button:not([disabled])",
-  "[onclick]",
-  "[onmousedown]",
-  "[onmouseup]",
-  "[role=link]",
-  "[role=button]",
-].join(",");
+const CLICKABLE_SELECTORS = ["a[href]", "area[href]", "button:not([disabled])", "[onclick]", "[onmousedown]", "[onmouseup]", "[role=link]", "[role=button]"].join(",");
 handlers.push({
   shortDescription: "Click",
   longDescription: "Click anchor, button or other clickable elements",
-  isSupported(target: HTMLElement) {
+  isSupported(target) {
     return target.matches(CLICKABLE_SELECTORS);
   },
-  handle(target: HTMLElement, options: ActionOptions) {
+  handle(target, options) {
     simulateClick(target, options);
     console.debug("click", target);
   }
@@ -60,10 +35,10 @@ handlers.push({
 handlers.push({
   shortDescription: "Blur",
   longDescription: "Blur the focused element",
-  isSupported(target: HTMLElement) {
+  isSupported(target) {
     return target === document.activeElement;
   },
-  handle(target: HTMLElement) {
+  handle(target) {
     target.blur();
     console.debug(this.longDescription, target);
   }
@@ -71,10 +46,10 @@ handlers.push({
 
 handlers.push({
   shortDescription: "Focus iframe",
-  isSupported(target: HTMLElement) {
+  isSupported(target) {
     return target.tagName === "IFRAME";
   },
-  handle(target: HTMLElement) {
+  handle(target) {
     target.focus();
     console.debug("Focus iframe", target);
   }
@@ -83,10 +58,10 @@ handlers.push({
 handlers.push({
   shortDescription: "Edit",
   longDescription: "Focus the editable element",
-  isSupported(target: HTMLElement) {
+  isSupported(target) {
     return utils.isEditable(target);
   },
-  handle(target: HTMLElement) {
+  handle(target) {
     target.focus();
     console.debug(this.longDescription, target);
   }
@@ -95,11 +70,10 @@ handlers.push({
 handlers.push({
   shortDescription: "Click",
   longDescription: "Click the <input> element",
-  isSupported(target: HTMLElement) {
-    return target.tagName === "INPUT" &&
-      ["checkbox", "radio", "button", "image", "submit", "reset"].includes((target: any).type);
+  isSupported(target) {
+    return target.tagName === "INPUT" && ["checkbox", "radio", "button", "image", "submit", "reset"].includes(target.type);
   },
-  handle(target: HTMLElement, options: ActionOptions) {
+  handle(target, options) {
     target.focus();
     simulateClick(target, options);
     console.debug(this.longDescription, target);
@@ -109,10 +83,10 @@ handlers.push({
 handlers.push({
   shortDescription: "Focus",
   longDescription: "Focus the <input> element",
-  isSupported(target: HTMLElement) {
+  isSupported(target) {
     return target.tagName === "INPUT";
   },
-  handle(target: HTMLElement) {
+  handle(target) {
     target.focus();
     console.debug(this.longDescription, target);
   }
@@ -121,10 +95,10 @@ handlers.push({
 handlers.push({
   shortDescription: "Focus",
   longDescription: "Focus the <select> element",
-  isSupported(target: HTMLElement) {
+  isSupported(target) {
     return target.tagName === "SELECT";
   },
-  handle(target: HTMLElement) {
+  handle(target) {
     target.focus();
     console.debug(this.longDescription, target);
   }
@@ -133,10 +107,10 @@ handlers.push({
 handlers.push({
   shortDescription: "Focus",
   longDescription: "Focus the 'tabindex'-ed element",
-  isSupported(target: HTMLElement) {
+  isSupported(target) {
     return target.hasAttribute("tabindex");
   },
-  handle(target: HTMLElement) {
+  handle(target) {
     target.focus();
     console.debug(this.longDescription, target);
   }
@@ -145,10 +119,10 @@ handlers.push({
 handlers.push({
   shortDescription: "Scroll",
   longDescription: "Focus the scrollable element",
-  isSupported(target: HTMLElement) {
+  isSupported(target) {
     return utils.isScrollable(target, window.getComputedStyle(target));
   },
-  handle(element: HTMLElement) {
+  handle(element) {
     // Make scrollable from your keyboard
     if (!element.hasAttribute("tabindex")) {
       element.setAttribute("tabindex", "-1");
@@ -164,14 +138,16 @@ handlers.push({
 
 handlers.push({
   shortDescription: "Click",
-  isSupported() { return true; },
-  handle(target: HTMLElement, options: ActionOptions) {
+  isSupported() {
+    return true;
+  },
+  handle(target, options) {
     simulateClick(target, options);
     console.debug("click", target);
   }
 });
 
-async function simulateClick(element: HTMLElement, options: ActionOptions) {
+async function simulateClick(element, options) {
   dispatchMouseEvent("mouseover", element, options);
 
   for (const type of ["mousedown", "mouseup", "click"]) {
@@ -181,29 +157,8 @@ async function simulateClick(element: HTMLElement, options: ActionOptions) {
   }
 }
 
-declare class MouseEvent extends UIEvent {
-  constructor(type: MouseEventTypes, mouseEventInit?: MouseEventInit): void;
-}
-
-declare interface MouseEventInit {
-  screenX?: number;
-  screenY?: number;
-  clientX?: number;
-  clientY?: number;
-  ctrlKey?: boolean;
-  shiftKey?: boolean;
-  altKey?: boolean;
-  metaKey?: boolean;
-  button?: number;
-  buttons?: number;
-  relatedTarget?: EventTarget;
-  regison?: string;
-  bubbles?: boolean;
-  cancelable?: boolean;
-}
-
 /// Return false if canceled
-function dispatchMouseEvent(type: MouseEventTypes, element: HTMLElement, options: ActionOptions): boolean {
+function dispatchMouseEvent(type, element, options) {
   const event = new MouseEvent(type, {
     button: 0,
     bubbles: true,
@@ -211,7 +166,7 @@ function dispatchMouseEvent(type: MouseEventTypes, element: HTMLElement, options
     ctrlKey: options.ctrlKey,
     shiftKey: options.shiftKey,
     altKey: options.altKey,
-    metaKey: options.metaKey || options.ctrlKey,
+    metaKey: options.metaKey || options.ctrlKey
   });
   return element.dispatchEvent(event);
 }

@@ -1,16 +1,8 @@
-// @flow
-
 import * as vp from "./viewports";
 import * as rectUtils from "./rects";
 import { subscribe } from "./chrome-messages";
 
-import type { Blured } from "./blurer";
-
 const Z_INDEX_OFFSET = 2147483640;
-
-declare class Object {
-  static assign: Object$Assign;
-}
 
 export default class BlurView {
   constructor() {
@@ -20,7 +12,7 @@ export default class BlurView {
       display: "block",
       border: "none",
       outline: "none",
-      zIndex: Z_INDEX_OFFSET.toString(),
+      zIndex: Z_INDEX_OFFSET.toString()
     });
 
     function removeOverlay() {
@@ -31,7 +23,7 @@ export default class BlurView {
       }
     }
 
-    subscribe("Blured", ({ rect }: Blured) => {
+    subscribe("Blured", ({ rect }) => {
       const body = document.body;
       if (!body) return;
 
@@ -50,19 +42,16 @@ export default class BlurView {
 
       rect = rectUtils.move(rect, vp.visual.offsets());
       Object.assign(overlay.style, {
-        top:  `${rect.top - bodyOffsets.y}px`,
+        top: `${rect.top - bodyOffsets.y}px`,
         left: `${rect.left - bodyOffsets.x}px`,
         height: `${rect.height}px`,
-        width:  `${rect.width}px`,
+        width: `${rect.width}px`
       });
       body.insertBefore(overlay, body.firstChild);
 
       // $FlowFixMe
-      const animation = overlay.animate([
-        { boxShadow: "0 0   0    0 rgba(128,128,128,0.15), 0 0   0    0 rgba(0,0,128,0.1)" },
-        { boxShadow: "0 0 3px 72px rgba(128,128,128,   0), 0 0 3px 80px rgba(0,0,128,  0)" },
-      ], {
-        duration: 400,
+      const animation = overlay.animate([{ boxShadow: "0 0   0    0 rgba(128,128,128,0.15), 0 0   0    0 rgba(0,0,128,0.1)" }, { boxShadow: "0 0 3px 72px rgba(128,128,128,   0), 0 0 3px 80px rgba(0,0,128,  0)" }], {
+        duration: 400
       });
       animation.addEventListener("finish", removeOverlay);
     });

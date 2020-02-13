@@ -1,28 +1,26 @@
-// @flow
-
 import * as rects from "./rects";
-import type { Rect, Point, Sizes } from "./rects";
+
 
 let layoutVPOffsetsCache = null;
 
 export const layout = {
   /// get the coordinates of the top-left of the layout viewport.
-  offsets(): Point {
+  offsets() {
     if (layoutVPOffsetsCache) return layoutVPOffsetsCache;
     const documentElement = document.documentElement;
     if (!documentElement) return { y: 0, x: 0 };
     const rootRect = documentElement.getBoundingClientRect();
-    return layoutVPOffsetsCache = { y: - rootRect.top, x: - rootRect.left };
+    return layoutVPOffsetsCache = { y: -rootRect.top, x: -rootRect.left };
   },
-  sizes(): Sizes {
+  sizes() {
     const documentElement = document.documentElement;
     if (!documentElement) return { height: 0, width: 0 };
     return {
       height: documentElement.clientHeight,
-      width: documentElement.clientWidth,
+      width: documentElement.clientWidth
     };
   },
-  rect(): Rect {
+  rect() {
     return rects.rectByOffsetsAndSizes(this.offsets(), this.sizes());
   }
 };
@@ -33,15 +31,13 @@ let prevInnerHeight;
 
 export const visual = {
   /// get the coordinates from the top-left of the visual viewport.
-  offsets(): Point {
+  offsets() {
     return { y: window.scrollY, x: window.scrollX };
   },
-  sizes(): Sizes {
+  sizes() {
     const innerWidth = window.innerWidth;
     const innerHeight = window.innerHeight;
-    if (prevInnerWidth === innerWidth &&
-        prevInnerHeight === innerHeight &&
-        visualVPSizesCache) return visualVPSizesCache;
+    if (prevInnerWidth === innerWidth && prevInnerHeight === innerHeight && visualVPSizesCache) return visualVPSizesCache;
     prevInnerWidth = innerWidth;
     prevInnerHeight = innerHeight;
     const documentElement = document.documentElement;
@@ -52,10 +48,10 @@ export const visual = {
     console.debug("scale", scale);
     return visualVPSizesCache = {
       height: Math.floor(documentElement.clientHeight / scale),
-      width:  Math.floor(documentElement.clientWidth / scale),
+      width: Math.floor(documentElement.clientWidth / scale)
     };
   },
-  rect(): Rect {
+  rect() {
     return rects.rectByOffsetsAndSizes(this.offsets(), this.sizes());
   }
 };
@@ -69,7 +65,7 @@ window.addEventListener("resize", () => {
   visualVPSizesCache = null;
 }, { passive: true });
 
-export function getBoundingClientRectFromRoot(element: HTMLElement): Rect {
+export function getBoundingClientRectFromRoot(element) {
   const layoutVpOffsets = layout.offsets();
   const rectFromLayoutVp = element.getBoundingClientRect();
   return rects.move(rectFromLayoutVp, layoutVpOffsets);
@@ -83,7 +79,7 @@ Object.assign(iframeDummy.style, {
   left: "0px",
   top: "0px",
   border: "0",
-  visibility: "hidden",
+  visibility: "hidden"
 });
 iframeDummy.srcDoc = "<!DOCTYPE html><html><body style='margin:0px; padding:0px'></body></html>";
 function getScale(documentElement, body) {
@@ -92,7 +88,7 @@ function getScale(documentElement, body) {
   if (!iframeDummy.contentDocument || !iframeDummy.contentDocument.body) return 1;
   Object.assign(iframeDummy.contentDocument.body.style, {
     width: `${documentRect.width}px`,
-    height: `${documentRect.height}px`,
+    height: `${documentRect.height}px`
   });
   const originalOverflow = documentElement.style.overflow;
   documentElement.style.overflow = "hidden";

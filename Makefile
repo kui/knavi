@@ -56,15 +56,7 @@ $(ZIP):
 test: check mocha
 
 .PHONY: check
-check: flow lint
-
-.PHONY: flow
-flow:
-# Detect no "@flow" files
-	@for f in src/**/*.js src/*.js; \
-		do ( head -n1 "$$f" | grep -qF '@flow' ) || printf "\e[38;5;1mWARN: No @flow: $$f\n\e[0m"; \
-	done
-	$(BIN)/flow src
+check: lint
 
 .PHONY: lint
 lint:
@@ -74,7 +66,6 @@ lint:
 watch:
 	rm -fr $(BUILD)/**/*.js
 	$(BIN)/chokidar 'Makefile' 'src' '!src/**/*.js' -c 'make' & \
-	$(BIN)/chokidar 'src/**/*.js' -c 'make flow' & \
 	$(BIN)/webpack --watch & \
 	wait
 
