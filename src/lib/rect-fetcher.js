@@ -47,9 +47,7 @@ const HINTABLE_QUERY = [
   "[role=link]",
   "[role=button]",
   "[data-image-url]"
-]
-  .map(s => "body /deep/ " + s)
-  .join(",");
+].join(",");
 
 function listAllTarget(self, viewport) {
   const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
@@ -63,7 +61,7 @@ function listAllTarget(self, viewport) {
   let totalElements = 0;
 
   const startMsec = performance.now();
-  for (const element of document.querySelectorAll("body /deep/ *")) {
+  for (const element of document.querySelectorAll("body *")) {
     totalElements++;
 
     let isClickableElement = false;
