@@ -52,36 +52,35 @@ const HINTABLE_QUERY = [
 function listAllTarget(self, viewport) {
   const selector = [...HINTABLE_QUERY, ...self.additionalSelectors].join(",");
 
+  function buildTarget(element) {
+    const clickableness = deriveClickableness(element);
+    if (!clickableness) return null;
+
+    const rects = self.detector.get(element, viewport);
+    if (rects.length === 0) return null;
+
+    return Object.assign({ element, rects }, clickableness);
+  }
+
+  function deriveClickableness(element) {
+    if (element.matches(selector)) {
+      return { mayBeClickable: false };
+    }
+
+    const style = self.styleCache.get(element);
+    if (["pointer", "zoom-in", "zoom-out"].includes(style.cursor)) {
+      return { mayBeClickable: true };
+    }
+    if (isScrollable(element, style)) {
+      return { mayBeClickable: false };
+    }
+
+    return null;
+  }
+
   function listTargets(doc) {
-    const hintables = new Set(doc.querySelectorAll(selector));
     return Array.from(
       flatMap(doc.querySelectorAll("*"), element => {
-        function buildTarget() {
-          const clickableness = deriveClickableness();
-          if (!clickableness) return null;
-
-          const rects = self.detector.get(element, viewport);
-          if (rects.length === 0) return null;
-
-          return Object.assign({ element, rects }, clickableness);
-        }
-
-        function deriveClickableness() {
-          if (hintables.has(element)) {
-            return { mayBeClickable: false };
-          }
-
-          const style = self.styleCache.get(element);
-          if (["pointer", "zoom-in", "zoom-out"].includes(style.cursor)) {
-            return { mayBeClickable: true };
-          }
-          if (isScrollable(element, style)) {
-            return { mayBeClickable: false };
-          }
-
-          return null;
-        }
-
         let childTargets;
         if (element.shadowRoot) {
           childTargets = listTargets(element.shadowRoot);
@@ -89,7 +88,7 @@ function listAllTarget(self, viewport) {
           childTargets = [];
         }
 
-        const target = buildTarget();
+        const target = buildTarget(element);
         if (target) {
           return [target, ...childTargets];
         } else {
