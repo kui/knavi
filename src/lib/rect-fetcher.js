@@ -49,71 +49,73 @@ const HINTABLE_QUERY = [
   "[data-image-url]"
 ];
 
-function querySelectorAll(document, selector) {
-  // FIXME: querySelectorAll("*") can be invoke once with the invocation in "listAllTarget"
-  const fromShadowDoms = Array.from(document.querySelectorAll("*")).flatMap(
-    element => {
-      if (!element.shadowRoot) {
-        return [];
-      }
-      return querySelectorAll(element.shadowRoot, selector);
-    }
-  );
-  return [...document.querySelectorAll(selector), ...fromShadowDoms];
-}
-
 function listAllTarget(self, viewport) {
-  const selecteds = new Set(
-    querySelectorAll(
-      document,
-      [...HINTABLE_QUERY, ...self.additionalSelectors].join(",")
-    )
-  );
-
-  const targets = [];
-
-  let totalElements = 0;
+  const selector = [...HINTABLE_QUERY, ...self.additionalSelectors].join(",");
 
   const startMsec = performance.now();
-  for (const element of querySelectorAll(document, "*")) {
-    totalElements++;
-
-    let isClickableElement = false;
-    let mightBeClickable = false;
-    let style = null;
-
-    if (selecteds.has(element)) {
-      isClickableElement = true;
-    } else {
-      style = self.styleCache.get(element);
-      // might be clickable
-      if (["pointer", "zoom-in", "zoom-out"].includes(style.cursor)) {
-        mightBeClickable = true;
-        isClickableElement = true;
-      } else if (isScrollable(element, style)) {
-        isClickableElement = true;
-      }
-    }
-
-    if (!isClickableElement) continue;
-
-    const rects = self.detector.get(element, viewport);
-    if (rects.length === 0) continue;
-
-    targets.push({ element, rects, mightBeClickable, style });
-  }
+  const targets = listTargets(self, viewport, document, selector);
   const elapsedMsec = performance.now() - startMsec;
 
   console.debug(
     "list all elements: elapsedMsec=",
     elapsedMsec,
-    "totalElements=",
-    totalElements,
     "targetElements=",
     targets.length
   );
 
   return targets;
+}
+
+function listTargets(self, viewport, document, selector) {
+  const hintables = new Set(document.querySelectorAll(selector));
+  return Array.from(
+    flatMap(document.querySelectorAll("*"), element => {
+      let childTargets;
+      if (element.shadowRoot) {
+        childTargets = listTargets(
+          self,
+          viewport,
+          element.shadowRoot,
+          selector
+        );
+      } else {
+        childTargets = [];
+      }
+
+      const target = buildTarget(self, viewport, hintables, element);
+      if (target) {
+        return [target, ...childTargets];
+      } else {
+        return childTargets;
+      }
+    })
+  );
+}
+
+function buildTarget(self, viewport, hintables, element) {
+  const clickableness = deriveClickableness(self, hintables, element);
+  if (!clickableness) return null;
+
+  const rects = self.detector.get(element, viewport);
+  if (rects.length === 0) return null;
+
+  return Object.assign({ element, rects }, clickableness);
+}
+
+function deriveClickableness(self, hintables, element) {
+  if (hintables.has(element)) {
+    return { mightBeClickable: false, style: null };
+  }
+
+  const style = self.styleCache.get(element);
+  if (["pointer", "zoom-in", "zoom-out"].includes(style.cursor)) {
+    return { mightBeClickable: true, style };
+  }
+  if (isScrollable(element, style)) {
+    return { mightBeClickable: false, style };
+  }
+
+  return null;
 }
 
 function distinctSimilarTarget(self, targets, viewport) {
