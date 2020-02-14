@@ -52,8 +52,55 @@ const HINTABLE_QUERY = [
 function listAllTarget(self, viewport) {
   const selector = [...HINTABLE_QUERY, ...self.additionalSelectors].join(",");
 
+  function listTargets(doc) {
+    const hintables = new Set(doc.querySelectorAll(selector));
+    return Array.from(
+      flatMap(doc.querySelectorAll("*"), element => {
+        function buildTarget() {
+          const clickableness = deriveClickableness();
+          if (!clickableness) return null;
+
+          const rects = self.detector.get(element, viewport);
+          if (rects.length === 0) return null;
+
+          return Object.assign({ element, rects }, clickableness);
+        }
+
+        function deriveClickableness() {
+          if (hintables.has(element)) {
+            return { mayBeClickable: false };
+          }
+
+          const style = self.styleCache.get(element);
+          if (["pointer", "zoom-in", "zoom-out"].includes(style.cursor)) {
+            return { mayBeClickable: true };
+          }
+          if (isScrollable(element, style)) {
+            return { mayBeClickable: false };
+          }
+
+          return null;
+        }
+
+        let childTargets;
+        if (element.shadowRoot) {
+          childTargets = listTargets(element.shadowRoot);
+        } else {
+          childTargets = [];
+        }
+
+        const target = buildTarget();
+        if (target) {
+          return [target, ...childTargets];
+        } else {
+          return childTargets;
+        }
+      })
+    );
+  }
+
   const startMsec = performance.now();
-  const targets = listTargets(self, viewport, document, selector);
+  const targets = listTargets(document);
   const elapsedMsec = performance.now() - startMsec;
 
   console.debug(
@@ -64,58 +111,6 @@ function listAllTarget(self, viewport) {
   );
 
   return targets;
-}
-
-function listTargets(self, viewport, document, selector) {
-  const hintables = new Set(document.querySelectorAll(selector));
-  return Array.from(
-    flatMap(document.querySelectorAll("*"), element => {
-      let childTargets;
-      if (element.shadowRoot) {
-        childTargets = listTargets(
-          self,
-          viewport,
-          element.shadowRoot,
-          selector
-        );
-      } else {
-        childTargets = [];
-      }
-
-      const target = buildTarget(self, viewport, hintables, element);
-      if (target) {
-        return [target, ...childTargets];
-      } else {
-        return childTargets;
-      }
-    })
-  );
-}
-
-function buildTarget(self, viewport, hintables, element) {
-  const clickableness = deriveClickableness(self, hintables, element);
-  if (!clickableness) return null;
-
-  const rects = self.detector.get(element, viewport);
-  if (rects.length === 0) return null;
-
-  return Object.assign({ element, rects }, clickableness);
-}
-
-function deriveClickableness(self, hintables, element) {
-  if (hintables.has(element)) {
-    return { mightBeClickable: false, style: null };
-  }
-
-  const style = self.styleCache.get(element);
-  if (["pointer", "zoom-in", "zoom-out"].includes(style.cursor)) {
-    return { mightBeClickable: true, style };
-  }
-  if (isScrollable(element, style)) {
-    return { mightBeClickable: false, style };
-  }
-
-  return null;
 }
 
 function distinctSimilarTarget(self, targets, viewport) {
@@ -142,11 +137,11 @@ function distinctSimilarTarget(self, targets, viewport) {
     }
   }
 
-  let mightBeClickables = targets.filter(t => t.mightBeClickable);
+  let mayBeClickables = targets.filter(t => t.mayBeClickable);
 
   // Filter out targets which are children of <a> or <button>
-  for (let i = 0; i < mightBeClickables.length; i++) {
-    const target = mightBeClickables[i];
+  for (let i = 0; i < mayBeClickables.length; i++) {
+    const target = mayBeClickables[i];
 
     const parentTarget = first(
       flatMap(traverseParent(target.element), p => {
@@ -166,12 +161,12 @@ function distinctSimilarTarget(self, targets, viewport) {
     }
   }
 
-  mightBeClickables = mightBeClickables.filter(t => !t.filteredOutBy);
+  mayBeClickables = mayBeClickables.filter(t => !t.filteredOutBy);
   removeFilteredOutElements();
 
   // Filter out targets that is only one child for a parent that is target too.
-  for (let i = 0; i < mightBeClickables.length; i++) {
-    const target = mightBeClickables[i];
+  for (let i = 0; i < mayBeClickables.length; i++) {
+    const target = mayBeClickables[i];
     if (target.filteredOutBy) continue;
 
     const thinAncestors = takeWhile(traverseParent(target.element), e => {
@@ -194,12 +189,12 @@ function distinctSimilarTarget(self, targets, viewport) {
     }
   }
 
-  mightBeClickables = mightBeClickables.filter(t => !t.filteredOutBy);
+  mayBeClickables = mayBeClickables.filter(t => !t.filteredOutBy);
   removeFilteredOutElements();
 
   // Filter out targets that contains only existing targets
-  for (let i = mightBeClickables.length - 1; i >= 0; i--) {
-    const target = mightBeClickables[i];
+  for (let i = mayBeClickables.length - 1; i >= 0; i--) {
+    const target = mayBeClickables[i];
     if (target.filteredOutBy) continue;
 
     const childNodes = Array.from(
