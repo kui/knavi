@@ -47,21 +47,35 @@ const HINTABLE_QUERY = [
   "[role=link]",
   "[role=button]",
   "[data-image-url]"
-].join(",");
+];
+
+function querySelectorAll(document, selector) {
+  // FIXME: querySelectorAll("*") can be invoke once with the invocation in "listAllTarget"
+  const fromShadowDoms = Array.from(document.querySelectorAll("*")).flatMap(
+    element => {
+      if (!element.shadowRoot) {
+        return [];
+      }
+      return querySelectorAll(element.shadowRoot, selector);
+    }
+  );
+  return [...document.querySelectorAll(selector), ...fromShadowDoms];
+}
 
 function listAllTarget(self, viewport) {
-  const selecteds = new Set(document.querySelectorAll(HINTABLE_QUERY));
-  if (self.additionalSelectors.length >= 1) {
-    const q = self.additionalSelectors.join(",");
-    for (const e of document.querySelectorAll(q)) selecteds.add(e);
-  }
+  const selecteds = new Set(
+    querySelectorAll(
+      document,
+      [...HINTABLE_QUERY, ...self.additionalSelectors].join(",")
+    )
+  );
 
   const targets = [];
 
   let totalElements = 0;
 
   const startMsec = performance.now();
-  for (const element of document.querySelectorAll("body *")) {
+  for (const element of querySelectorAll(document, "*")) {
     totalElements++;
 
     let isClickableElement = false;
