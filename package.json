@@ -17,7 +17,7 @@
     "babel-loader": "^8.0.6",
     "babel-plugin-strip-function-call": "^1.0.2",
     "chokidar-cli": "^2.1.0",
-    "codemirror": "^5.51.0",
+    "codemirror": "^5.58.2",
     "core-js": "^3.6.4",
     "eslint": "^6.8.0",
     "eslint-plugin-prettier": "^3.1.2",
