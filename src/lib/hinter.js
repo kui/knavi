@@ -78,7 +78,7 @@ export default class Hinter {
     }
     this.context = null;
 
-    if (context.hitTarget != null) {
+    if (!options.ignoreTarget && context.hitTarget != null) {
       rectFetcher.action(context.hitTarget.holder, options);
     }
 

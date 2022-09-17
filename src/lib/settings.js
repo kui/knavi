@@ -75,6 +75,7 @@ const DEFAULT_ADDITIONAL_SELECTORS = `{
 
 const DEFAULT_SETTINGS = {
   magicKey: "Space",
+  cancelKey: "Escape",
   hints: "asdfghjkl",
   blurKey: "",
   css: "", // load from an external file
