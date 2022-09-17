@@ -7,6 +7,7 @@ import Blurer from "./lib/blurer";
 
 async function main() {
   let hitEventMatcher;
+  let cancelEventMatcher;
   let blurEventMatcher;
 
   const hinter = new HinterClient();
@@ -18,6 +19,7 @@ async function main() {
   const settings = await settingsClient.get();
   hintLetters = settings.hints;
   hitEventMatcher = new EventMatcher(settings.magicKey);
+  cancelEventMatcher = new EventMatcher(settings.cancelKey);
   blurEventMatcher = settings.blurKey
     ? new EventMatcher(settings.blurKey)
     : null;
@@ -35,6 +37,7 @@ async function main() {
   settingsClient.subscribe(async settings => {
     hintLetters = settings.hints;
     hitEventMatcher = new EventMatcher(settings.magicKey);
+    cancelEventMatcher = new EventMatcher(settings.cancelKey);
     blurEventMatcher = new EventMatcher(settings.blurKey);
     const matchedBlacklist = await settingsClient.getMatchedBlackList(
       location.href
@@ -68,11 +71,21 @@ async function main() {
     }
   }
   function hookKeyup(event) {
-    if (hinter.isHinting && hitEventMatcher.testModInsensitive(event)) {
+    if (
+      hinter.isHinting &&
+      (hitEventMatcher.testModInsensitive(event) ||
+        cancelEventMatcher.testModInsensitive(event))
+    ) {
       event.preventDefault();
       event.stopPropagation();
       const { shiftKey, altKey, ctrlKey, metaKey } = event;
-      hinter.removeHints({ shiftKey, altKey, ctrlKey, metaKey });
+      hinter.removeHints({
+        shiftKey,
+        altKey,
+        ctrlKey,
+        metaKey,
+        ignoreTarget: cancelEventMatcher.testModInsensitive(event)
+      });
       return;
     }
   }
