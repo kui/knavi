@@ -29,7 +29,7 @@
     "sinon": "^8.1.1",
     "storage-form": "^1.1.0",
     "webpack": "^4.41.6",
-    "webpack-cli": "^3.3.11"
+    "webpack-cli": "^3.3.12"
   },
   "repository": "git@github.com:kui/knavi.git"
 }
