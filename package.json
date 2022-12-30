@@ -24,7 +24,7 @@
     "glob-trie.js": "^0.2.1",
     "json5": "^2.1.1",
     "key-input-elements": "^1.1.0",
-    "mocha": "^7.0.1",
+    "mocha": "^10.2.0",
     "prettier": "^1.19.1",
     "sinon": "^8.1.1",
     "storage-form": "^1.1.0",
