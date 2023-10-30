@@ -17,7 +17,7 @@ $(BUILD):
 	mkdir -v $(BUILD)
 
 $(BUILD)/manifest.json: $(SRC)/manifest.js package.json node_modules
-	$(BIN)/babel-node scripts/jsonize-manifest.js > $@
+	node scripts/jsonize-manifest.js > $@
 
 $(BUILD)/%.js: $(SRC)/%.js $(SRC)/lib/*.js node_modules
 	@echo execute webpack for $@

@@ -1,4 +1,4 @@
-import pkg from "../package.json";
+import pkg from "../package.json" assert { type: "json" };
 
 /* eslint-disable camelcase */
 export default {
