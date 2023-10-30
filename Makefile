@@ -42,7 +42,7 @@ $(BUILD)/%: $(SRC)/%
 	cp -v $< $@
 
 node_modules: package.json
-	npm install
+	npm install --no-save
 	touch node_modules
 
 .PHONY: zip
