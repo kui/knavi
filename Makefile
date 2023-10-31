@@ -57,11 +57,13 @@ test: lint mocha
 
 .PHONY: lint
 lint: node_modules
-	$(BIN)/eslint .
+	npx eslint .
+	npx prettier . --check
 
 .PHONY: fix
 fix: node_modules
-	$(BIN)/eslint . --fix
+	npx eslint . --fix
+	npx prettier . --write
 
 .PHONY: watch
 watch: node_modules
