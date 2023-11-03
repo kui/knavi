@@ -1,9 +1,9 @@
-import * as utils from "./utils";
-import * as vp from "./viewports";
-import settingsClient from "./settings-client";
-import { subscribe } from "./chrome-messages";
-import { waitUntil } from "./utils";
-import { getBoundingRect } from "./rects";
+import * as utils from "./utils.js";
+import * as vp from "./viewports.js";
+import settingsClient from "./settings-client.js";
+import { subscribe } from "./chrome-messages.js";
+import { waitUntil } from "./utils.js";
+import { getBoundingRect } from "./rects.js";
 
 const OVERLAY_PADDING = 8;
 const CONTAINER_ID = "jp-k-ui-knavi-container";

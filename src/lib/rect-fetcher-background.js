@@ -1,4 +1,4 @@
-import { recieve, sendTo } from "./chrome-messages";
+import { recieve, sendTo } from "./chrome-messages.js";
 
 // import type { DescriptionsRequest, ActionRequest } from "./rect-fetcher-client";
 

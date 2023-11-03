@@ -3,8 +3,8 @@ import * as ki from "key-input-elements";
 import CodeMirror from "codemirror";
 import "codemirror/mode/css/css.js";
 import "codemirror/mode/javascript/javascript.js";
-import settings from "./lib/settings";
-import * as utils from "./lib/utils";
+import settings from "./lib/settings.js";
+import * as utils from "./lib/utils.js";
 
 async function init() {
   while (!document.body) await utils.nextAnimationFrame();

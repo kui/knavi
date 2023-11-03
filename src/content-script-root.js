@@ -1,2 +1,2 @@
-import "./lib/hinter-service";
-import "./lib/blurer-service";
+import "./lib/hinter-service.js";
+import "./lib/blurer-service.js";

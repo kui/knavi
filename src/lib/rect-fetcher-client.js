@@ -1,6 +1,6 @@
-import { send, recieve } from "./chrome-messages";
-import * as vp from "./viewports";
-import * as rectUtils from "./rects";
+import { send, recieve } from "./chrome-messages.js";
+import * as vp from "./viewports.js";
+import * as rectUtils from "./rects.js";
 
 const ALL_RECTS_REQUEST_TYPE = "jp-k-ui-knavi-AllRectsRequest";
 

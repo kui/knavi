@@ -1,4 +1,4 @@
-import * as rects from "./rects";
+import * as rects from "./rects.js";
 
 export const layout = {
   /// get the coordinates of the top-left of the layout viewport.

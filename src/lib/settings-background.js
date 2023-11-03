@@ -1,7 +1,7 @@
-import { recieve, sendTo } from "./chrome-messages";
-import settings from "./settings";
-import BlackList from "./blacklist";
-import AdditionalSelectors from "./additional-selectors";
+import { recieve, sendTo } from "./chrome-messages.js";
+import settings from "./settings.js";
+import BlackList from "./blacklist.js";
+import AdditionalSelectors from "./additional-selectors.js";
 
 let settingValues;
 let blackList;

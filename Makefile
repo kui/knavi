@@ -6,7 +6,6 @@ JS = $(patsubst $(SRC)/%, $(BUILD)/%, $(filter-out $(SRC)/manifest.js, $(wildcar
 STATICS = $(patsubst $(SRC)/%, $(BUILD)/%, $(wildcard $(SRC)/*.html $(SRC)/*.css))
 ICONS = $(addprefix $(BUILD)/icon, $(addsuffix .png, 16 48 128))
 PNG = $(patsubst $(SRC)/%.svg, $(BUILD)/%.png, $(wildcard $(SRC)/*.svg))
-BIN = node_modules/.bin
 
 FILES = $(BUILD) $(BUILD)/manifest.json $(BUILD)/codemirror.css $(STATICS) $(ICONS) $(PNG)
 
@@ -21,7 +20,7 @@ $(BUILD)/manifest.json: $(SRC)/manifest.js package.json node_modules
 
 $(BUILD)/%.js: $(SRC)/%.js $(SRC)/lib/*.js node_modules
 	@echo execute webpack for $@
-	DEST=$(BUILD) $(BIN)/webpack
+	DEST=$(BUILD) npx webpack
 
 $(ICONS): $(SRC)/icon.svg
 	rsvg-convert $< \
@@ -68,13 +67,13 @@ fix: node_modules
 .PHONY: watch
 watch: node_modules
 	rm -fr $(BUILD)/**/*.js
-	$(BIN)/chokidar 'Makefile' 'src' '!src/**/*.js' -c 'make' & \
-	$(BIN)/webpack --watch & \
+	npx chokidar 'Makefile' 'src' '!src/**/*.js' -c 'make' & \
+	npx webpack --watch & \
 	wait
 
 .PHONY: mocha
 mocha: node_modules
-	$(BIN)/mocha --require '@babel/register' test/**/*_test.js
+	npx mocha --require '@babel/register' test/**/*_test.js
 
 .PHONY: clean
 clean:

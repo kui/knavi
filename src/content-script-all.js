@@ -1,9 +1,12 @@
-import "./lib/rect-fetcher-service";
-import EventMatcher from "key-input-elements/lib/event-matcher";
-import settingsClient from "./lib/settings-client";
-import * as utils from "./lib/utils";
-import HinterClient from "./lib/hinter-client";
-import Blurer from "./lib/blurer";
+import "./lib/rect-fetcher-service.js";
+import * as em from "key-input-elements/lib/event-matcher.js";
+import settingsClient from "./lib/settings-client.js";
+import * as utils from "./lib/utils.js";
+import HinterClient from "./lib/hinter-client.js";
+import Blurer from "./lib/blurer.js";
+
+// workaround weird babel transpile
+const EventMatcher = em.default.default;
 
 async function main() {
   let hitEventMatcher;

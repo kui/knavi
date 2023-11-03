@@ -1,11 +1,11 @@
-import { filter, first } from "./iters";
-import RectFetcher from "./rect-fetcher";
-import ActionHandler from "./action-handlers";
-import { recieve, send } from "./chrome-messages";
-import settingsClient from "./settings-client";
-import * as rectUtils from "./rects";
-import * as vp from "./viewports";
-import Cache from "./cache";
+import { filter, first } from "./iters.js";
+import RectFetcher from "./rect-fetcher.js";
+import ActionHandler from "./action-handlers.js";
+import { recieve, send } from "./chrome-messages.js";
+import settingsClient from "./settings-client.js";
+import * as rectUtils from "./rects.js";
+import * as vp from "./viewports.js";
+import Cache from "./cache.js";
 
 // Donot import from rect-fetcher-client because it might start event listeners
 const ALL_RECTS_REQUEST_TYPE = "jp-k-ui-knavi-AllRectsRequest";

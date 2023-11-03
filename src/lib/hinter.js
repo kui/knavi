@@ -1,5 +1,5 @@
-import { send } from "./chrome-messages";
-import * as rectFetcher from "./rect-fetcher-client";
+import { send } from "./chrome-messages.js";
+import * as rectFetcher from "./rect-fetcher-client.js";
 
 export default class Hinter {
   constructor(hintLetters) {

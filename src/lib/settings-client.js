@@ -1,4 +1,4 @@
-import { send, subscribe } from "./chrome-messages";
+import { send, subscribe } from "./chrome-messages.js";
 
 export default {
   get() {

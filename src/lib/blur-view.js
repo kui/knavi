@@ -1,6 +1,6 @@
-import * as vp from "./viewports";
-import * as rectUtils from "./rects";
-import { subscribe } from "./chrome-messages";
+import * as vp from "./viewports.js";
+import * as rectUtils from "./rects.js";
+import { subscribe } from "./chrome-messages.js";
 
 const Z_INDEX_OFFSET = 2147483640;
 

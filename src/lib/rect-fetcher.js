@@ -5,11 +5,11 @@ import {
   first,
   takeWhile,
   length
-} from "./iters";
-import { isScrollable } from "./utils";
-import * as vp from "./viewports";
-import * as rectUtils from "./rects";
-import VisibleRectDetector from "./visible-rect-detector";
+} from "./iters.js";
+import { isScrollable } from "./utils.js";
+import * as vp from "./viewports.js";
+import * as rectUtils from "./rects.js";
+import VisibleRectDetector from "./visible-rect-detector.js";
 
 export default class RectFetcher {
   constructor(additionalSelectors, caches) {

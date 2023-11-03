@@ -1,7 +1,7 @@
-import { filter, first } from "./iters";
-import * as vp from "./viewports";
-import { send } from "./chrome-messages";
-import * as rectUtils from "./rects";
+import { filter, first } from "./iters.js";
+import * as vp from "./viewports.js";
+import { send } from "./chrome-messages.js";
+import * as rectUtils from "./rects.js";
 
 /// a message from a child frame indicates to blur.
 const BLUR_TYPE = "jp-k-ui-knavi-Blur";

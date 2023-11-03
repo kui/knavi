@@ -1,6 +1,6 @@
-import { filter, first, traverseParent, flatMap } from "./iters";
-import { intersection, getBoundingRect } from "./rects";
-import Cache from "./cache";
+import { filter, first, traverseParent, flatMap } from "./iters.js";
+import { intersection, getBoundingRect } from "./rects.js";
+import Cache from "./cache.js";
 
 export default class VisibleRectDetector {
   constructor(caches) {
