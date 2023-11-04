@@ -47,7 +47,7 @@ node_modules: package.json
 .PHONY: zip
 zip: $(ZIP)
 
-$(ZIP): all
+$(ZIP):
 	npm install
 	NODE_ENV=production make BUILD=$(PROD-BUILD) all
 	cd $(PROD-BUILD) && zip -vr ../$(ZIP) .
