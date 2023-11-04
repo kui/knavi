@@ -1,0 +1,14 @@
+name: release
+
+on:
+  tags: ["*"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: docker compose run make zip
+      - name: Release
+        run: gh release create ${{ github.ref }} knavi.zip --notes-from-tag

@@ -41,18 +41,19 @@ $(BUILD)/%: $(SRC)/%
 	cp -v $< $@
 
 node_modules: package.json
-	npm install --no-save
+	npm install
 	touch node_modules
 
 .PHONY: zip
 zip: $(ZIP)
 
 $(ZIP):
-	NODE_ENV=production make BUILD=$(PROD-BUILD) test all
+	npm install
+	NODE_ENV=production make BUILD=$(PROD-BUILD) all
 	cd $(PROD-BUILD) && zip -vr ../$(ZIP) .
 
-.PHONY: test
-test: lint mocha
+.PHONY: check
+check: lint test
 
 .PHONY: lint
 lint: node_modules
@@ -72,8 +73,8 @@ watch: node_modules
 	npx webpack --watch & \
 	wait
 
-.PHONY: mocha
-mocha: node_modules
+.PHONY: test
+test: node_modules
 	npx mocha test/**/*_test.js
 
 .PHONY: clean

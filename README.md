@@ -21,25 +21,25 @@ See [Dockerfile](Dockerfile) for build environment.
 Debug build:
 
 ```sh
-$ make
+make
 ```
 
 Interactive debug build:
 
 ```sh
-$ make watch
+make watch
 ```
 
 zip for production build:
 
 ```sh
-$ make zip
+make zip
 ```
 
 `docker` makes it easy to build environment:
 
 ```sh
-$ docker compose run make
-$ docker compose run make watch
-$ docker compose run make zip
+docker compose run make
+docker compose run make watch
+docker compose run make zip
 ```

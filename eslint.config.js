@@ -4,7 +4,7 @@ import globals from "globals";
 
 export default [
   {
-    ignores: ["build/**/*.js"],
+    ignores: ["{,prod-}build/**/*"],
   },
   js.configs.recommended,
   eslintConfigPrettier,

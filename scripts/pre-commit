@@ -1,0 +1,7 @@
+#!/bin/bash
+# Install this script as a pre-commit hook:
+#   ln -s ../../scripts/pre-commit .git/hooks/pre-commit
+
+set -euxo pipefail
+
+make fix lint
