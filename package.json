@@ -5,7 +5,7 @@
   "description": "Hit-a-Hint with magic key. You can click without the mouse by holding down the space key and hint text.",
   "type": "module",
   "scripts": {
-    "test": "make test"
+    "test": "make check"
   },
   "author": "Keiichiro Ui<keiichiro.ui@gmail.com>",
   "license": "MIT",

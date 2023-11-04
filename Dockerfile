@@ -10,6 +10,7 @@ RUN apt-get update \
     curl=7.68.0-1ubuntu2.20 \
     make=4.2.1-1.2 \
     librsvg2-bin=2.48.9-1ubuntu0.20.04.4 \
+    zip=3.0-11build1 \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
