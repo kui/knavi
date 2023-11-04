@@ -1,6 +1,6 @@
 import JSON5 from "json5";
 import GlobTrie from "glob-trie.js";
-import { flatMap } from "./iters";
+import { flatMap } from "./iters.js";
 
 export default class AdditionalSelectors {
   constructor(text) {
@@ -8,7 +8,7 @@ export default class AdditionalSelectors {
   }
 
   match(url) {
-    return Array.from(flatMap(this.patterns.collect(url), a => a));
+    return Array.from(flatMap(this.patterns.collect(url), (a) => a));
   }
 }
 

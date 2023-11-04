@@ -1,6 +1,6 @@
-import { filter, first, traverseParent, flatMap } from "./iters";
-import { intersection, getBoundingRect } from "./rects";
-import Cache from "./cache";
+import { filter, first, traverseParent, flatMap } from "./iters.js";
+import { intersection, getBoundingRect } from "./rects.js";
+import Cache from "./cache.js";
 
 export default class VisibleRectDetector {
   constructor(caches) {
@@ -11,8 +11,8 @@ export default class VisibleRectDetector {
 
   get(element, visualViewportFromLayoutVp) {
     return this.cache.getOr(element, () => {
-      return getVisibleRects(this, element, visualViewportFromLayoutVp).map(r =>
-        getRectFromVisualViewport(r, visualViewportFromLayoutVp)
+      return getVisibleRects(this, element, visualViewportFromLayoutVp).map(
+        (r) => getRectFromVisualViewport(r, visualViewportFromLayoutVp),
       );
     });
   }
@@ -21,7 +21,7 @@ export default class VisibleRectDetector {
 function getVisibleRects(self, element, viewport) {
   const clientRects = getClientRects(self, element);
   return Array.from(
-    flatMap(clientRects, rect => {
+    flatMap(clientRects, (rect) => {
       // too small rects
       if (isSmallRect(rect)) return [];
 
@@ -37,7 +37,7 @@ function getVisibleRects(self, element, viewport) {
       if (!isPointable(self, element, croppedRect, viewport)) return [];
 
       return [croppedRect];
-    })
+    }),
   );
 }
 
@@ -58,7 +58,9 @@ function getClientRects(self, element) {
 }
 
 function getAreaRects(element) {
-  const map = first(filter(traverseParent(element), e => e.tagName === "MAP"));
+  const map = first(
+    filter(traverseParent(element), (e) => e.tagName === "MAP"),
+  );
   if (!(map instanceof HTMLMapElement)) return [];
 
   const img = document.querySelector(`body /deep/ img[usemap="#${map.name}"]`);
@@ -68,9 +70,9 @@ function getAreaRects(element) {
 
   if (element.shape === "default") return [rect];
 
-  const coords = element.coords.split(",").map(c => parseInt(c));
+  const coords = element.coords.split(",").map((c) => parseInt(c));
   // filter out NaN
-  if (coords.some(c => !(c >= 0))) return [];
+  if (coords.some((c) => !(c >= 0))) return [];
 
   if (element.shape === "circle") {
     const [x, y, r] = coords;
@@ -80,7 +82,7 @@ function getAreaRects(element) {
     const top = y - d + rect.top;
     const bottom = y + d + rect.top;
     return [
-      { left, right, top, bottom, width: right - left, height: bottom - top }
+      { left, right, top, bottom, width: right - left, height: bottom - top },
     ];
   }
 
@@ -91,7 +93,7 @@ function getAreaRects(element) {
   const left = Math.min(x1, x2) + rect.left;
   const right = Math.max(x1, x2) + rect.left;
   return [
-    { left, right, top, bottom, width: right - left, height: bottom - top }
+    { left, right, top, bottom, width: right - left, height: bottom - top },
   ];
 }
 
@@ -103,8 +105,8 @@ function getAnchorRects(self, anchor) {
   const childNodes = Array.from(
     filter(
       anchor.childNodes,
-      n => !isBlankTextNode(n) && !isSmallElement(self, n)
-    )
+      (n) => !isBlankTextNode(n) && !isSmallElement(self, n),
+    ),
   );
   if (childNodes.length !== 1) return anchorRects;
 
@@ -157,7 +159,7 @@ function isPointable(self, element, rect, viewport) {
     [0.1, 0.1],
     [0.1, 0.9],
     [0.9, 0.1],
-    [0.9, 0.9]
+    [0.9, 0.9],
   ]) {
     const x = avg(left, right, xr);
     const y = avg(top, bottom, yr);
@@ -237,6 +239,6 @@ function getRectFromVisualViewport(r, visualViewport) {
     left: r.left - visualViewport.left,
     right: r.right - visualViewport.left,
     width: r.width,
-    height: r.height
+    height: r.height,
   };
 }

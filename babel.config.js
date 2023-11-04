@@ -1,26 +1,26 @@
 const envOptions = {
-  targets: {
-    // See http://caniuse.com/usage-table
-    chrome: "79"
-  },
+  // See https://browsersl.ist/#q=Chrome+%3E+100
+  targets: "Chrome >= 100",
   useBuiltIns: "usage",
-  corejs: 3
+  corejs: 3,
 };
 
+// Config for dev
 const development = {
-  presets: [["@babel/preset-env", envOptions]]
+  presets: [["@babel/preset-env", envOptions]],
 };
 
+// Config for release package
 const production = {
-  presets: [["@babel/preset-env", Object.assign(envOptions, { loose: true })]],
+  presets: [["@babel/preset-env", { ...envOptions, loose: true }]],
   plugins: [
     [
       "strip-function-call",
       {
-        strip: ["console.debug", "console.time", "console.timeEnd"]
-      }
-    ]
-  ]
+        strip: ["console.debug", "console.time", "console.timeEnd"],
+      },
+    ],
+  ],
 };
 
-module.exports = Object.assign(development, { env: { production } });
+export default { ...development, env: { production } };

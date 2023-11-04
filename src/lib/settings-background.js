@@ -1,7 +1,7 @@
-import { recieve, sendTo } from "./chrome-messages";
-import settings from "./settings";
-import BlackList from "./blacklist";
-import AdditionalSelectors from "./additional-selectors";
+import { recieve, sendTo } from "./chrome-messages.js";
+import settings from "./settings.js";
+import BlackList from "./blacklist.js";
+import AdditionalSelectors from "./additional-selectors.js";
 
 let settingValues;
 let blackList;
@@ -10,8 +10,8 @@ let additionalSelectors;
 (async () => {
   await settings.init();
   settingValues = settings.load();
-  settingValues.then(s => console.log("Init load settings", s));
-  blackList = settingValues.then(s => new BlackList(s.blackList));
+  settingValues.then((s) => console.log("Init load settings", s));
+  blackList = settingValues.then((s) => new BlackList(s.blackList));
   additionalSelectors = buildAdditionalSelectorsPromise();
 
   recieve("GetMatchedBlackList", async ({ url }, s, sendResponse) => {
@@ -29,14 +29,14 @@ let additionalSelectors;
 
 chrome.storage.onChanged.addListener(async () => {
   settingValues = settings.load();
-  settingValues.then(s => console.log("Settings changed", s));
+  settingValues.then((s) => console.log("Settings changed", s));
 
-  blackList = settingValues.then(s => new BlackList(s.blackList));
+  blackList = settingValues.then((s) => new BlackList(s.blackList));
   additionalSelectors = buildAdditionalSelectorsPromise();
-  const tabs = new Promise(resolve => chrome.tabs.query({}, resolve));
+  const tabs = new Promise((resolve) => chrome.tabs.query({}, resolve));
   const s = {
     type: "BroadcastNewSettings",
-    settings: await settingValues
+    settings: await settingValues,
   };
   for (const tab of await tabs) {
     sendTo(s, tab.id);
@@ -45,8 +45,8 @@ chrome.storage.onChanged.addListener(async () => {
 
 function buildAdditionalSelectorsPromise() {
   return settingValues
-    .then(s => new AdditionalSelectors(s.additionalSelectors))
-    .catch(e => {
+    .then((s) => new AdditionalSelectors(s.additionalSelectors))
+    .catch((e) => {
       console.error(e);
       return new AdditionalSelectors("{}");
     });

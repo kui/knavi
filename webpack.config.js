@@ -1,23 +1,26 @@
-const path = require("path");
-const DEBUG = process.env.NODE_ENV !== "production";
-const DEST = path.resolve(__dirname, process.env.DEST || "./build");
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-module.exports = {
+const DIRNAME = path.dirname(fileURLToPath(import.meta.url));
+const DEBUG = process.env.NODE_ENV !== "production";
+const DEST = path.resolve(DIRNAME, process.env.DEST || "build");
+
+export default {
   mode: DEBUG ? "development" : "production",
   devtool: DEBUG ? "inline-source-map" : "source-map",
   entry: {
     options: "./src/options.js",
     background: "./src/background.js",
     "content-script-root": "./src/content-script-root.js",
-    "content-script-all": "./src/content-script-all.js"
+    "content-script-all": "./src/content-script-all.js",
   },
   output: {
     path: DEST,
-    filename: "[name].js"
+    filename: "[name].js",
   },
   module: {
     rules: [
-      { test: /\.m?js$/, exclude: /node_modules/, loader: "babel-loader" }
-    ]
-  }
+      { test: /\.m?js$/, exclude: /node_modules/, loader: "babel-loader" },
+    ],
+  },
 };

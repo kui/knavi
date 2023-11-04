@@ -1,5 +1,5 @@
-import assert from "assert";
-import AdditionalSelectors from "../../src/lib/additional-selectors";
+import assert from "node:assert";
+import AdditionalSelectors from "../../src/lib/additional-selectors.js";
 
 describe("AdditionalSelectors", () => {
   describe("#constructor", () => {

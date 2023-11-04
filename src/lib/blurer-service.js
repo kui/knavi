@@ -1,3 +1,3 @@
-import BlurView from "./blur-view";
+import BlurView from "./blur-view.js";
 
 new BlurView();

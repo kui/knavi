@@ -1,4 +1,4 @@
-import * as utils from "./utils";
+import * as utils from "./utils.js";
 
 const handlers = [];
 
@@ -13,7 +13,7 @@ export default class ActionHandlerDelegater {
   }
 
   getHandler(target) {
-    const h = handlers.find(h => h.isSupported(target));
+    const h = handlers.find((h) => h.isSupported(target));
     if (h == null) throw Error("Unreachable code");
     return h;
   }
@@ -27,7 +27,7 @@ const CLICKABLE_SELECTORS = [
   "[onmousedown]",
   "[onmouseup]",
   "[role=link]",
-  "[role=button]"
+  "[role=button]",
 ].join(",");
 handlers.push({
   shortDescription: "Click",
@@ -38,7 +38,7 @@ handlers.push({
   handle(target, options) {
     simulateClick(target, options);
     console.debug("click", target);
-  }
+  },
 });
 
 handlers.push({
@@ -50,7 +50,7 @@ handlers.push({
   handle(target) {
     target.blur();
     console.debug(this.longDescription, target);
-  }
+  },
 });
 
 handlers.push({
@@ -61,7 +61,7 @@ handlers.push({
   handle(target) {
     target.focus();
     console.debug("Focus iframe", target);
-  }
+  },
 });
 
 handlers.push({
@@ -73,7 +73,7 @@ handlers.push({
   handle(target) {
     target.focus();
     console.debug(this.longDescription, target);
-  }
+  },
 });
 
 handlers.push({
@@ -83,7 +83,7 @@ handlers.push({
     return (
       target.tagName === "INPUT" &&
       ["checkbox", "radio", "button", "image", "submit", "reset"].includes(
-        target.type
+        target.type,
       )
     );
   },
@@ -91,7 +91,7 @@ handlers.push({
     target.focus();
     simulateClick(target, options);
     console.debug(this.longDescription, target);
-  }
+  },
 });
 
 handlers.push({
@@ -103,7 +103,7 @@ handlers.push({
   handle(target) {
     target.focus();
     console.debug(this.longDescription, target);
-  }
+  },
 });
 
 handlers.push({
@@ -115,7 +115,7 @@ handlers.push({
   handle(target) {
     target.focus();
     console.debug(this.longDescription, target);
-  }
+  },
 });
 
 handlers.push({
@@ -127,7 +127,7 @@ handlers.push({
   handle(target) {
     target.focus();
     console.debug(this.longDescription, target);
-  }
+  },
 });
 
 handlers.push({
@@ -147,7 +147,7 @@ handlers.push({
     }
     element.focus();
     console.debug(this.longDescription, element);
-  }
+  },
 });
 
 handlers.push({
@@ -158,7 +158,7 @@ handlers.push({
   handle(target, options) {
     simulateClick(target, options);
     console.debug("click", target);
-  }
+  },
 });
 
 async function simulateClick(element, options) {
@@ -180,7 +180,7 @@ function dispatchMouseEvent(type, element, options) {
     ctrlKey: options.ctrlKey,
     shiftKey: options.shiftKey,
     altKey: options.altKey,
-    metaKey: options.metaKey || options.ctrlKey
+    metaKey: options.metaKey || options.ctrlKey,
   });
   return element.dispatchEvent(event);
 }

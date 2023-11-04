@@ -1,10 +1,10 @@
-import { send, recieve } from "./chrome-messages";
-import * as vp from "./viewports";
-import * as rectUtils from "./rects";
+import { send, recieve } from "./chrome-messages.js";
+import * as vp from "./viewports.js";
+import * as rectUtils from "./rects.js";
 
 const ALL_RECTS_REQUEST_TYPE = "jp-k-ui-knavi-AllRectsRequest";
 
-const frameIdPromise = send({ type: "GetFrameId" }).then(id => {
+const frameIdPromise = send({ type: "GetFrameId" }).then((id) => {
   if (id !== 0) throw Error(`This script might not work right: frameId=${id}`);
   return id;
 });
@@ -13,7 +13,7 @@ const frameIdPromise = send({ type: "GetFrameId" }).then(id => {
 /// Requests are thrown by `postMessage` (frame message passing),
 /// because the requests should reach only visible frames.
 export function fetchAllRects(callback) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     let completeHandler;
     const stopRecieve = recieve(
       "RectsFragmentResponse",
@@ -21,18 +21,18 @@ export function fetchAllRects(callback) {
         console.debug("RectsFragmentResponse", res);
         callback(res.holders);
         done();
-      }
+      },
     );
 
     window.addEventListener(
       "message",
-      (completeHandler = event => {
+      (completeHandler = (event) => {
         if (event.source !== window) return;
         if (event.data.type !== "AllRectsResponseComplete") return;
         window.removeEventListener("message", completeHandler);
         stopRecieve();
         resolve();
-      })
+      }),
     );
 
     const offsets = { x: 0, y: 0 };
@@ -44,9 +44,9 @@ export function fetchAllRects(callback) {
           type: ALL_RECTS_REQUEST_TYPE,
           offsets,
           viewport: rectUtils.rectByOffsetsAndSizes(offsets, visualVpSizes),
-          clientFrameId: await frameIdPromise
+          clientFrameId: await frameIdPromise,
         },
-        "*"
+        "*",
       );
     })();
   });
@@ -56,7 +56,7 @@ export function getDescriptions(e) {
   return send({
     type: "DescriptionsRequest",
     frameId: e.frameId,
-    index: e.index
+    index: e.index,
   });
 }
 
@@ -65,6 +65,6 @@ export function action(e, options) {
     type: "ActionRequest",
     frameId: e.frameId,
     index: e.index,
-    options
+    options,
   });
 }

@@ -1,11 +1,11 @@
-import { send, subscribe } from "./chrome-messages";
+import { send, subscribe } from "./chrome-messages.js";
 
 export default {
   get() {
     return send({ type: "GetSettings" });
   },
   subscribe(callback) {
-    subscribe("BroadcastNewSettings", message => {
+    subscribe("BroadcastNewSettings", (message) => {
       callback(message.settings);
     });
   },
@@ -14,5 +14,5 @@ export default {
   },
   getMatchedSelectors(url) {
     return send({ type: "GetMatchedSelectors", url });
-  }
+  },
 };

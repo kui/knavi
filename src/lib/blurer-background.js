@@ -1,4 +1,4 @@
-import { recieve, sendTo } from "./chrome-messages";
+import { recieve, sendTo } from "./chrome-messages.js";
 
 // Proxy to root frame in self tab.
 recieve("Blured", (msg, sender) => {

@@ -1,4 +1,4 @@
-import { send } from "./chrome-messages";
+import { send } from "./chrome-messages.js";
 
 export default class HinterClient {
   constructor() {

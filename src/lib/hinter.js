@@ -1,5 +1,5 @@
-import { send } from "./chrome-messages";
-import * as rectFetcher from "./rect-fetcher-client";
+import { send } from "./chrome-messages.js";
+import * as rectFetcher from "./rect-fetcher-client.js";
 
 export default class Hinter {
   constructor(hintLetters) {
@@ -21,7 +21,7 @@ export default class Hinter {
 
     send({ type: "StartHinting", context });
 
-    await rectFetcher.fetchAllRects(holders => {
+    await rectFetcher.fetchAllRects((holders) => {
       if (holders.length === 0) return;
 
       const hintTexts = [];
@@ -58,7 +58,7 @@ export default class Hinter {
     let actionDescriptions;
     if (context.hitTarget) {
       actionDescriptions = await rectFetcher.getDescriptions(
-        context.hitTarget.holder
+        context.hitTarget.holder,
       );
     }
 
@@ -67,7 +67,7 @@ export default class Hinter {
       context,
       input: inputChar,
       stateChanges,
-      actionDescriptions
+      actionDescriptions,
     });
   }
 

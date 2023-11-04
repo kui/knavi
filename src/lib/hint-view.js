@@ -1,9 +1,9 @@
-import * as utils from "./utils";
-import * as vp from "./viewports";
-import settingsClient from "./settings-client";
-import { subscribe } from "./chrome-messages";
-import { waitUntil } from "./utils";
-import { getBoundingRect } from "./rects";
+import * as utils from "./utils.js";
+import * as vp from "./viewports.js";
+import settingsClient from "./settings-client.js";
+import { subscribe } from "./chrome-messages.js";
+import { waitUntil } from "./utils.js";
+import { getBoundingRect } from "./rects.js";
 
 const OVERLAY_PADDING = 8;
 const CONTAINER_ID = "jp-k-ui-knavi-container";
@@ -19,7 +19,7 @@ export default class HintView {
       container.id = CONTAINER_ID;
       const root = container.attachShadow({
         mode: "open",
-        deletesFocus: false
+        deletesFocus: false,
       });
       const overlay = root.appendChild(document.createElement("div"));
       overlay.id = OVERLAY_ID;
@@ -29,7 +29,7 @@ export default class HintView {
 
       const settings = await settingsClient.get();
       style.textContent = settings.css;
-      settingsClient.subscribe(settings => {
+      settingsClient.subscribe((settings) => {
         style.textContent = settings.css;
       });
 
@@ -53,7 +53,7 @@ export default class HintView {
         const df = document.createDocumentFragment();
         for (const hint of generateHintElements(newTargets)) {
           hints.add(hint);
-          hint.elements.forEach(e => df.appendChild(e));
+          hint.elements.forEach((e) => df.appendChild(e));
         }
         root.appendChild(df);
 
@@ -73,7 +73,7 @@ export default class HintView {
           highligtHints(hints, stateChanges, actionDescriptions);
           moveOverlay(overlay, context.targets);
           moveActiveOverlay(activeOverlay, context.hitTarget);
-        }
+        },
       );
       subscribe("AfterRemoveHints", () => {
         if (!hints) throw Error("Illegal state");
@@ -144,7 +144,7 @@ function initStyles(body, container, overlay, activeOverlay) {
     margin: "0",
     overflow: "hidden",
     zIndex: Z_INDEX_OFFSET.toString(),
-    display: "none"
+    display: "none",
   });
   Object.assign(overlay.style, {
     position: "absolute",
@@ -154,7 +154,7 @@ function initStyles(body, container, overlay, activeOverlay) {
     left: "0",
     width: "100%",
     height: "100%",
-    display: "block"
+    display: "block",
   });
   Object.assign(activeOverlay.style, {
     position: "absolute",
@@ -164,7 +164,7 @@ function initStyles(body, container, overlay, activeOverlay) {
     left: "0",
     width: "0",
     height: "0",
-    display: "none"
+    display: "none",
   });
 }
 
@@ -181,7 +181,7 @@ function moveActiveOverlay(activeOverlay, hitTarget) {
     left: px(rect.left),
     height: px(rect.height),
     width: px(rect.width),
-    display: "block"
+    display: "block",
   });
 }
 
@@ -217,7 +217,7 @@ function moveOverlay(overlay, targets) {
     left: px(rr.left),
     height: px(rr.bottom - rr.top),
     width: px(rr.right - rr.left),
-    display: "block"
+    display: "block",
   });
 }
 
@@ -233,7 +233,7 @@ function highligtHints(hints, changes, actionDescriptions) {
         if (actionDescriptions.long)
           e.setAttribute(
             "data-long-action-description",
-            actionDescriptions.long
+            actionDescriptions.long,
           );
       }
       if (oldState === "hit") {
@@ -256,7 +256,7 @@ function generateHintElements(targets) {
     hints.reduce((o, h) => {
       o[h.target.hint] = h;
       return o;
-    }, {})
+    }, {}),
   );
   return hints;
 }
@@ -265,7 +265,7 @@ function buildHintElements(target) {
   // Hinting for all client rects are annoying
   // const rects = target.rects;
   const rects = target.holder.rects.slice(0, 1);
-  return rects.map(rect => {
+  return rects.map((rect) => {
     const h = document.createElement("div");
     h.textContent = target.hint;
     h.dataset["hint"] = target.hint;
@@ -273,7 +273,7 @@ function buildHintElements(target) {
       position: "absolute",
       display: "block",
       top: px(rect.top),
-      left: px(rect.left)
+      left: px(rect.left),
     });
     h.classList.add(HINT_CLASS);
     return h;

@@ -1,5 +1,5 @@
-import assert from "assert";
-import BlackList from "../../src/lib/blacklist";
+import assert from "node:assert";
+import BlackList from "../../src/lib/blacklist.js";
 
 const patterns = `https://www.google.co.jp/search
 https://twitter.com/*/status/*`;
@@ -10,10 +10,10 @@ describe("BlackList", () => {
     it("should return true if any patterns matched", () => {
       assert.deepEqual(
         bl.match("https://twitter.com/k_ui/status/823418931834548226"),
-        ["https://twitter.com/*/status/*"]
+        ["https://twitter.com/*/status/*"],
       );
       assert.deepEqual(bl.match("https://www.google.co.jp/search"), [
-        "https://www.google.co.jp/search"
+        "https://www.google.co.jp/search",
       ]);
     });
     it("should return false if no patterns matched", () => {

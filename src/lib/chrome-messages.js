@@ -11,28 +11,28 @@ function initIfRequired() {
       "handlers",
       c,
       "location=",
-      location.href
+      location.href,
     );
     if (!c || c.handlers.length === 0) {
       console.debug(" -> ignore");
       return;
     }
-    return c.handlers.some(h => h(message, sender, sendResponse));
+    return c.handlers.some((h) => h(message, sender, sendResponse));
   });
 }
 
 export function sendTo(message, tabId, frameId) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     chrome.tabs.sendMessage(
       tabId,
       message,
       frameId == null ? null : { frameId },
-      resolve
+      resolve,
     );
   });
 }
 export function send(message) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     chrome.runtime.sendMessage(message, resolve);
   });
 }
@@ -49,8 +49,8 @@ export function recieve(type, handler) {
       (m, s, r) => {
         handler(m, s, r);
         return true;
-      }
-    ]
+      },
+    ],
   });
   return () => {
     handlers.delete(type);
@@ -63,7 +63,7 @@ export function subscribe(type, handler) {
   const c = handlers.get(type) || {
     type,
     handlerType: "subscribers",
-    handlers: []
+    handlers: [],
   };
   handlers.set(type, c);
   if (c.handlerType === "reciever") {

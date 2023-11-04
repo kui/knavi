@@ -1,4 +1,4 @@
-import "./lib/rect-fetcher-background";
-import "./lib/hinter-background";
-import "./lib/blurer-background";
-import "./lib/settings-background";
+import "./lib/rect-fetcher-background.js";
+import "./lib/hinter-background.js";
+import "./lib/blurer-background.js";
+import "./lib/settings-background.js";

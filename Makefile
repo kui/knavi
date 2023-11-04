@@ -6,7 +6,6 @@ JS = $(patsubst $(SRC)/%, $(BUILD)/%, $(filter-out $(SRC)/manifest.js, $(wildcar
 STATICS = $(patsubst $(SRC)/%, $(BUILD)/%, $(wildcard $(SRC)/*.html $(SRC)/*.css))
 ICONS = $(addprefix $(BUILD)/icon, $(addsuffix .png, 16 48 128))
 PNG = $(patsubst $(SRC)/%.svg, $(BUILD)/%.png, $(wildcard $(SRC)/*.svg))
-BIN = node_modules/.bin
 
 FILES = $(BUILD) $(BUILD)/manifest.json $(BUILD)/codemirror.css $(STATICS) $(ICONS) $(PNG)
 
@@ -17,11 +16,11 @@ $(BUILD):
 	mkdir -v $(BUILD)
 
 $(BUILD)/manifest.json: $(SRC)/manifest.js package.json node_modules
-	$(BIN)/babel-node scripts/jsonize-manifest.js > $@
+	node scripts/jsonize-manifest.js > $@
 
 $(BUILD)/%.js: $(SRC)/%.js $(SRC)/lib/*.js node_modules
 	@echo execute webpack for $@
-	DEST=$(BUILD) $(BIN)/webpack
+	DEST=$(BUILD) npx webpack
 
 $(ICONS): $(SRC)/icon.svg
 	rsvg-convert $< \
@@ -42,7 +41,7 @@ $(BUILD)/%: $(SRC)/%
 	cp -v $< $@
 
 node_modules: package.json
-	npm install
+	npm install --no-save
 	touch node_modules
 
 .PHONY: zip
@@ -57,22 +56,25 @@ test: lint mocha
 
 .PHONY: lint
 lint: node_modules
-	$(BIN)/eslint .
+	npx eslint .
+	npx prettier . --check
+	hadolint Dockerfile
 
 .PHONY: fix
 fix: node_modules
-	$(BIN)/eslint . --fix
+	npx eslint . --fix
+	npx prettier . --write
 
 .PHONY: watch
 watch: node_modules
 	rm -fr $(BUILD)/**/*.js
-	$(BIN)/chokidar 'Makefile' 'src' '!src/**/*.js' -c 'make' & \
-	$(BIN)/webpack --watch & \
+	npx chokidar 'Makefile' 'src' '!src/**/*.js' -c 'make' & \
+	npx webpack --watch & \
 	wait
 
 .PHONY: mocha
 mocha: node_modules
-	$(BIN)/mocha --require '@babel/register' test/**/*_test.js
+	npx mocha test/**/*_test.js
 
 .PHONY: clean
 clean:

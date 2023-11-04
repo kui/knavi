@@ -1,9 +1,12 @@
-import "./lib/rect-fetcher-service";
-import EventMatcher from "key-input-elements/lib/event-matcher";
-import settingsClient from "./lib/settings-client";
-import * as utils from "./lib/utils";
-import HinterClient from "./lib/hinter-client";
-import Blurer from "./lib/blurer";
+import "./lib/rect-fetcher-service.js";
+import * as em from "key-input-elements/lib/event-matcher.js";
+import settingsClient from "./lib/settings-client.js";
+import * as utils from "./lib/utils.js";
+import HinterClient from "./lib/hinter-client.js";
+import Blurer from "./lib/blurer.js";
+
+// workaround weird babel transpile
+const EventMatcher = em.default.default;
 
 async function main() {
   let hitEventMatcher;
@@ -23,7 +26,7 @@ async function main() {
     : null;
 
   const matchedBlacklist = await settingsClient.getMatchedBlackList(
-    location.href
+    location.href,
   );
   if (matchedBlacklist.length === 0) {
     enableKeyhooks();
@@ -32,12 +35,12 @@ async function main() {
     disableKeyhooks();
   }
 
-  settingsClient.subscribe(async settings => {
+  settingsClient.subscribe(async (settings) => {
     hintLetters = settings.hints;
     hitEventMatcher = new EventMatcher(settings.magicKey);
     blurEventMatcher = new EventMatcher(settings.blurKey);
     const matchedBlacklist = await settingsClient.getMatchedBlackList(
-      location.href
+      location.href,
     );
     if (matchedBlacklist.length === 0) {
       enableKeyhooks();

@@ -4,12 +4,12 @@ import {
   filter,
   first,
   takeWhile,
-  length
-} from "./iters";
-import { isScrollable } from "./utils";
-import * as vp from "./viewports";
-import * as rectUtils from "./rects";
-import VisibleRectDetector from "./visible-rect-detector";
+  length,
+} from "./iters.js";
+import { isScrollable } from "./utils.js";
+import * as vp from "./viewports.js";
+import * as rectUtils from "./rects.js";
+import VisibleRectDetector from "./visible-rect-detector.js";
 
 export default class RectFetcher {
   constructor(additionalSelectors, caches) {
@@ -22,7 +22,7 @@ export default class RectFetcher {
     const layoutVpOffsets = vp.layout.offsets();
     const visualViewportFromLayoutVp = rectUtils.offsets(
       visualViewport,
-      layoutVpOffsets
+      layoutVpOffsets,
     );
     const t = listAllTarget(this, visualViewportFromLayoutVp);
     return distinctSimilarTarget(this, t, visualViewportFromLayoutVp);
@@ -46,7 +46,7 @@ const HINTABLE_QUERY = [
   "[contenteditable=true]",
   "[role=link]",
   "[role=button]",
-  "[data-image-url]"
+  "[data-image-url]",
 ];
 
 function listAllTarget(self, viewport) {
@@ -80,7 +80,7 @@ function listAllTarget(self, viewport) {
 
   function listTargets(doc) {
     return Array.from(
-      flatMap(doc.querySelectorAll("*"), element => {
+      flatMap(doc.querySelectorAll("*"), (element) => {
         let childTargets;
         if (element.shadowRoot) {
           childTargets = listTargets(element.shadowRoot);
@@ -94,7 +94,7 @@ function listAllTarget(self, viewport) {
         } else {
           return childTargets;
         }
-      })
+      }),
     );
   }
 
@@ -106,7 +106,7 @@ function listAllTarget(self, viewport) {
     "list all elements: elapsedMsec=",
     elapsedMsec,
     "targetElements=",
-    targets.length
+    targets.length,
   );
 
   return targets;
@@ -114,9 +114,9 @@ function listAllTarget(self, viewport) {
 
 function distinctSimilarTarget(self, targets, viewport) {
   const targetMap = new Map(
-    (function*() {
+    (function* () {
       for (const t of targets) yield [t.element, t];
-    })()
+    })(),
   );
 
   function isVisibleNode(node) {
@@ -136,31 +136,31 @@ function distinctSimilarTarget(self, targets, viewport) {
     }
   }
 
-  let mayBeClickables = targets.filter(t => t.mayBeClickable);
+  let mayBeClickables = targets.filter((t) => t.mayBeClickable);
 
   // Filter out targets which are children of <a> or <button>
   for (let i = 0; i < mayBeClickables.length; i++) {
     const target = mayBeClickables[i];
 
     const parentTarget = first(
-      flatMap(traverseParent(target.element), p => {
+      flatMap(traverseParent(target.element), (p) => {
         const t = targetMap.get(p);
         if (t == null) return [];
         if (t.filteredOutBy) return [t.filteredOutBy];
         if (["A", "BUTTON"].includes(t.element.tagName)) return [t];
         return [];
-      })
+      }),
     );
     if (parentTarget) {
       target.filteredOutBy = parentTarget;
       console.debug(
         "filter out: a child of a parent <a>/<button>: target=%o",
-        target.element
+        target.element,
       );
     }
   }
 
-  mayBeClickables = mayBeClickables.filter(t => !t.filteredOutBy);
+  mayBeClickables = mayBeClickables.filter((t) => !t.filteredOutBy);
   removeFilteredOutElements();
 
   // Filter out targets that is only one child for a parent that is target too.
@@ -168,27 +168,27 @@ function distinctSimilarTarget(self, targets, viewport) {
     const target = mayBeClickables[i];
     if (target.filteredOutBy) continue;
 
-    const thinAncestors = takeWhile(traverseParent(target.element), e => {
+    const thinAncestors = takeWhile(traverseParent(target.element), (e) => {
       return length(filter(e.childNodes, isVisibleNode)) === 1;
     });
     const parentTarget = first(
-      flatMap(thinAncestors, p => {
+      flatMap(thinAncestors, (p) => {
         const t = targetMap.get(p);
         if (t == null) return [];
         if (t.filteredOutBy) return [t.filteredOutBy];
         return [t];
-      })
+      }),
     );
     if (parentTarget) {
       target.filteredOutBy = parentTarget;
       console.debug(
         "filter out: a child of a thin parent: target=%o",
-        target.element
+        target.element,
       );
     }
   }
 
-  mayBeClickables = mayBeClickables.filter(t => !t.filteredOutBy);
+  mayBeClickables = mayBeClickables.filter((t) => !t.filteredOutBy);
   removeFilteredOutElements();
 
   // Filter out targets that contains only existing targets
@@ -197,17 +197,17 @@ function distinctSimilarTarget(self, targets, viewport) {
     if (target.filteredOutBy) continue;
 
     const childNodes = Array.from(
-      filter(target.element.childNodes, isVisibleNode)
+      filter(target.element.childNodes, isVisibleNode),
     );
-    if (childNodes.every(c => targetMap.has(c))) {
+    if (childNodes.every((c) => targetMap.has(c))) {
       const child = childNodes[0];
       target.filteredOutBy = targetMap.get(child);
       console.debug(
         "filter out: only targets containing: target=%o",
-        target.element
+        target.element,
       );
     }
   }
 
-  return targets.filter(t => t.filteredOutBy == null);
+  return targets.filter((t) => t.filteredOutBy == null);
 }

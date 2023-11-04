@@ -9,8 +9,12 @@
   animation: fadein 240ms linear;
 }
 @keyframes fadein {
-  0% { opacity: 0; }
-  100% { opacity: var(--overlay-opacity); }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: var(--overlay-opacity);
+  }
 }
 
 /* hit target overlay */
@@ -22,8 +26,8 @@
   animation: pulse 1200ms linear infinite;
   z-index: 2;
 
-  --pulse-outer-color: rgba(255,0,0,0.8);
-  --pulse-inner-color: rgba(128,128,128,0.8);
+  --pulse-outer-color: rgba(255, 0, 0, 0.8);
+  --pulse-inner-color: rgba(128, 128, 128, 0.8);
   --pulse-outer-width: 8px;
   --pulse-max-radius: 80px;
   --pulse-blur: 3px;
@@ -31,23 +35,32 @@
 @keyframes pulse {
   0% {
     box-shadow:
-    0 0 var(--pulse-blur) 0 rgba(255,255,255,0),
-    0 0 var(--pulse-blur) 0 rgba(255,255,255,0);
+      0 0 var(--pulse-blur) 0 rgba(255, 255, 255, 0),
+      0 0 var(--pulse-blur) 0 rgba(255, 255, 255, 0);
   }
   10% {
     box-shadow:
-    0 0 var(--pulse-blur) calc(var(--pulse-max-radius) * 0.1 - var(--pulse-outer-width)) var(--pulse-inner-color),
-    0 0 var(--pulse-blur) calc(var(--pulse-max-radius) * 0.1) var(--pulse-outer-color);
+      0 0 var(--pulse-blur)
+        calc(var(--pulse-max-radius) * 0.1 - var(--pulse-outer-width))
+        var(--pulse-inner-color),
+      0 0 var(--pulse-blur) calc(var(--pulse-max-radius) * 0.1)
+        var(--pulse-outer-color);
   }
   50% {
     box-shadow:
-    0 0 var(--pulse-blur) calc(var(--pulse-max-radius) * 0.5 - var(--pulse-outer-width)) var(--pulse-inner-color),
-    0 0 var(--pulse-blur) calc(var(--pulse-max-radius) * 0.5) var(--pulse-outer-color);
+      0 0 var(--pulse-blur)
+        calc(var(--pulse-max-radius) * 0.5 - var(--pulse-outer-width))
+        var(--pulse-inner-color),
+      0 0 var(--pulse-blur) calc(var(--pulse-max-radius) * 0.5)
+        var(--pulse-outer-color);
   }
   100% {
     box-shadow:
-    0 0 var(--pulse-blur) calc(var(--pulse-max-radius) * 1.0 - var(--pulse-outer-width)) rgba(255,255,255,0),
-    0 0 var(--pulse-blur) calc(var(--pulse-max-radius) * 1.0) rgba(255,255,255,0);
+      0 0 var(--pulse-blur)
+        calc(var(--pulse-max-radius) * 1 - var(--pulse-outer-width))
+        rgba(255, 255, 255, 0),
+      0 0 var(--pulse-blur) calc(var(--pulse-max-radius) * 1)
+        rgba(255, 255, 255, 0);
   }
 }
 
@@ -62,7 +75,17 @@
   white-space: nowrap;
   line-height: 1em;
   font-size: 16px;
-  font-family: Consolas,Menlo,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New,monospace,sans-serif;
+  font-family:
+    Consolas,
+    Menlo,
+    Monaco,
+    Lucida Console,
+    Liberation Mono,
+    DejaVu Sans Mono,
+    Bitstream Vera Sans Mono,
+    Courier New,
+    monospace,
+    sans-serif;
   text-transform: uppercase;
 }
 .hint[data-state="disabled"] {

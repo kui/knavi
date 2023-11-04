@@ -5,7 +5,7 @@ class Storage {
 
   get(names) {
     return new Promise((resolve, reject) => {
-      this.storage.get(names, items => {
+      this.storage.get(names, (items) => {
         const err = chrome.runtime.lastError;
         if (err) {
           reject(Error(err.message));
@@ -39,7 +39,7 @@ class Storage {
 
   getBytes(names) {
     return new Promise((resolve, reject) => {
-      this.storage.getBytesInUse(names, b => {
+      this.storage.getBytesInUse(names, (b) => {
         const err = chrome.runtime.lastError;
         if (err) {
           reject(Error(err.message));
@@ -79,7 +79,7 @@ const DEFAULT_SETTINGS = {
   blurKey: "",
   css: "", // load from an external file
   blackList: DEFAULT_BLACK_LIST,
-  additionalSelectors: DEFAULT_ADDITIONAL_SELECTORS
+  additionalSelectors: DEFAULT_ADDITIONAL_SELECTORS,
 };
 
 export default {
@@ -118,7 +118,7 @@ export default {
   },
   async isLocal() {
     return await isLocal();
-  }
+  },
 };
 
 async function fetchCss() {
@@ -130,7 +130,7 @@ async function getAll(storage) {
   return Object.assign(
     {},
     DEFAULT_SETTINGS,
-    await storage.get(Object.keys(DEFAULT_SETTINGS))
+    await storage.get(Object.keys(DEFAULT_SETTINGS)),
   );
 }
 
