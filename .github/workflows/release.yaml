@@ -2,7 +2,7 @@ name: release
 
 on:
   tags: ["*"]
-  
+
 jobs:
   test:
     runs-on: ubuntu-latest
