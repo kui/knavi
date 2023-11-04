@@ -22,22 +22,24 @@ Debug build:
 
 ```sh
 $ make
-#or
-$ docker compose run --rm make
 ```
 
 Interactive debug build:
 
 ```sh
 $ make watch
-#or
-$ docker compose run --rm make watch
 ```
 
 zip for production build:
 
 ```sh
 $ make zip
-#or
-$ docker compose run --rm make zip
+```
+
+`docker` makes it easy to build environment:
+
+```sh
+$ docker compose run make
+$ docker compose run make watch
+$ docker compose run make zip
 ```
