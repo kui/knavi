@@ -1,8 +1,8 @@
-const eslintConfigPrettier = require("eslint-config-prettier");
-const js = require("@eslint/js");
-const globals = require("globals");
+import eslintConfigPrettier from "eslint-config-prettier";
+import js from "@eslint/js";
+import globals from "globals";
 
-module.exports = [
+export default [
   {
     ignores: ["build/**/*.js"],
   },

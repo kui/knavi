@@ -1,8 +1,11 @@
-const path = require("node:path");
-const DEBUG = process.env.NODE_ENV !== "production";
-const DEST = path.resolve(__dirname, process.env.DEST || "./build");
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-module.exports = {
+const DIRNAME = path.dirname(fileURLToPath(import.meta.url));
+const DEBUG = process.env.NODE_ENV !== "production";
+const DEST = path.resolve(DIRNAME, process.env.DEST || "build");
+
+export default {
   mode: DEBUG ? "development" : "production",
   devtool: DEBUG ? "inline-source-map" : "source-map",
   entry: {

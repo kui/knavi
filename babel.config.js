@@ -23,4 +23,4 @@ const production = {
   ],
 };
 
-module.exports = { ...development, env: { production } };
+export default { ...development, env: { production } };
