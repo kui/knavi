@@ -58,6 +58,7 @@ test: lint mocha
 lint: node_modules
 	npx eslint .
 	npx prettier . --check
+	hadolint Dockerfile
 
 .PHONY: fix
 fix: node_modules
