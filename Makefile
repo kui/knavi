@@ -73,7 +73,7 @@ watch: node_modules
 
 .PHONY: mocha
 mocha: node_modules
-	npx mocha --require '@babel/register' test/**/*_test.js
+	npx mocha test/**/*_test.js
 
 .PHONY: clean
 clean:

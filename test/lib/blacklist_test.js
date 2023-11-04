@@ -1,5 +1,5 @@
-import assert from "assert";
-import BlackList from "../../src/lib/blacklist";
+import assert from "node:assert";
+import BlackList from "../../src/lib/blacklist.js";
 
 const patterns = `https://www.google.co.jp/search
 https://twitter.com/*/status/*`;
