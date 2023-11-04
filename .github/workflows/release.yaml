@@ -12,6 +12,6 @@ jobs:
       - name: Build
         run: docker compose run make zip
       - name: Release
-        run: gh release create ${{ github.ref }} knavi.zip --notes-from-tag
+        run: gh release create ${{ github.ref }} knavi.zip --notes-file changelog/${{ github.ref_name }}.md
         env:
           GH_TOKEN: ${{ github.token }}
