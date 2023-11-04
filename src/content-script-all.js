@@ -26,7 +26,7 @@ async function main() {
     : null;
 
   const matchedBlacklist = await settingsClient.getMatchedBlackList(
-    location.href
+    location.href,
   );
   if (matchedBlacklist.length === 0) {
     enableKeyhooks();
@@ -35,12 +35,12 @@ async function main() {
     disableKeyhooks();
   }
 
-  settingsClient.subscribe(async settings => {
+  settingsClient.subscribe(async (settings) => {
     hintLetters = settings.hints;
     hitEventMatcher = new EventMatcher(settings.magicKey);
     blurEventMatcher = new EventMatcher(settings.blurKey);
     const matchedBlacklist = await settingsClient.getMatchedBlackList(
-      location.href
+      location.href,
     );
     if (matchedBlacklist.length === 0) {
       enableKeyhooks();

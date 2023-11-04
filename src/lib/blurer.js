@@ -9,7 +9,7 @@ const BLUR_TYPE = "jp-k-ui-knavi-Blur";
 export default class Blurer {
   constructor() {
     // Blur request from a child frame
-    window.addEventListener("message", e => {
+    window.addEventListener("message", (e) => {
       if (e.data.type !== BLUR_TYPE) return;
       console.debug("blur", e.data, "location=", location.href);
       if (e.source === window) {
@@ -22,14 +22,14 @@ export default class Blurer {
       const sourceIframe = first(
         filter(
           document.querySelectorAll("iframe"),
-          i => e.source === i.contentWindow
-        )
+          (i) => e.source === i.contentWindow,
+        ),
       );
       if (!sourceIframe) return;
       const sourceRect = getFirstClientRectFromVisualVp(sourceIframe);
       const offsettedRect = rectUtils.move(e.data.rect, {
         x: sourceRect.left,
-        y: sourceRect.top
+        y: sourceRect.top,
       });
 
       const rect = rectUtils.intersection(sourceRect, offsettedRect);
@@ -65,6 +65,6 @@ function getRectFromVisualVp(rectFromLayoutVp) {
   const visualVpOffsets = vp.visual.offsets();
   return rectUtils.offsets(
     rectUtils.move(rectFromLayoutVp, layoutVpOffsets),
-    visualVpOffsets
+    visualVpOffsets,
   );
 }

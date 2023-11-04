@@ -9,7 +9,7 @@ new HintsView();
   let hinter;
   const settings = await settingsClient.get();
   hinter = new Hinter(settings.hints);
-  settingsClient.subscribe(settings => {
+  settingsClient.subscribe((settings) => {
     hinter = new Hinter(settings.hints);
   });
 

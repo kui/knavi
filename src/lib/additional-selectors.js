@@ -8,7 +8,7 @@ export default class AdditionalSelectors {
   }
 
   match(url) {
-    return Array.from(flatMap(this.patterns.collect(url), a => a));
+    return Array.from(flatMap(this.patterns.collect(url), (a) => a));
   }
 }
 

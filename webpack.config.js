@@ -9,15 +9,15 @@ module.exports = {
     options: "./src/options.js",
     background: "./src/background.js",
     "content-script-root": "./src/content-script-root.js",
-    "content-script-all": "./src/content-script-all.js"
+    "content-script-all": "./src/content-script-all.js",
   },
   output: {
     path: DEST,
-    filename: "[name].js"
+    filename: "[name].js",
   },
   module: {
     rules: [
-      { test: /\.m?js$/, exclude: /node_modules/, loader: "babel-loader" }
-    ]
-  }
+      { test: /\.m?js$/, exclude: /node_modules/, loader: "babel-loader" },
+    ],
+  },
 };

@@ -24,7 +24,7 @@ async function initRevertButton(body) {
   const settingValues = await settings.loadDefaults();
   for (const e of body.getElementsByClassName("js-revert-button")) {
     console.log("revert button: ", e);
-    e.addEventListener("click", e => {
+    e.addEventListener("click", (e) => {
       if (!(e.target instanceof HTMLElement)) return false;
       const targetQuery = e.target.dataset["target"];
       if (!targetQuery) return false;
@@ -44,7 +44,7 @@ async function initRevertButton(body) {
 function initClearButton(body) {
   for (const e of body.getElementsByClassName("js-clear-button")) {
     console.log("clear button: ", e);
-    e.addEventListener("click", e => {
+    e.addEventListener("click", (e) => {
       if (!(e.target instanceof HTMLElement)) return false;
       const targetQuery = e.target.dataset["target"];
       if (!targetQuery) return false;
@@ -60,7 +60,7 @@ function initClearButton(body) {
 async function initCodeMirror() {
   const form = document.querySelector("form[is=storage-form]");
   if (form == null) throw Error("form element not found");
-  await new Promise(resolve => {
+  await new Promise((resolve) => {
     const waitingInitSync = () => {
       console.log("storage-form init sync");
       form.removeEventListener("storage-from-sync", waitingInitSync, false);
@@ -106,7 +106,7 @@ async function initBytesDisplay() {
 
     const update = async () => {
       bytesDisplay.textContent = new Intl.NumberFormat("en").format(
-        await getBytesInUse(itemName)
+        await getBytesInUse(itemName),
       );
     };
     update();
@@ -114,11 +114,11 @@ async function initBytesDisplay() {
   }
 
   for (const bytesMaxDisplay of document.querySelectorAll(
-    ".js-bytes-max-display"
+    ".js-bytes-max-display",
   )) {
     const update = async () => {
       bytesMaxDisplay.textContent = new Intl.NumberFormat("en").format(
-        await getMaxBytesPerItem()
+        await getMaxBytesPerItem(),
       );
     };
     update();
@@ -126,7 +126,7 @@ async function initBytesDisplay() {
   }
 
   for (const bytesPercentDisplay of document.querySelectorAll(
-    ".js-bytes-percent-display"
+    ".js-bytes-percent-display",
   )) {
     const itemName = bytesPercentDisplay.dataset.name;
     if (!itemName) continue;
@@ -144,11 +144,11 @@ async function initBytesDisplay() {
   }
 
   for (const bytesDisplay of document.querySelectorAll(
-    ".js-total-bytes-display"
+    ".js-total-bytes-display",
   )) {
     const update = async () => {
       bytesDisplay.textContent = new Intl.NumberFormat("en").format(
-        await settings.getTotalBytesInUse()
+        await settings.getTotalBytesInUse(),
       );
     };
     update();
@@ -156,11 +156,11 @@ async function initBytesDisplay() {
   }
 
   for (const bytesMaxDisplay of document.querySelectorAll(
-    ".js-total-bytes-max-display"
+    ".js-total-bytes-max-display",
   )) {
     const update = async () => {
       bytesMaxDisplay.textContent = new Intl.NumberFormat("en").format(
-        await getMaxBytes()
+        await getMaxBytes(),
       );
     };
     update();
@@ -168,7 +168,7 @@ async function initBytesDisplay() {
   }
 
   for (const bytesPercentDisplay of document.querySelectorAll(
-    ".js-total-bytes-percent-display"
+    ".js-total-bytes-percent-display",
   )) {
     const update = async () => {
       const bytes = await settings.getTotalBytesInUse();

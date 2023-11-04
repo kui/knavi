@@ -1,40 +1,61 @@
 <html>
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>KNavi Settings</title>
-    <link rel="stylesheet" type="text/css" href="codemirror.css">
-    <link rel="stylesheet" type="text/css" href="options.css">
+    <link rel="stylesheet" type="text/css" href="codemirror.css" />
+    <link rel="stylesheet" type="text/css" href="options.css" />
     <script src="options.js" async></script>
   </head>
   <body>
-    <h1><img src="icon48.png" title="Icon"> KNavi Settings</h1>
+    <h1><img src="icon48.png" title="Icon" /> KNavi Settings</h1>
 
     <form is="storage-form" autosync area="chrome-sync">
       <h2>Basic Settings</h2>
       <table class="config-table">
         <tr>
           <th><label for="magic-key">Magic Key</label></th>
-          <td><input is="keydown-input" id="magic-key" name="magicKey" value="Space"
-                     autocomplete="off" noMod></td>
+          <td>
+            <input
+              is="keydown-input"
+              id="magic-key"
+              name="magicKey"
+              value="Space"
+              autocomplete="off"
+              noMod
+            />
+          </td>
         </tr>
         <tr>
           <th><label for="hints">Hint Letters</label></th>
-          <td><input id="hints" name="hints" value="asdfghjkl"></td>
+          <td><input id="hints" name="hints" value="asdfghjkl" /></td>
         </tr>
       </table>
 
       <h2>Blur key</h2>
-      <p>A support function to in-activate a current focused element such as input, textarea and iframe. Press [Clear] if you want to disable.</p>
+      <p>
+        A support function to in-activate a current focused element such as
+        input, textarea and iframe. Press [Clear] if you want to disable.
+      </p>
       <table class="config-table">
         <tr>
           <th><label for="blur-key">Key</label></th>
           <td>
-            <input is="keydown-input" id="blur-key" name="blurKey" value="" autocomplete="off">
-            <button type="button"
-                    class="js-clear-button"
-                    data-target="#blur-key"
-                    alt="Clear to disable"
-                    title="Clear to disable">Clear</button>
+            <input
+              is="keydown-input"
+              id="blur-key"
+              name="blurKey"
+              value=""
+              autocomplete="off"
+            />
+            <button
+              type="button"
+              class="js-clear-button"
+              data-target="#blur-key"
+              alt="Clear to disable"
+              title="Clear to disable"
+            >
+              Clear
+            </button>
           </td>
         </tr>
       </table>
@@ -44,43 +65,77 @@
       <textarea id="css" name="css"></textarea>
       <div class="js-cm-wrapper" data-target="#css" data-mode="css"></div>
       <p>
-        <button type="button"
-                class="js-revert-button"
-                data-target="#css">Revert to Default Style</button>
+        <button type="button" class="js-revert-button" data-target="#css">
+          Revert to Default Style
+        </button>
         <span class="js-bytes-display" data-name="css"></span> bytes /
-        <span class="js-bytes-max-display"></span> bytes
-        (<span class="js-bytes-percent-display" data-name="css"></span>)
+        <span class="js-bytes-max-display"></span> bytes (<span
+          class="js-bytes-percent-display"
+          data-name="css"
+        ></span
+        >)
       </p>
 
       <h2>Black List</h2>
-      <p>Stop knavi on listed pages. You can use some wildcard pattern matching. See <a href="https://github.com/rbranson/glob-trie.js#expression-support">glob-trie.js docs</a>.</p>
+      <p>
+        Stop knavi on listed pages. You can use some wildcard pattern matching.
+        See
+        <a href="https://github.com/rbranson/glob-trie.js#expression-support"
+          >glob-trie.js docs</a
+        >.
+      </p>
       <textarea name="blackList"></textarea>
       <p>
         <span class="js-bytes-display" data-name="blackList"></span> bytes /
-        <span class="js-bytes-max-display"></span> bytes
-        (<span class="js-bytes-percent-display" data-name="blackList"></span>)
+        <span class="js-bytes-max-display"></span> bytes (<span
+          class="js-bytes-percent-display"
+          data-name="blackList"
+        ></span
+        >)
       </p>
 
       <h2>Additional Selectors</h2>
-      <p>Additional hintable element selectors in the specific pages. A JSON key is an URL pattern used in wildcard matching (<a href="https://github.com/rbranson/glob-trie.js#expression-support">glob-trie.js</a>). A JSON value is CSS selector or array. This JSON is serialized as <a href="https://github.com/json5/json5#example">JSON5</a>.</p>
-      <textarea id="additional-selectors" name="additionalSelectors"></textarea>
-      <div class="js-cm-wrapper" data-target="#additional-selectors" data-mode="json"></div>
       <p>
-        <span class="js-bytes-display" data-name="additionalSelectors"></span> bytes /
-        <span class="js-bytes-max-display"></span> bytes
-        (<span class="js-bytes-percent-display" data-name="additionalSelectors"></span>)
+        Additional hintable element selectors in the specific pages. A JSON key
+        is an URL pattern used in wildcard matching (<a
+          href="https://github.com/rbranson/glob-trie.js#expression-support"
+          >glob-trie.js</a
+        >). A JSON value is CSS selector or array. This JSON is serialized as
+        <a href="https://github.com/json5/json5#example">JSON5</a>.
+      </p>
+      <textarea id="additional-selectors" name="additionalSelectors"></textarea>
+      <div
+        class="js-cm-wrapper"
+        data-target="#additional-selectors"
+        data-mode="json"
+      ></div>
+      <p>
+        <span class="js-bytes-display" data-name="additionalSelectors"></span>
+        bytes / <span class="js-bytes-max-display"></span> bytes (<span
+          class="js-bytes-percent-display"
+          data-name="additionalSelectors"
+        ></span
+        >)
       </p>
 
       <details name="advanced-configs">
         <summary>Advanced settings</summary>
 
         <h2>Settings Storage</h2>
-        <p>Indicate where these setting values are stored. <code>sync</code> shares your settings between your browser.</p>
+        <p>
+          Indicate where these setting values are stored.
+          <code>sync</code> shares your settings between your browser.
+        </p>
         <table class="config-table">
           <tr>
             <th><label for="_area">Value</label></th>
             <td>
-              <select is="area-select" id="_area" name="_area" area="chrome-local">
+              <select
+                is="area-select"
+                id="_area"
+                name="_area"
+                area="chrome-local"
+              >
                 <option value="chrome-sync" selected>sync</option>
                 <option value="chrome-local">local</option>
               </select>
@@ -93,8 +148,11 @@
     <div id="total-storage-usage">
       Total storage usage:
       <span class="js-total-bytes-display"></span> bytes /
-      <span class="js-total-bytes-max-display"></span> bytes
-      (<span class="js-total-bytes-percent-display" data-name="blackList"></span>)
+      <span class="js-total-bytes-max-display"></span> bytes (<span
+        class="js-total-bytes-percent-display"
+        data-name="blackList"
+      ></span
+      >)
     </div>
   </body>
 </html>

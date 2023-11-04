@@ -5,9 +5,9 @@ export class EventEmitter {
 
   async emit(value) {
     await Promise.all(
-      this.listeners.map(async l => {
+      this.listeners.map(async (l) => {
         l.callback(value);
-      })
+      }),
     );
   }
 

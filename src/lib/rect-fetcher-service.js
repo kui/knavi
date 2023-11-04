@@ -31,9 +31,9 @@ recieve("ActionRequest", (req, sender, sendResponse) => {
 });
 
 const additionalSelectorsPromise = settingsClient.getMatchedSelectors(
-  location.href
+  location.href,
 );
-additionalSelectorsPromise.then(s => {
+additionalSelectorsPromise.then((s) => {
   if (s.length >= 1) console.debug("mached additional selectors", s);
 });
 
@@ -41,7 +41,7 @@ if (parent !== window) {
   parent.postMessage({ type: REGISTE_FRAME_TYPE }, "*");
 }
 
-window.addEventListener("message", event => {
+window.addEventListener("message", (event) => {
   switch (event.data.type) {
     case ALL_RECTS_REQUEST_TYPE:
       handleAllRectsRequest(event.data);
@@ -59,8 +59,8 @@ async function handleAllRectsRequest(req) {
   const visualViewport = rectUtils.move(req.viewport, visualVpOffsets);
 
   const caches = {
-    style: new Cache(e => window.getComputedStyle(e)),
-    clientRects: new Cache(e => Array.from(e.getClientRects()))
+    style: new Cache((e) => window.getComputedStyle(e)),
+    clientRects: new Cache((e) => Array.from(e.getClientRects())),
   };
   const rectFetcher = new RectFetcher(await additionalSelectorsPromise, caches);
   const frameId = await frameIdPromise;
@@ -68,18 +68,18 @@ async function handleAllRectsRequest(req) {
   rectElements = rectFetcher
     .getAll(visualViewport)
     .map(({ element, rects }, index) => {
-      rects = rects.map(r => rectUtils.move(r, req.offsets));
+      rects = rects.map((r) => rectUtils.move(r, req.offsets));
       return { element, holder: { index, frameId, rects } };
     });
 
   console.debug(
     "rectElements",
-    rectElements.map(({ element }) => element)
+    rectElements.map(({ element }) => element),
   );
   await send({
     type: "RectsFragmentResponse",
-    holders: rectElements.map(e => e.holder),
-    clientFrameId: req.clientFrameId
+    holders: rectElements.map((e) => e.holder),
+    clientFrameId: req.clientFrameId,
   });
 
   // Propagate requests to child frames
@@ -88,7 +88,7 @@ async function handleAllRectsRequest(req) {
   const frames = new Set(
     filter(rectElements, ({ element }) => {
       return registeredFrames.has(element.contentWindow);
-    })
+    }),
   );
   if (frames.size === 0) {
     console.debug("No visible frames", location.href);
@@ -101,18 +101,18 @@ async function handleAllRectsRequest(req) {
   const layoutVpOffsets = vp.layout.offsets();
   const layoutVpOffsetsFromRootVisualVp = {
     y: layoutVpOffsets.y - visualVpOffsets.y + req.offsets.y,
-    x: layoutVpOffsets.x - visualVpOffsets.x + req.offsets.x
+    x: layoutVpOffsets.x - visualVpOffsets.x + req.offsets.x,
   };
   for (const frame of frames) {
     const borderWidth = getBorderWidth(frame.element, caches);
     const clientRect = rectUtils.move(
       caches.clientRects.get(frame.element)[0],
-      layoutVpOffsetsFromRootVisualVp
+      layoutVpOffsetsFromRootVisualVp,
     );
     const iframeViewport = rectUtils.excludeBorders(clientRect, borderWidth);
     const offsets = {
       x: iframeViewport.left,
-      y: iframeViewport.top
+      y: iframeViewport.top,
     };
     const croppedRect = frame.holder.rects[0];
     const viewport = rectUtils.intersection(croppedRect, iframeViewport);
@@ -125,9 +125,9 @@ async function handleAllRectsRequest(req) {
         type: ALL_RECTS_REQUEST_TYPE,
         viewport: rectUtils.offsets(viewport, offsets),
         offsets,
-        clientFrameId: req.clientFrameId
+        clientFrameId: req.clientFrameId,
       },
-      "*"
+      "*",
     );
   }
   if (frames.size === 0) {
@@ -142,15 +142,15 @@ async function handleAllRectsRequest(req) {
   let timeoutId;
   window.addEventListener(
     "message",
-    (responseCompleteHandler = event => {
+    (responseCompleteHandler = (event) => {
       if (event.source === window) return;
       if (event.data.type !== "AllRectsResponseComplete") return;
 
       const frame = first(
         filter(
           frames.values(),
-          ({ element }) => element.contentWindow === event.source
-        )
+          ({ element }) => element.contentWindow === event.source,
+        ),
       );
       if (!frame) return;
       frames.delete(frame);
@@ -160,7 +160,7 @@ async function handleAllRectsRequest(req) {
         window.removeEventListener("message", responseCompleteHandler);
         clearTimeout(timeoutId);
       }
-    })
+    }),
   );
   // Fetching complete timeout
   timeoutId = setTimeout(() => {
@@ -168,7 +168,7 @@ async function handleAllRectsRequest(req) {
       "Timeout: no response child frames=",
       frames,
       "location=",
-      location.href
+      location.href,
     );
     window.parent.postMessage({ type: "AllRectsResponseComplete" }, "*");
     window.removeEventListener("message", responseCompleteHandler);
@@ -203,6 +203,6 @@ function getBorderWidth(element, caches) {
     top: f("top", 0, "height"),
     bottom: f("bottom", 0, "height"),
     left: f("left", 0, "width"),
-    right: f("right", "last", "width")
+    right: f("right", "last", "width"),
   };
 }

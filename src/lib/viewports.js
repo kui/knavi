@@ -10,12 +10,12 @@ export const layout = {
     if (!documentElement) return { height: 0, width: 0 };
     return {
       height: documentElement.clientHeight,
-      width: documentElement.clientWidth
+      width: documentElement.clientWidth,
     };
   },
   rect() {
     return rects.rectByOffsetsAndSizes(this.offsets(), this.sizes());
-  }
+  },
 };
 
 export const visual = {
@@ -28,7 +28,7 @@ export const visual = {
   },
   rect() {
     return rects.rectByOffsetsAndSizes(this.offsets(), this.sizes());
-  }
+  },
 };
 
 export function getBoundingClientRectFromRoot(element) {

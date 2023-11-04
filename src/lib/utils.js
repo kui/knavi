@@ -1,5 +1,5 @@
 export function nextAnimationFrame() {
-  return new Promise(resolve => requestAnimationFrame(resolve));
+  return new Promise((resolve) => requestAnimationFrame(resolve));
 }
 
 export function isScrollable(element, style) {

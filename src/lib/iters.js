@@ -28,7 +28,7 @@ export function reduce(i, m, initValue) {
 }
 
 export function length(i) {
-  return reduce(i, n => ++n, 0);
+  return reduce(i, (n) => ++n, 0);
 }
 
 export function first(i) {
@@ -59,7 +59,7 @@ export function* flatMap(i, m) {
 
 export function distinct(i) {
   const s = new Set();
-  return filter(i, e => {
+  return filter(i, (e) => {
     if (s.has(e)) return false;
     s.add(e);
     return true;
