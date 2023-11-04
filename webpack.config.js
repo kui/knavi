@@ -1,4 +1,4 @@
-const path = require("path");
+const path = require("node:path");
 const DEBUG = process.env.NODE_ENV !== "production";
 const DEST = path.resolve(__dirname, process.env.DEST || "./build");
 
