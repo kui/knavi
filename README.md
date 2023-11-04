@@ -16,19 +16,28 @@ Hiting:
 
 ## Build
 
-Require [nvm][] and [yarn][].
+See [Dockerfile](Dockerfile) for build environment.
 
-debug build:
+Debug build:
 
-```
+```sh
 $ make
+#or
+$ docker compose run --rm make
+```
+
+Interactive debug build:
+
+```sh
+$ make watch
+#or
+$ docker compose run --rm make watch
 ```
 
 zip for production build:
 
-```
+```sh
 $ make zip
+#or
+$ docker compose run --rm make zip
 ```
-
-[nvm]: https://github.com/creationix/nvm
-[yarn]: https://yarnpkg.com/

@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  make:
+    build: .
+    volumes:
+      - type: bind
+        source: ./
+        target: /work
+    working_dir: /work
+    entrypoint: ["./entrypoint.bash"]
