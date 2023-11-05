@@ -3,9 +3,7 @@ import js from "@eslint/js";
 import globals from "globals";
 
 export default [
-  {
-    ignores: ["{,prod-}build/**/*"],
-  },
+  { ignores: ["{,prod-}build"] },
   js.configs.recommended,
   eslintConfigPrettier,
   {
