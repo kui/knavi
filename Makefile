@@ -59,6 +59,7 @@ check: lint test
 lint: node_modules
 	npx eslint .
 	npx prettier . --check
+	npx tsc --project src --noEmit
 	hadolint Dockerfile
 
 .PHONY: fix

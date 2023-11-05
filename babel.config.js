@@ -7,12 +7,15 @@ const envOptions = {
 
 // Config for dev
 const development = {
-  presets: [["@babel/preset-env", envOptions]],
+  presets: ["@babel/preset-typescript", ["@babel/preset-env", envOptions]],
 };
 
 // Config for release package
 const production = {
-  presets: [["@babel/preset-env", { ...envOptions, loose: true }]],
+  presets: [
+    "@babel/preset-typescript",
+    ["@babel/preset-env", { ...envOptions, loose: true }],
+  ],
   plugins: [
     [
       "strip-function-call",

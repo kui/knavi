@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "lib": ["esnext", "dom", "webworker"],
+    "strict": true,
+    "isolatedModules": true,
+    "noEmit": true
+  }
+}
