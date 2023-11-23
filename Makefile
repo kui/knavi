@@ -2,7 +2,7 @@ SRC = src
 BUILD ?= build
 PROD-BUILD = prod-build
 ZIP = knavi.zip
-JS = $(patsubst $(SRC)/%, $(BUILD)/%, $(filter-out $(SRC)/manifest.js, $(wildcard $(SRC)/*.js)))
+JS = build/background.js build/content-root.js build/content-all.js build/options.js
 STATICS = $(patsubst $(SRC)/%, $(BUILD)/%, $(wildcard $(SRC)/*.html $(SRC)/*.css))
 ICONS = $(addprefix $(BUILD)/icon, $(addsuffix .png, 16 48 128))
 PNG = $(patsubst $(SRC)/%.svg, $(BUILD)/%.png, $(wildcard $(SRC)/*.svg))
@@ -18,7 +18,7 @@ $(BUILD):
 $(BUILD)/manifest.json: $(SRC)/manifest.js package.json node_modules
 	node scripts/jsonize-manifest.js > $@
 
-$(BUILD)/%.js: $(SRC)/%.js $(SRC)/lib/*.js node_modules
+$(BUILD)/%.js: $(SRC)/* $(SRC)/lib/* node_modules
 	@echo execute webpack for $@
 	DEST=$(BUILD) npx webpack
 

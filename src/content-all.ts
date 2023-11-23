@@ -65,7 +65,7 @@ async function main() {
         event.preventDefault();
         event.stopPropagation();
         hinter.attachHints();
-      } else if (blurEventMatcher && blurEventMatcher.test(event)) {
+      } else if (blurEventMatcher?.test(event)) {
         blurer.blur();
       }
     }

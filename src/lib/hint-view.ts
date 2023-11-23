@@ -36,7 +36,7 @@ export default class HintView {
       let hints;
 
       // wait event setup until document.body.firstChild is reachable.
-      while (!(document.body && document.body.firstChild))
+      while (!(document.body?.firstChild))
         await utils.nextAnimationFrame();
 
       subscribe("StartHinting", () => {
@@ -268,7 +268,7 @@ function buildHintElements(target) {
   return rects.map((rect) => {
     const h = document.createElement("div");
     h.textContent = target.hint;
-    h.dataset["hint"] = target.hint;
+    h.dataset.hint = target.hint;
     Object.assign(h.style, {
       position: "absolute",
       display: "block",

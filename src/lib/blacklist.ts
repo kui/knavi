@@ -13,7 +13,7 @@ export default class BlackList {
 function parse(text) {
   return text
     .split(/\s*\r?\n\s*/)
-    .filter((s) => !/^#/.test(s)) // filter out comments
+    .filter((s) => !s.startsWith("#")) // filter out comments
     .filter((s) => s) // filter out empty patterns
     .reduce((gt, s) => {
       gt.add(s, s);

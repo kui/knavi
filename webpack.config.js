@@ -9,10 +9,10 @@ export default {
   mode: DEBUG ? "development" : "production",
   devtool: DEBUG ? "inline-source-map" : "source-map",
   entry: {
-    options: "./src/options.js",
+    options: "./src/options.ts",
     background: "./src/background.ts",
-    "content-script-root": "./src/content-script-root.js",
-    "content-script-all": "./src/content-script-all.js",
+    "content-root": "./src/content-root.ts",
+    "content-all": "./src/content-all.ts",
   },
   output: {
     path: DEST,
