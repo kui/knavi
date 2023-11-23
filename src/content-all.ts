@@ -1,13 +1,14 @@
 import settingsClient from "./lib/settings-client";
 import { RectFetcherService } from "./lib/rect-fetcher-service";
 import { KeyboardEventHandler } from "./lib/keyboard-event-handler";
+import { printError } from "./lib/errors";
 
 const keyboardEventHandler = new KeyboardEventHandler();
 (async () => {
   const setting = await settingsClient.get(["magicKey", "blurKey", "hints"]);
   await keyboardEventHandler.setup(setting);
   console.debug("settings loaded");
-})().catch(console.error);
+})().catch(printError);
 
 const rectFetcherService = new RectFetcherService();
 

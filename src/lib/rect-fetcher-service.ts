@@ -6,6 +6,7 @@ import * as vp from "./viewports";
 import { Router, sendToRuntime } from "./chrome-messages";
 import * as rectUtils from "./rects";
 import CachedFetcher from "./cached-fetcher";
+import { printError } from "./errors";
 
 interface ElementProfile {
   element: Element;
@@ -57,7 +58,7 @@ export class RectFetcherService {
     switch (event.data.type) {
       case ALL_RECTS_REQUEST_TYPE:
         this.handleAllRectsRequest(event.data as AllRectsRequest).catch(
-          console.error,
+          printError,
         );
         return;
       case REGISTER_FRAME_TYPE:

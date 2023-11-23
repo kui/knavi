@@ -4,6 +4,7 @@ import HinterClient from "./hinter-client";
 import Blurer from "./blurer";
 import { isEditable } from "./elements";
 import { isSigleLetter } from "./strings";
+import { printError } from "./errors";
 
 // workaround weird babel transpile
 const KeyboardEventMatcherImpl = em.default
@@ -34,7 +35,7 @@ export class KeyboardEventHandler {
     }
     if (this.hinter.isHinting) {
       if (isSigleLetter(event.key) && this.hintLetters.includes(event.key)) {
-        this.hinter.hitHint(event.key).catch(console.error);
+        this.hinter.hitHint(event.key).catch(printError);
         return true;
       }
       if (this.hitMatcher.test(event)) {
@@ -42,7 +43,7 @@ export class KeyboardEventHandler {
       }
     } else {
       if (isNonEditable(event.target) && this.hitMatcher.test(event)) {
-        this.hinter.attachHints().catch(console.error);
+        this.hinter.attachHints().catch(printError);
         return true;
       }
       if (this.blurMatcher.test(event)) {
@@ -64,7 +65,7 @@ export class KeyboardEventHandler {
       const { shiftKey, altKey, ctrlKey, metaKey } = event;
       this.hinter
         .removeHints({ shiftKey, altKey, ctrlKey, metaKey })
-        .catch(console.error);
+        .catch(printError);
       return true;
     }
     return false;
@@ -84,6 +85,7 @@ export class KeyboardEventHandler {
     return this.matchedBlacklist.length > 0;
   }
 }
+
 function isNonEditable(target: EventTarget | null): boolean {
   return target != null && !isEditable(target);
 }

@@ -2,6 +2,7 @@ import { filter, first } from "./iters";
 import * as vp from "./viewports";
 import { sendToRuntime } from "./chrome-messages";
 import * as rectUtils from "./rects";
+import { printError } from "./errors";
 
 // a message from a child frame indicates to blur.
 const BLUR_TYPE = "com.github.kui.knavi.Blur";
@@ -19,9 +20,7 @@ export default class Blurer {
     if (event.source === window) {
       // Blur then stop bubbling.
       this.blur();
-      sendToRuntime("AfterBlur", { rect: event.data.rect }).catch(
-        console.error,
-      );
+      sendToRuntime("AfterBlur", { rect: event.data.rect }).catch(printError);
       return;
     }
 

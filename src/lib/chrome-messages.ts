@@ -1,3 +1,4 @@
+import { printError } from "./errors";
 import { SingleLetter } from "./strings";
 
 // TODO separate by the handler (background, content, popup, etc)
@@ -140,14 +141,15 @@ export class Router<RegisterdTypes extends keyof Messages | void> {
     sender: chrome.runtime.MessageSender,
     sendResponse: (r: Response<T>) => void,
   ) {
+    console.debug("Router: recieve", message);
     const handler = this.handlers.get(type(message));
     if (!handler) {
-      console.debug("MessageRouter: unknown type=%s", type(message));
+      console.debug("Router: unknown type=%s", type(message));
       return;
     }
     const result = handler(message, sender, sendResponse);
     if (result instanceof Promise) {
-      result.catch(console.error);
+      result.catch(printError);
     }
   }
 
@@ -165,7 +167,11 @@ export function sendToRuntime<T extends keyof Messages>(
       { [typeSymbol]: type, ...payload },
       (r: Response<T>) => {
         if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
+          reject(
+            Error(`Failed to send message to runtime: ${type}`, {
+              cause: chrome.runtime.lastError,
+            }),
+          );
         } else {
           resolve(r);
         }
@@ -187,7 +193,16 @@ export function sendToTab<T extends keyof Messages>(
       options,
       (r: Response<T>) => {
         if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
+          reject(
+            Error(
+              `Failed to send message to tab: tabId=${tabId}, type=${type}, options=${JSON.stringify(
+                options,
+              )}`,
+              {
+                cause: chrome.runtime.lastError,
+              },
+            ),
+          );
         } else {
           resolve(r);
         }

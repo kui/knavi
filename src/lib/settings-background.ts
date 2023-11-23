@@ -3,6 +3,7 @@ import { BlackList } from "./blacklist";
 import { AdditionalSelectors } from "./additional-selectors";
 import { Router, sendToTab } from "./chrome-messages";
 import { flatMap } from "./iters";
+import { printError } from "./errors";
 
 let settingValues: Promise<Settings>;
 let blackList: Promise<BlackList>;
@@ -14,9 +15,9 @@ function setup() {
   additionalSelectors = buildAdditionalSelectors();
   settingValues
     .then((s) => console.log("Settings loaded", s))
-    .catch(console.error);
+    .catch(printError);
 }
-settings.init().then(setup).catch(console.error);
+settings.init().then(setup).catch(printError);
 
 export const router = Router.newInstance()
   .add("GetSettings", async (message, sender, sendResponse) => {
@@ -43,7 +44,7 @@ chrome.storage.onChanged.addListener(() => {
       return [sendToTab(t.id, "BroadcastNewSettings", s)];
     });
     await Promise.all(sendTasks);
-  })().catch(console.error);
+  })().catch(printError);
 });
 
 function tabsQuery(
@@ -67,7 +68,7 @@ async function buildAdditionalSelectors() {
   try {
     return new AdditionalSelectors((await settingValues).additionalSelectors);
   } catch (e) {
-    console.error(e);
+    printError(e);
     return new AdditionalSelectors("{}");
   }
 }

@@ -1,5 +1,6 @@
 import { nextAnimationFrame } from "./animations";
 import { isEditable, isScrollable } from "./elements";
+import { printError } from "./errors";
 
 interface ActionHandler {
   getDescriptions(): ActionDescriptions;
@@ -231,7 +232,7 @@ function simulateClick(element: Element, options: MouseEventInit) {
       const b = dispatchMouseEvent(type, element, options);
       if (!b) console.debug("canceled", type);
     }
-  })().catch(console.error);
+  })().catch(printError);
 }
 
 // Return false if canceled

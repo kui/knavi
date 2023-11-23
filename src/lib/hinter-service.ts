@@ -3,6 +3,7 @@ import { Hinter } from "./hinter";
 import { RectFetcherClient } from "./rect-fetcher-client";
 import { HintView } from "./hint-view";
 import { Router } from "./chrome-messages";
+import { printError } from "./errors";
 
 const rectFetcher = new RectFetcherClient();
 
@@ -11,7 +12,7 @@ const view = new HintView();
 (async () => {
   const settings = await settingsClient.get(["hints", "css"]);
   setup(settings.hints, settings.css);
-})().catch(console.error);
+})().catch(printError);
 
 export function setup(hints: string, css: string) {
   hinter.setup(hints);
