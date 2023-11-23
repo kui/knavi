@@ -1,9 +1,15 @@
+type StoredSettings = Settings & { _area: "chrome-sync" | "chrome-local" };
+type StorageKey = keyof StoredSettings;
+
 class Storage {
-  constructor(storage) {
+  storage: chrome.storage.StorageArea;
+  constructor(storage: chrome.storage.StorageArea) {
     this.storage = storage;
   }
 
-  get(names) {
+  get<K extends StorageKey>(
+    names: K[] | K | null = null,
+  ): Promise<Partial<Pick<StoredSettings, K>>> {
     return new Promise((resolve, reject) => {
       this.storage.get(names, (items) => {
         const err = chrome.runtime.lastError;
@@ -11,17 +17,19 @@ class Storage {
           reject(Error(err.message));
           return;
         }
-        resolve(items);
+        resolve(items as Pick<StoredSettings, K>);
       });
     });
   }
 
-  async getSingle(name) {
+  async getSingle<K extends keyof StoredSettings>(
+    name: K,
+  ): Promise<StoredSettings[K] | undefined> {
     return (await this.get(name))[name];
   }
 
-  set(items) {
-    return new Promise((resolve, reject) => {
+  set(items: Partial<Settings>) {
+    return new Promise<void>((resolve, reject) => {
       this.storage.set(items, () => {
         const err = chrome.runtime.lastError;
         if (err) {
@@ -33,12 +41,12 @@ class Storage {
     });
   }
 
-  async setSingle(name, value) {
+  async setSingle<K extends keyof Settings>(name: K, value: Settings[K]) {
     await this.set({ [name]: value });
   }
 
-  getBytes(names) {
-    return new Promise((resolve, reject) => {
+  getBytes<K extends keyof Settings>(names: K[] | K | null = null) {
+    return new Promise<number>((resolve, reject) => {
       this.storage.getBytesInUse(names, (b) => {
         const err = chrome.runtime.lastError;
         if (err) {
@@ -73,7 +81,7 @@ const DEFAULT_ADDITIONAL_SELECTORS = `{
   ],
 }`;
 
-const DEFAULT_SETTINGS = {
+const DEFAULT_SETTINGS: Settings = {
   magicKey: "Space",
   hints: "asdfghjkl",
   blurKey: "",
@@ -82,35 +90,43 @@ const DEFAULT_SETTINGS = {
   additionalSelectors: DEFAULT_ADDITIONAL_SELECTORS,
 };
 
+const SETTINGS_KEYS = Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[];
+
 export default {
   async init() {
     const storage = await getStorage();
-    const s = await storage.get(Object.keys(DEFAULT_SETTINGS));
-    const changes = {};
-    for (const name of Object.keys(DEFAULT_SETTINGS)) {
-      if (s[name] != null) continue;
-      switch (name) {
-        case "css":
-          changes.css = await fetchCss();
-          break;
-        default:
-          changes[name] = DEFAULT_SETTINGS[name];
-          break;
-      }
+    const current = await storage.get(SETTINGS_KEYS);
+    const defaults: Partial<Settings> = {};
+
+    DEFAULT_SETTINGS.css = await fetchCss();
+
+    for (const name of SETTINGS_KEYS) {
+      if (current[name] != null) continue;
+      defaults[name] = DEFAULT_SETTINGS[name];
     }
-    if (Object.keys(changes).length === 0) return;
-    console.debug("Initialize settings", changes);
-    await storage.set(changes);
+
+    if (Object.keys(defaults).length === 0) return;
+    console.debug("Initialize some settings to default values", defaults);
+    await storage.set(defaults);
+  },
+  async get<K extends keyof Settings>(names: K[]): Promise<Pick<Settings, K>> {
+    return {
+      ...pickDefaults(names),
+      ...(await (await getStorage()).get(names)),
+    };
   },
   async load() {
-    return getAll();
+    return {
+      ...DEFAULT_SETTINGS,
+      ...(await (await getStorage()).get(SETTINGS_KEYS)),
+    };
   },
-  async loadDefaults() {
-    return Object.assign({}, DEFAULT_SETTINGS, { css: await fetchCss() });
+  loadDefaults() {
+    return DEFAULT_SETTINGS;
   },
-  async getBytesInUse(name) {
+  async getBytesInUse<K extends keyof Settings>(names: K[]): Promise<number> {
     const storage = await getStorage();
-    return await storage.getBytes(name);
+    return await storage.getBytes(names);
   },
   async getTotalBytesInUse() {
     const storage = await getStorage();
@@ -122,16 +138,8 @@ export default {
 };
 
 async function fetchCss() {
-  return await (await fetch("./default-style.css")).text();
-}
-
-async function getAll(storage) {
-  if (!storage) storage = await getStorage();
-  return Object.assign(
-    {},
-    DEFAULT_SETTINGS,
-    await storage.get(Object.keys(DEFAULT_SETTINGS)),
-  );
+  const r = await fetch("./default-style.css");
+  return await r.text();
 }
 
 async function isLocal() {
@@ -141,4 +149,12 @@ async function isLocal() {
 
 async function getStorage() {
   return (await isLocal()) ? local : sync;
+}
+
+function pickDefaults<N extends keyof Settings>(names: N[]): Pick<Settings, N> {
+  const p: Partial<Settings> = {};
+  for (const n of names) {
+    p[n] = DEFAULT_SETTINGS[n];
+  }
+  return p as Pick<Settings, N>;
 }

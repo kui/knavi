@@ -32,7 +32,7 @@ export default [
       rules: {
         ...config.rules,
         "@typescript-eslint/prefer-namespace-keyword": "off",
-      }
+      },
     })),
   {
     files: ["*.config.js"],

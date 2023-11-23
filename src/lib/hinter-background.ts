@@ -1,17 +1,16 @@
-import { recieve, sendTo } from "./chrome-messages.js";
+import { Router, sendToTab } from "./chrome-messages";
 
-// Proxy messages to the root frame from hinter-client.
-["AttachHints", "RemoveHints", "HitHint"].forEach((type) => {
-  recieve(type, (msg, sender) => sendTo(msg, sender.tab.id, 0));
-});
-
-// Proxy messages to the root frame from hinter.
-[
-  "StartHinting",
-  "NewTargets",
-  "EndHinting",
-  "AfterHitHint",
-  "AfterRemoveHints",
-].forEach((type) => {
-  recieve(type, (msg, sender) => sendTo(msg, sender.tab.id, 0));
-});
+export const router = Router.newInstance().addAll(
+  [
+    "AttachHints",
+    "RemoveHints",
+    "HitHint",
+    "RenderTargets",
+    "AfterHitHint",
+    "AfterRemoveHints",
+  ],
+  (type) => async (msg, sender, sendResponse) => {
+    await sendToTab(sender.tab!.id!, type, msg, { frameId: 0 });
+    sendResponse();
+  },
+);

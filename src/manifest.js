@@ -17,13 +17,13 @@ export default function (pkg) {
     content_scripts: [
       {
         matches: ["<all_urls>"],
-        js: ["content-script-all.js"],
+        js: ["content-all.js"],
         run_at: "document_start",
         all_frames: true,
       },
       {
         matches: ["<all_urls>"],
-        js: ["content-script-root.js"],
+        js: ["content-root.js"],
         run_at: "document_start",
       },
     ],
@@ -31,7 +31,7 @@ export default function (pkg) {
     options_page: "options.html",
     options_ui: {
       page: "options.html",
-      // This option page require to be open in a tab,
+      // The option page requires to be open in a tab,
       // because new option UI style grubs escape key events to close the modal.
       open_in_tab: true,
     },

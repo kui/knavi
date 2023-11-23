@@ -1,96 +1,87 @@
-export function rectByOffsetsAndSizes(offsets, sizes) {
+import { map } from "./iters";
+
+export function rectByOffsetsAndSizes(
+  offsets: Coordinates,
+  sizes: Sizes,
+): Rect {
   return {
-    top: offsets.y,
-    bottom: offsets.y + sizes.height,
-    left: offsets.x,
-    right: offsets.x + sizes.width,
-    height: sizes.height,
-    width: sizes.width,
+    ...offsets,
+    ...sizes,
   };
 }
 
-export function rectByTBLR(top, bottom, left, right) {
-  if (top > bottom || left > right) {
-    return null;
-  }
-  return rect(top, bottom, left, right);
-}
-
-export function rectByPoints(...points) {
-  const top = Math.min(...points.map((p) => p.y));
-  const bottom = Math.max(...points.map((p) => p.y));
-  const left = Math.min(...points.map((p) => p.x));
-  const right = Math.max(...points.map((p) => p.x));
-  return rect(top, bottom, left, right);
-}
-
-function rect(top, bottom, left, right) {
+export function move(rect: Rect, offsets: Coordinates): Rect {
   return {
-    top,
-    bottom,
-    left,
-    right,
-    height: bottom - top,
+    ...rect,
+    x: rect.x + offsets.x,
+    y: rect.y + offsets.y,
+  };
+}
+
+export function offsets(rect: Rect, offsets: Coordinates): Rect {
+  return {
+    ...rect,
+    x: rect.x - offsets.x,
+    y: rect.y - offsets.y,
+  };
+}
+
+export function intersection(...rects: Rect[]): Rect | null {
+  const domRects = rects.map((r) => DOMRectReadOnly.fromRect(r));
+  const left = Math.max(...map(domRects, (r) => r.left));
+  const right = Math.min(...map(domRects, (r) => r.right));
+  const top = Math.max(...map(domRects, (r) => r.top));
+  const bottom = Math.min(...map(domRects, (r) => r.bottom));
+
+  if (left >= right || top >= bottom) return null;
+  return {
+    x: left,
+    y: top,
     width: right - left,
-  };
-}
-
-export function move(r, delta) {
-  return {
-    top: r.top + delta.y,
-    bottom: r.bottom + delta.y,
-    left: r.left + delta.x,
-    right: r.right + delta.x,
-    height: r.height,
-    width: r.width,
-  };
-}
-
-export function offsets(r, offsets) {
-  return {
-    top: r.top - offsets.y,
-    bottom: r.bottom - offsets.y,
-    left: r.left - offsets.x,
-    right: r.right - offsets.x,
-    height: r.height,
-    width: r.width,
-  };
-}
-
-export function intersection(...rects) {
-  const top = Math.max(...rects.map((r) => r.top));
-  const bottom = Math.min(...rects.map((r) => r.bottom));
-  const left = Math.max(...rects.map((r) => r.left));
-  const right = Math.min(...rects.map((r) => r.right));
-  return rectByTBLR(top, bottom, left, right);
-}
-
-export function excludeBorders(rect, borderWidth) {
-  return rectByPoints(
-    {
-      y: rect.top + borderWidth.top,
-      x: rect.left + borderWidth.left,
-    },
-    {
-      y: rect.bottom - borderWidth.bottom,
-      x: rect.right - borderWidth.right,
-    },
-  );
-}
-
-export function getBoundingRect(rects) {
-  if (rects.length === 1) return rects[0];
-
-  const top = Math.min(...rects.map((r) => r.top));
-  const bottom = Math.max(...rects.map((r) => r.bottom));
-  const left = Math.min(...rects.map((r) => r.left));
-  const right = Math.max(...rects.map((r) => r.right));
-  return {
-    top,
-    bottom,
-    left,
-    right,
     height: bottom - top,
+  };
+}
+
+export function getBoundingRect(rects: Rect[]): Rect {
+  const domRects = rects.map((r) => DOMRectReadOnly.fromRect(r));
+  const left = Math.min(...map(domRects, (r) => r.left));
+  const right = Math.max(...map(domRects, (r) => r.right));
+  const top = Math.min(...map(domRects, (r) => r.top));
+  const bottom = Math.max(...map(domRects, (r) => r.bottom));
+
+  return {
+    x: left,
+    y: top,
     width: right - left,
+    height: bottom - top,
+  };
+}
+
+export function excludeBorders(
+  rect: Rect,
+  borders: { top: number; right: number; bottom: number; left: number },
+): Rect {
+  return {
+    x: rect.x + borders.left,
+    y: rect.y + borders.top,
+    width: rect.width - borders.left - borders.right,
+    height: rect.height - borders.top - borders.bottom,
+  };
+}
+
+export function addPadding(rect: Rect, padding: number): Rect {
+  return {
+    x: rect.x - padding,
+    y: rect.y - padding,
+    width: rect.width + padding * 2,
+    height: rect.height + padding * 2,
+  };
+}
+
+export function empty(offset: Coordinates): Rect {
+  return {
+    ...offset,
+    width: 0,
+    height: 0,
   };
 }

@@ -1,21 +1,24 @@
-import { recieve, sendTo } from "./chrome-messages.js";
+import { Router, sendToTab } from "./chrome-messages";
 
-// import type { DescriptionsRequest, ActionRequest } from "./rect-fetcher-client";
+export const router = Router.newInstance()
+  .add("GetFrameId", (message, sender, sendResponse) =>
+    sendResponse(sender.frameId!),
+  )
 
-recieve("GetFrameId", (m, sender, responseCallback) =>
-  responseCallback(sender.frameId),
-);
+  // proxy ResponseRectsFragment
+  .add("ResponseRectsFragment", async (message, sender, sendResponse) => {
+    await sendToTab(sender.tab!.id!, "ResponseRectsFragment", message, {
+      frameId: message.clientFrameId,
+    });
+    sendResponse();
+  })
 
-// proxy RectsFragmentResponse
-recieve("RectsFragmentResponse", async (message, sender, sendResponse) => {
-  await sendTo(message, sender.tab.id, message.clientFrameId);
-  sendResponse();
-});
-
-// proxy DescriptionsRequest/ActionRequest
-["DescriptionsRequest", "ActionRequest"].forEach((type) => {
-  recieve(type, async (message, sender, sendResponse) => {
-    const r = await sendTo(message, sender.tab.id, message.frameId);
-    sendResponse(r);
-  });
-});
+  .addAll(
+    ["GetDescriptions", "ExecuteAction"],
+    (type) => async (message, sender, sendResponse) => {
+      const r = await sendToTab(sender.tab!.id!, type, message, {
+        frameId: message.frameId,
+      });
+      sendResponse(r);
+    },
+  );

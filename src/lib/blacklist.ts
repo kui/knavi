@@ -1,22 +1,28 @@
 import GlobTrie from "glob-trie.js";
+import { filter, map, reduce } from "./iters";
 
-export default class BlackList {
-  constructor(text) {
+export class BlackList {
+  private patterns: GlobTrie<string>;
+
+  constructor(text: string) {
     this.patterns = parse(text);
   }
 
-  match(url) {
+  match(url: string) {
     return this.patterns.collect(url);
   }
 }
 
-function parse(text) {
-  return text
-    .split(/\s*\r?\n\s*/)
-    .filter((s) => !s.startsWith("#")) // filter out comments
-    .filter((s) => s) // filter out empty patterns
-    .reduce((gt, s) => {
+function parse(text: string) {
+  return reduce(
+    filter(
+      map(text.split("\n"), (s) => s.trim()),
+      (s) => !s.startsWith("#") && s.length > 0,
+    ),
+    (gt, s) => {
       gt.add(s, s);
       return gt;
-    }, new GlobTrie());
+    },
+    new GlobTrie(),
+  );
 }

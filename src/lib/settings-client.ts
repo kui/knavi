@@ -1,18 +1,16 @@
-import { send, subscribe } from "./chrome-messages.js";
+import { sendToRuntime, Router } from "./chrome-messages";
 
 export default {
-  get() {
-    return send({ type: "GetSettings" });
+  get<K extends keyof Settings>(names: K[]): Promise<Pick<Settings, K>> {
+    return sendToRuntime("GetSettings", { names });
   },
-  subscribe(callback) {
-    subscribe("BroadcastNewSettings", (message) => {
-      callback(message.settings);
-    });
+  matchBlacklist(url: string): Promise<string[]> {
+    return sendToRuntime("MatchBlacklist", { url });
   },
-  getMatchedBlackList(url) {
-    return send({ type: "GetMatchedBlackList", url });
+  matchAdditionalSelectors(url: string): Promise<string[]> {
+    return sendToRuntime("MatchAdditionalSelectors", { url });
   },
-  getMatchedSelectors(url) {
-    return send({ type: "GetMatchedSelectors", url });
+  subscribeRouter(handler: (settings: Settings) => void | Promise<void>) {
+    return Router.newInstance().add("BroadcastNewSettings", handler);
   },
 };

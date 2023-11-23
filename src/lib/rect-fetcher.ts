@@ -1,31 +1,40 @@
-import {
-  flatMap,
-  traverseParent,
-  filter,
-  first,
-  takeWhile,
-  length,
-} from "./iters.js";
-import { isScrollable } from "./utils.js";
+import { flatMap, filter, first, takeWhile, length, map } from "./iters.js";
+import { isScrollable, traverseParent } from "./elements";
 import * as vp from "./viewports.js";
-import * as rectUtils from "./rects.js";
-import VisibleRectDetector from "./visible-rect-detector.js";
+import * as rects from "./rects.js";
+import VisibleRectDetector from "./visible-rect-detector";
+import CachedFetcher from "./cached-fetcher.js";
 
+interface ElementRects {
+  element: Element;
+  rects: Rect[];
+  maybeClickable: boolean;
+  filteredOutBy?: ElementRects;
+}
+
+// TODO refactor
 export default class RectFetcher {
-  constructor(additionalSelectors, caches) {
-    this.styleCache = caches.style;
-    this.detector = new VisibleRectDetector(caches);
+  readonly styleCache: CachedFetcher<Element, CSSStyleDeclaration>;
+  readonly detector: VisibleRectDetector;
+  readonly additionalSelectors: string[];
+
+  constructor(
+    additionalSelectors: string[],
+    clientRectsFetcher: CachedFetcher<Element, DOMRect[]>,
+    styleFetcher: CachedFetcher<Element, CSSStyleDeclaration>,
+  ) {
+    this.styleCache = styleFetcher;
+    this.detector = new VisibleRectDetector(clientRectsFetcher, styleFetcher);
     this.additionalSelectors = additionalSelectors;
   }
 
-  getAll(visualViewport) {
-    const layoutVpOffsets = vp.layout.offsets();
-    const visualViewportFromLayoutVp = rectUtils.offsets(
+  getAll(visualViewport: Rect) {
+    const visualVpFromLayoutVp = rects.offsets(
       visualViewport,
-      layoutVpOffsets,
+      vp.layout.offsets(),
     );
-    const t = listAllTarget(this, visualViewportFromLayoutVp);
-    return distinctSimilarTarget(this, t, visualViewportFromLayoutVp);
+    const t = listAllTarget(this, visualVpFromLayoutVp);
+    return distinctSimilarTarget(this, t, visualVpFromLayoutVp);
   }
 }
 
@@ -49,39 +58,41 @@ const HINTABLE_QUERY = [
   "[data-image-url]",
 ];
 
-function listAllTarget(self, viewport) {
+function listAllTarget(self: RectFetcher, viewport: Rect) {
   const selector = [...HINTABLE_QUERY, ...self.additionalSelectors].join(",");
 
-  function buildTarget(element) {
+  function buildTarget(element: Element): ElementRects | null {
     const clickableness = deriveClickableness(element);
     if (!clickableness) return null;
 
     const rects = self.detector.get(element, viewport);
     if (rects.length === 0) return null;
 
-    return Object.assign({ element, rects }, clickableness);
+    return { element, rects, ...clickableness };
   }
 
-  function deriveClickableness(element) {
+  function deriveClickableness(
+    element: Element,
+  ): { maybeClickable: boolean } | null {
     if (element.matches(selector)) {
-      return { mayBeClickable: false };
+      return { maybeClickable: false };
     }
 
     const style = self.styleCache.get(element);
     if (["pointer", "zoom-in", "zoom-out"].includes(style.cursor)) {
-      return { mayBeClickable: true };
+      return { maybeClickable: true };
     }
     if (isScrollable(element, style)) {
-      return { mayBeClickable: false };
+      return { maybeClickable: false };
     }
 
     return null;
   }
 
-  function listTargets(doc) {
+  function listTargets(doc: Document | ShadowRoot): ElementRects[] {
     return Array.from(
       flatMap(doc.querySelectorAll("*"), (element) => {
-        let childTargets;
+        let childTargets: ElementRects[];
         if (element.shadowRoot) {
           childTargets = listTargets(element.shadowRoot);
         } else {
@@ -89,11 +100,7 @@ function listAllTarget(self, viewport) {
         }
 
         const target = buildTarget(element);
-        if (target) {
-          return [target, ...childTargets];
-        } else {
-          return childTargets;
-        }
+        return target ? [target, ...childTargets] : childTargets;
       }),
     );
   }
@@ -112,16 +119,16 @@ function listAllTarget(self, viewport) {
   return targets;
 }
 
-function distinctSimilarTarget(self, targets, viewport) {
-  const targetMap = new Map(
-    (function* () {
-      for (const t of targets) yield [t.element, t];
-    })(),
-  );
+function distinctSimilarTarget(
+  self: RectFetcher,
+  targets: ElementRects[],
+  viewport: Rect,
+) {
+  const targetMap = new Map(map(targets, (t) => [t.element, t]));
 
-  function isVisibleNode(node) {
+  function isVisibleNode(node: Node) {
     // filter out blank text nodes
-    if (node instanceof Text) return !/^\s*$/.test(node.textContent);
+    if (node instanceof Text) return !/^\s*$/.test(node.data);
     // filter out invisible element.
     if (node instanceof Element) {
       if (self.detector.get(node, viewport).length >= 1) return true;
@@ -136,12 +143,10 @@ function distinctSimilarTarget(self, targets, viewport) {
     }
   }
 
-  let mayBeClickables = targets.filter((t) => t.mayBeClickable);
+  let maybeClickables = targets.filter((t) => t.maybeClickable);
 
   // Filter out targets which are children of <a> or <button>
-  for (let i = 0; i < mayBeClickables.length; i++) {
-    const target = mayBeClickables[i];
-
+  for (const target of maybeClickables) {
     const parentTarget = first(
       flatMap(traverseParent(target.element), (p) => {
         const t = targetMap.get(p);
@@ -160,21 +165,21 @@ function distinctSimilarTarget(self, targets, viewport) {
     }
   }
 
-  mayBeClickables = mayBeClickables.filter((t) => !t.filteredOutBy);
+  maybeClickables = maybeClickables.filter((t) => !t.filteredOutBy);
   removeFilteredOutElements();
 
   // Filter out targets that is only one child for a parent that is target too.
-  for (let i = 0; i < mayBeClickables.length; i++) {
-    const target = mayBeClickables[i];
+  for (const target of maybeClickables) {
     if (target.filteredOutBy) continue;
 
-    const thinAncestors = takeWhile(traverseParent(target.element), (e) => {
-      return length(filter(e.childNodes, isVisibleNode)) === 1;
-    });
+    const thinAncestors = takeWhile(
+      traverseParent(target.element),
+      (e) => length(filter(e.childNodes, isVisibleNode)) === 1,
+    );
     const parentTarget = first(
       flatMap(thinAncestors, (p) => {
         const t = targetMap.get(p);
-        if (t == null) return [];
+        if (!t) return [];
         if (t.filteredOutBy) return [t.filteredOutBy];
         return [t];
       }),
@@ -188,16 +193,16 @@ function distinctSimilarTarget(self, targets, viewport) {
     }
   }
 
-  mayBeClickables = mayBeClickables.filter((t) => !t.filteredOutBy);
+  maybeClickables = maybeClickables.filter((t) => !t.filteredOutBy);
   removeFilteredOutElements();
 
   // Filter out targets that contains only existing targets
-  for (let i = mayBeClickables.length - 1; i >= 0; i--) {
-    const target = mayBeClickables[i];
+  for (let i = maybeClickables.length - 1; i >= 0; i--) {
+    const target = maybeClickables[i];
     if (target.filteredOutBy) continue;
 
     const childNodes = Array.from(
-      filter(target.element.childNodes, isVisibleNode),
+      filter(target.element.children, isVisibleNode),
     );
     if (childNodes.every((c) => targetMap.has(c))) {
       const child = childNodes[0];
@@ -209,5 +214,5 @@ function distinctSimilarTarget(self, targets, viewport) {
     }
   }
 
-  return targets.filter((t) => t.filteredOutBy == null);
+  return targets.filter((t) => !t.filteredOutBy);
 }

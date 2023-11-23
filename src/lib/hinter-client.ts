@@ -1,24 +1,31 @@
-import { send } from "./chrome-messages.js";
+import { sendToRuntime } from "./chrome-messages";
+import { SingleLetter } from "./strings";
 
 export default class HinterClient {
+  private hinting: boolean;
+
   constructor() {
-    this.isHinting = false;
+    this.hinting = false;
   }
 
-  attachHints() {
-    if (this.isHinting) throw Error("Illegal state");
-    this.isHinting = true;
-    send({ type: "AttachHints" });
+  get isHinting() {
+    return this.hinting;
   }
 
-  hitHint(key) {
-    if (!this.isHinting) throw Error("Illegal state");
-    send({ type: "HitHint", key });
+  async attachHints() {
+    if (this.hinting) throw Error("Illegal state");
+    this.hinting = true;
+    await sendToRuntime("AttachHints");
   }
 
-  removeHints(options) {
-    if (!this.isHinting) throw Error("Illegal state");
-    this.isHinting = false;
-    send({ type: "RemoveHints", options });
+  async hitHint(key: SingleLetter) {
+    if (!this.hinting) throw Error("Illegal state");
+    await sendToRuntime("HitHint", { key });
+  }
+
+  async removeHints(options: ActionOptions) {
+    if (!this.hinting) throw Error("Illegal state");
+    this.hinting = false;
+    await sendToRuntime("RemoveHints", { options });
   }
 }

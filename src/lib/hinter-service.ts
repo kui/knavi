@@ -1,19 +1,25 @@
-import settingsClient from "./settings-client.js";
-import Hinter from "./hinter.js";
-import HintsView from "./hint-view.js";
-import { recieve } from "./chrome-messages.js";
+import settingsClient from "./settings-client";
+import { Hinter } from "./hinter";
+import { RectFetcherClient } from "./rect-fetcher-client";
+import { HintView } from "./hint-view";
+import { Router } from "./chrome-messages";
 
-new HintsView();
+const rectFetcher = new RectFetcherClient();
 
+const hinter = new Hinter(rectFetcher);
+const view = new HintView();
 (async () => {
-  let hinter;
-  const settings = await settingsClient.get();
-  hinter = new Hinter(settings.hints);
-  settingsClient.subscribe((settings) => {
-    hinter = new Hinter(settings.hints);
-  });
+  const settings = await settingsClient.get(["hints", "css"]);
+  setup(settings.hints, settings.css);
+})().catch(console.error);
 
-  recieve("AttachHints", () => hinter.attachHints());
-  recieve("RemoveHints", ({ options }) => hinter.removeHints(options));
-  recieve("HitHint", ({ key }) => hinter.hitHint(key));
-})();
+export function setup(hints: string, css: string) {
+  hinter.setup(hints);
+  view.setup(css);
+}
+export const router = Router.newInstance()
+  .merge(rectFetcher.router())
+  .merge(hinter.router())
+  .merge(view.router());
+export const handleMessage = (e: MessageEvent<{ type?: string }>) =>
+  rectFetcher.handleMessage(e);

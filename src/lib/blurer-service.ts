@@ -1,3 +1,4 @@
 import BlurView from "./blur-view.js";
 
-new BlurView();
+const view = new BlurView();
+export const router = view.router();

@@ -1,6 +1,11 @@
-import { recieve, sendTo } from "./chrome-messages.js";
+import { Router, sendToTab } from "./chrome-messages";
 
-// Proxy to root frame in self tab.
-recieve("Blured", (msg, sender) => {
-  sendTo(msg, sender.tab.id, 0);
-});
+export const router = Router.newInstance().add(
+  "AfterBlur",
+  async (message, sender, sendResponse) => {
+    await sendToTab(sender.tab!.id!, "AfterBlur", message, {
+      frameId: 0,
+    });
+    sendResponse();
+  },
+);

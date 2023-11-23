@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
     "skipLibCheck": true,
-    "lib": ["esnext", "dom", "webworker"],
+    "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
     "strict": true,
     "isolatedModules": true,
+    "target": "ESNext",
     "noEmit": true
   }
 }
