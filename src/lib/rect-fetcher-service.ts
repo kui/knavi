@@ -1,10 +1,10 @@
 import { filter, first } from "./iters";
 import RectFetcher from "./rect-fetcher";
 import ActionHandler from "./action-handlers";
-import settingsClient from "./settings-client.js";
-import * as vp from "./viewports.js";
-import { Router, sendToRuntime } from "./chrome-messages.js";
-import * as rectUtils from "./rects.js";
+import settingsClient from "./settings-client";
+import * as vp from "./viewports";
+import { Router, sendToRuntime } from "./chrome-messages";
+import * as rectUtils from "./rects";
 import CachedFetcher from "./cached-fetcher";
 
 interface ElementProfile {

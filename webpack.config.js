@@ -9,7 +9,7 @@ export default {
   mode: DEBUG ? "development" : "production",
   devtool: DEBUG ? "inline-source-map" : "source-map",
   entry: {
-    options: "./src/options.ts",
+    options: "./src/options.js",
     background: "./src/background.ts",
     "content-root": "./src/content-root.ts",
     "content-all": "./src/content-all.ts",
@@ -22,5 +22,8 @@ export default {
     rules: [
       { test: /\.(js|ts)$/, exclude: /node_modules/, loader: "babel-loader" },
     ],
+  },
+  resolve: {
+    extensions: [".ts", ".js"],
   },
 };

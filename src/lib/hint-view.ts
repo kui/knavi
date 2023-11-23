@@ -1,9 +1,9 @@
-import * as vp from "./viewports.js";
-import { Router } from "./chrome-messages.js";
-import { addPadding, getBoundingRect, intersection } from "./rects.js";
-import { waitUntil } from "./animations.js";
-import { flatMap, groupIntoObjectBy } from "./iters.js";
-import { applyStyle } from "./elements.js";
+import * as vp from "./viewports";
+import { Router } from "./chrome-messages";
+import { addPadding, getBoundingRect, intersection } from "./rects";
+import { waitUntil } from "./animations";
+import { flatMap, groupIntoObjectBy } from "./iters";
+import { applyStyle } from "./elements";
 
 interface HintElement {
   elements: HTMLElement[];

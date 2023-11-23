@@ -41,6 +41,6 @@ export default function (pkg) {
       // To insert hints for all sites.
       "<all_urls>",
     ],
-    web_accessible_resources: ["*.js.map"],
+    web_accessible_resources: ["*.js.map", "*.css"],
   };
 }

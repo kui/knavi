@@ -1,7 +1,7 @@
 import settings from "./settings";
 import { BlackList } from "./blacklist";
 import { AdditionalSelectors } from "./additional-selectors";
-import { Router, sendToTab } from "./chrome-messages.js";
+import { Router, sendToTab } from "./chrome-messages";
 import { flatMap } from "./iters";
 
 let settingValues: Promise<Settings>;

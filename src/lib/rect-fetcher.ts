@@ -1,9 +1,9 @@
-import { flatMap, filter, first, takeWhile, length, map } from "./iters.js";
+import { flatMap, filter, first, takeWhile, length, map } from "./iters";
 import { isScrollable, traverseParent } from "./elements";
-import * as vp from "./viewports.js";
-import * as rects from "./rects.js";
+import * as vp from "./viewports";
+import * as rects from "./rects";
 import VisibleRectDetector from "./visible-rect-detector";
-import CachedFetcher from "./cached-fetcher.js";
+import CachedFetcher from "./cached-fetcher";
 
 interface ElementRects {
   element: Element;

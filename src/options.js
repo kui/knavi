@@ -3,11 +3,11 @@ import * as ki from "key-input-elements";
 import CodeMirror from "codemirror";
 import "codemirror/mode/css/css.js";
 import "codemirror/mode/javascript/javascript.js";
-import settings from "./lib/settings.js";
-import * as utils from "./lib/utils.js";
+import settings from "./lib/settings.ts";
+import { nextAnimationFrame } from "./lib/animations.ts";
 
 async function init() {
-  while (!document.body) await utils.nextAnimationFrame();
+  while (!document.body) await nextAnimationFrame();
   const body = document.body;
 
   initCodeMirror();
@@ -92,7 +92,7 @@ async function initCodeMirror() {
     });
     (async () => {
       for (;;) {
-        await utils.nextAnimationFrame();
+        await nextAnimationFrame();
         if (value !== textarea.value) cm.setValue((value = textarea.value));
       }
     })();

@@ -1,6 +1,6 @@
-import * as vp from "./viewports.js";
-import { sendToRuntime, Router } from "./chrome-messages.js";
-import { wait } from "./promises.js";
+import * as vp from "./viewports";
+import { sendToRuntime, Router } from "./chrome-messages";
+import { wait } from "./promises";
 
 const ALL_RECTS_REQUEST_TYPE = "com.github.kui.knavi.AllRectsRequest";
 const ALL_RECTS_RESPONSE_COMPLETE_TYPE =
