@@ -1,14 +1,10 @@
-import * as em from "key-input-elements/lib/event-matcher.js";
+import KeyboardEventMatcher from "key-input-elements/lib/event-matcher.js";
 import settingsClient from "./settings-client";
 import HinterClient from "./hinter-client";
 import Blurer from "./blurer";
 import { isEditable } from "./elements";
 import { isSigleLetter } from "./strings";
 import { printError } from "./errors";
-
-// workaround weird babel transpile
-const KeyboardEventMatcherImpl = em.default
-  .default as unknown as typeof KeyboardEventMatcher;
 
 export class KeyboardEventHandler {
   private readonly hinter = new HinterClient();
@@ -20,8 +16,8 @@ export class KeyboardEventHandler {
 
   async setup(settings: Pick<Settings, "magicKey" | "blurKey" | "hints">) {
     this.hintLetters = settings.hints;
-    this.hitMatcher = new KeyboardEventMatcherImpl(settings.magicKey);
-    this.blurMatcher = new KeyboardEventMatcherImpl(settings.blurKey);
+    this.hitMatcher = new KeyboardEventMatcher(settings.magicKey);
+    this.blurMatcher = new KeyboardEventMatcher(settings.blurKey);
     this.matchedBlacklist = await settingsClient.matchBlacklist(location.href);
   }
 

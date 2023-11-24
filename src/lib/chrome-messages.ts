@@ -80,10 +80,8 @@ interface Messages {
   };
 }
 
-const typeSymbol: unique symbol = Symbol("type");
-
 type Message<T extends keyof Messages> = {
-  readonly [typeSymbol]: T;
+  readonly "@type": T;
 } & MessagePayload<T>;
 type MessagePayload<T extends keyof Messages> = Messages[T]["payload"];
 type Response<T extends keyof Messages> = Messages[T]["response"];
@@ -94,10 +92,21 @@ type Handler<T extends keyof Messages> = (
 ) => void | Promise<void>;
 
 function type<T extends keyof Messages>(m: Message<T>): T {
-  return m[typeSymbol];
+  return m["@type"];
 }
 
-export class Router<RegisterdTypes extends keyof Messages | void> {
+function message<T extends keyof Messages>(
+  type: T,
+  payload: MessagePayload<T>,
+): Message<T> {
+  return { "@type": type, ...payload };
+}
+
+export class Router<
+  // Message types which are already registered to reject duplicate type registration.
+  // If T is void, it means no message types are registered.
+  RegisteredTypes extends keyof Messages | void,
+> {
   private readonly handlers = new Map<
     keyof Messages,
     Handler<keyof Messages>
@@ -111,25 +120,25 @@ export class Router<RegisterdTypes extends keyof Messages | void> {
     return new Router();
   }
 
-  add<T extends Exclude<keyof Messages, RegisterdTypes>>(
+  add<T extends Exclude<keyof Messages, RegisteredTypes>>(
     type: T,
     handler: Handler<T>,
-  ): Router<Exclude<RegisterdTypes | T, void>> {
+  ): Router<Exclude<RegisteredTypes | T, void>> {
     this.handlers.set(type, handler as unknown as Handler<keyof Messages>);
     return this;
   }
 
-  addAll<T extends Exclude<keyof Messages, RegisterdTypes>>(
+  addAll<T extends Exclude<keyof Messages, RegisteredTypes>>(
     types: T[],
     buildHandler: (type: T) => Handler<T>,
-  ): Router<Exclude<RegisterdTypes | T, void>> {
+  ): Router<Exclude<RegisteredTypes | T, void>> {
     types.forEach((type) => this.add(type, buildHandler(type)));
     return this;
   }
 
-  merge<T extends Exclude<keyof Messages, RegisterdTypes>>(
+  merge<T extends Exclude<keyof Messages, RegisteredTypes>>(
     router: Router<T>,
-  ): Router<Exclude<RegisterdTypes | T, void>> {
+  ): Router<Exclude<RegisteredTypes | T, void>> {
     for (const [type, handler] of router.handlers) {
       this.handlers.set(type, handler);
     }
@@ -163,20 +172,14 @@ export function sendToRuntime<T extends keyof Messages>(
   payload: MessagePayload<T> = {},
 ): Promise<Response<T>> {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(
-      { [typeSymbol]: type, ...payload },
-      (r: Response<T>) => {
-        if (chrome.runtime.lastError) {
-          reject(
-            Error(`Failed to send message to runtime: ${type}`, {
-              cause: chrome.runtime.lastError,
-            }),
-          );
-        } else {
-          resolve(r);
-        }
-      },
-    );
+    chrome.runtime.sendMessage(message(type, payload), (r: Response<T>) => {
+      const cause = chrome.runtime.lastError;
+      if (cause) {
+        reject(Error(`Failed to sendToRuntime: type=${type}`, { cause }));
+      } else {
+        resolve(r);
+      }
+    });
   });
 }
 
@@ -189,20 +192,17 @@ export function sendToTab<T extends keyof Messages>(
   return new Promise((resolve, reject) => {
     chrome.tabs.sendMessage(
       tabId,
-      { [typeSymbol]: type, ...payload },
+      message(type, payload),
       options,
       (r: Response<T>) => {
-        if (chrome.runtime.lastError) {
-          reject(
-            Error(
-              `Failed to send message to tab: tabId=${tabId}, type=${type}, options=${JSON.stringify(
-                options,
-              )}`,
-              {
-                cause: chrome.runtime.lastError,
-              },
-            ),
-          );
+        const cause = chrome.runtime.lastError;
+        if (cause) {
+          const values = [
+            `tabId=${tabId}`,
+            `type=${type}`,
+            `options=${JSON.stringify(options)}`,
+          ].join(", ");
+          reject(Error(`Failed to sendToTab: ${values}`, { cause }));
         } else {
           resolve(r);
         }
