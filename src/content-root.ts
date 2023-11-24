@@ -1,10 +1,11 @@
 import settingsClient from "./lib/settings-client";
 import * as hinterService from "./lib/hinter-service";
 import * as blurerService from "./lib/blurer-service";
-import { Router } from "./lib/chrome-messages";
+import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
+import { Router as DOMMessageRouter } from "./lib/dom-messages";
 
 chrome.runtime.onMessage.addListener(
-  Router.newInstance()
+  ChromeMessageRouter.newInstance()
     .merge(
       settingsClient.subscribeRouter((settings) => {
         hinterService.setup(settings.hints, settings.css);
@@ -14,4 +15,12 @@ chrome.runtime.onMessage.addListener(
     .merge(blurerService.router)
     .buildListener(),
 );
-window.addEventListener("message", hinterService.handleMessage);
+
+addEventListener(
+  "message",
+  new DOMMessageRouter()
+    .add("com.github.kui.knavi.AllRectsResponseComplete", () => {
+      hinterService.rectFetcher.handleAllRectsResponseComplete();
+    })
+    .buildListener(),
+);

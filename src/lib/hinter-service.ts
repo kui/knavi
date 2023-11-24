@@ -5,7 +5,7 @@ import { HintView } from "./hint-view";
 import { Router } from "./chrome-messages";
 import { printError } from "./errors";
 
-const rectFetcher = new RectFetcherClient();
+export const rectFetcher = new RectFetcherClient();
 
 const hinter = new Hinter(rectFetcher);
 const view = new HintView();
@@ -22,5 +22,3 @@ export const router = Router.newInstance()
   .merge(rectFetcher.router())
   .merge(hinter.router())
   .merge(view.router());
-export const handleMessage = (e: MessageEvent<{ type?: string }>) =>
-  rectFetcher.handleMessage(e);

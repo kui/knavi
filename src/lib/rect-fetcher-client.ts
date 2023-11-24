@@ -1,10 +1,8 @@
 import * as vp from "./viewports";
 import { sendToRuntime, Router } from "./chrome-messages";
 import { wait } from "./promises";
+import { postMessageTo } from "./dom-messages";
 
-const ALL_RECTS_REQUEST_TYPE = "com.github.kui.knavi.AllRectsRequest";
-const ALL_RECTS_RESPONSE_COMPLETE_TYPE =
-  "com.github.kui.knavi.AllRectsResponseComplete";
 const TIMEOUT_MS = 2000;
 
 // TODO: Rename because this is not only to fetch rects but also to execute actions and get descriptions.
@@ -50,15 +48,11 @@ export class RectFetcherClient {
       console.warn("Timeout: fetchAllRects"),
     );
 
-    window.postMessage(
-      {
-        type: ALL_RECTS_REQUEST_TYPE,
-        offsets: { x: 0, y: 0 },
-        viewport: vp.visual.sizes(),
-        clientFrameId: await this.frameIdPromise,
-      },
-      "*",
-    );
+    postMessageTo(window, "com.github.kui.knavi.AllRectsRequest", {
+      offsets: { x: 0, y: 0 },
+      viewport: vp.visual.rect(),
+      clientFrameId: await this.frameIdPromise,
+    });
 
     await Promise.race([fetchingPromise, timeout]);
     this.callback = null;
@@ -80,15 +74,7 @@ export class RectFetcherClient {
     );
   }
 
-  handleMessage(event: MessageEvent<{ type?: string }>) {
-    switch (event.data.type) {
-      case ALL_RECTS_RESPONSE_COMPLETE_TYPE:
-        this.handleAllRectsResponseComplete();
-        return;
-    }
-  }
-
-  private handleAllRectsResponseComplete() {
+  handleAllRectsResponseComplete() {
     if (this.callback) {
       this.callback({ type: "complete" });
     } else {

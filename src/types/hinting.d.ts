@@ -25,13 +25,6 @@ interface RectHolder {
   rects: Rect[];
 }
 
-interface AllRectsRequest {
-  type: typeof ALL_RECTS_REQUEST_TYPE;
-  viewport: Rect;
-  offsets: Coordinates;
-  clientFrameId: number;
-}
-
 interface HintTarget {
   holder: RectHolder;
   hint: string;

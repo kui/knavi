@@ -28,8 +28,10 @@ export default class BlurView {
 
   blur(
     // Offsetted by visual viewport.
-    rect: Rect,
+    rect: Rect | null,
   ) {
+    if (!rect) return;
+
     const body = document.body;
     if (!body) return;
 

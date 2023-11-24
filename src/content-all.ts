@@ -2,8 +2,11 @@ import settingsClient from "./lib/settings-client";
 import { RectFetcherService } from "./lib/rect-fetcher-service";
 import { KeyboardEventHandler } from "./lib/keyboard-event-handler";
 import { printError } from "./lib/errors";
+import Blurer from "./lib/blurer";
+import { Router as DOMMessageRouter } from "./lib/dom-messages";
 
-const keyboardEventHandler = new KeyboardEventHandler();
+const blurer = new Blurer();
+const keyboardEventHandler = new KeyboardEventHandler(blurer);
 (async () => {
   const setting = await settingsClient.get(["magicKey", "blurKey", "hints"]);
   await keyboardEventHandler.setup(setting);
@@ -50,7 +53,16 @@ window.addEventListener(
   },
   true,
 );
-window.addEventListener("message", (event: MessageEvent<{ type?: string }>) => {
-  keyboardEventHandler.handleMessage(event);
-  rectFetcherService.handleMessage(event);
-});
+
+window.addEventListener(
+  "message",
+  new DOMMessageRouter()
+    .add("com.github.kui.knavi.Blur", (e) => blurer.handleBlurMessage(e))
+    .add("com.github.kui.knavi.AllRectsRequest", (e) =>
+      rectFetcherService.handleAllRectsRequest(e.data),
+    )
+    .add("com.github.kui.knavi.RegisterFrame", (e) =>
+      rectFetcherService.handleRegisterFrame(e),
+    )
+    .buildListener(),
+);

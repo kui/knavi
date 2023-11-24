@@ -6,7 +6,11 @@ import * as vp from "./viewports";
 import { Router, sendToRuntime } from "./chrome-messages";
 import * as rectUtils from "./rects";
 import CachedFetcher from "./cached-fetcher";
-import { printError } from "./errors";
+import {
+  MessagePayload as DOMMessagePayload,
+  MessageTypes as DOMMessageTypes,
+  postMessageTo,
+} from "./dom-messages";
 
 interface ElementProfile {
   element: Element;
@@ -17,12 +21,6 @@ interface ElementProfile {
     rects: Rect[];
   };
 }
-
-// Donot import from rect-fetcher-client because it might start event listeners
-const ALL_RECTS_REQUEST_TYPE = "com.github.kui.knavi.AllRectsRequest";
-const ALL_RECTS_RESPONSE_COMPLETE_TYPE =
-  "com.github.kui.knavi.AllRectsResponseComplete";
-const REGISTER_FRAME_TYPE = "com.github.kui.knavi.RegisterFrame";
 
 export class RectFetcherService {
   private rectElements: ElementProfile[];
@@ -36,7 +34,7 @@ export class RectFetcherService {
     this.registeredFrames = new Set();
     this.frameIdPromise = sendToRuntime("GetFrameId");
     if (parent !== window) {
-      parent.postMessage({ type: REGISTER_FRAME_TYPE }, "*");
+      postMessageTo(parent, "com.github.kui.knavi.RegisterFrame", null);
     }
   }
 
@@ -54,21 +52,10 @@ export class RectFetcherService {
       });
   }
 
-  handleMessage(event: MessageEvent<{ type?: string }>) {
-    switch (event.data.type) {
-      case ALL_RECTS_REQUEST_TYPE:
-        this.handleAllRectsRequest(event.data as AllRectsRequest).catch(
-          printError,
-        );
-        return;
-      case REGISTER_FRAME_TYPE:
-        this.handleRegisterFrame(event);
-        return;
-    }
-  }
-
   // TODO refactor
-  async handleAllRectsRequest(req: AllRectsRequest) {
+  async handleAllRectsRequest(
+    req: DOMMessagePayload<"com.github.kui.knavi.AllRectsRequest">,
+  ) {
     console.debug("AllRectsRequest req=", req, "location=", location.href);
 
     const visualVpOffsets = vp.visual.offsets();
@@ -116,9 +103,10 @@ export class RectFetcherService {
     );
     if (frames.size === 0) {
       console.debug("No frames", location.href);
-      window.parent.postMessage(
-        { type: ALL_RECTS_RESPONSE_COMPLETE_TYPE },
-        "*",
+      postMessageTo(
+        parent,
+        "com.github.kui.knavi.AllRectsResponseComplete",
+        null,
       );
       return;
     }
@@ -151,21 +139,26 @@ export class RectFetcherService {
         frames.delete(frame);
         continue;
       }
-      element.contentWindow?.postMessage(
-        {
-          type: ALL_RECTS_REQUEST_TYPE,
-          viewport: rectUtils.offsets(viewport, offsets),
-          offsets,
-          clientFrameId: req.clientFrameId,
-        },
-        "*",
-      );
+      if (element.contentWindow) {
+        postMessageTo(
+          element.contentWindow,
+          "com.github.kui.knavi.AllRectsRequest",
+          {
+            viewport: rectUtils.offsets(viewport, offsets),
+            offsets,
+            clientFrameId: req.clientFrameId,
+          },
+        );
+      } else {
+        console.warn("No contentWindow to post message", element);
+      }
     }
     if (frames.size === 0) {
       console.debug("No visible frames", location.href);
-      window.parent.postMessage(
-        { type: ALL_RECTS_RESPONSE_COMPLETE_TYPE },
-        "*",
+      postMessageTo(
+        parent,
+        "com.github.kui.knavi.AllRectsResponseComplete",
+        null,
       );
       return;
     }
@@ -178,9 +171,10 @@ export class RectFetcherService {
         "location=",
         location.href,
       );
-      window.parent.postMessage(
-        { type: ALL_RECTS_RESPONSE_COMPLETE_TYPE },
-        "*",
+      postMessageTo(
+        parent,
+        "com.github.kui.knavi.AllRectsResponseComplete",
+        null,
       );
       window.removeEventListener("message", responseCompleteHandler);
     }, 1000);
@@ -188,10 +182,11 @@ export class RectFetcherService {
     // Handle reqest complete
     // TODO Exporse message handlers
     const responseCompleteHandler = (
-      event: MessageEvent<{ type?: string }>,
+      event: MessageEvent<{ type?: DOMMessageTypes }>,
     ) => {
       if (event.source === window) return;
-      if (event.data.type !== ALL_RECTS_RESPONSE_COMPLETE_TYPE) return;
+      if (event.data.type !== "com.github.kui.knavi.AllRectsResponseComplete")
+        return;
 
       const frame = first(
         filter(
@@ -205,9 +200,10 @@ export class RectFetcherService {
       console.debug("Request complete: ", frame, "frames.size=", frames.size);
 
       if (frames.size === 0) {
-        window.parent.postMessage(
-          { type: ALL_RECTS_RESPONSE_COMPLETE_TYPE },
-          "*",
+        postMessageTo(
+          parent,
+          "com.github.kui.knavi.AllRectsResponseComplete",
+          null,
         );
         window.removeEventListener("message", responseCompleteHandler);
         clearTimeout(timeoutId);
@@ -247,7 +243,11 @@ export class RectFetcherService {
     };
   }
 
-  handleRegisterFrame(event: MessageEvent) {
+  handleRegisterFrame(
+    event: MessageEvent<
+      DOMMessagePayload<"com.github.kui.knavi.RegisterFrame">
+    >,
+  ) {
     const frame = event.source;
     if (!(frame instanceof Window)) return;
     if (this.registeredFrames.has(frame)) return;

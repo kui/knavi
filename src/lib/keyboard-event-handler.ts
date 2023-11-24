@@ -6,13 +6,15 @@ import { isEditable } from "./elements";
 import { isSigleLetter } from "./strings";
 import { printError } from "./errors";
 
+// TODO: Factor out the blurer and then rename this class.
 export class KeyboardEventHandler {
   private readonly hinter = new HinterClient();
-  private readonly blurer = new Blurer();
   private hitMatcher: KeyboardEventMatcher | null = null;
   private blurMatcher: KeyboardEventMatcher | null = null;
   private hintLetters = "";
   private matchedBlacklist: string[] = [];
+
+  constructor(private readonly blurer: Blurer) {}
 
   async setup(settings: Pick<Settings, "magicKey" | "blurKey" | "hints">) {
     this.hintLetters = settings.hints;
@@ -22,7 +24,7 @@ export class KeyboardEventHandler {
   }
 
   // Return true if the event is handled.
-  handleKeydown(event: KeyboardEvent) {
+  handleKeydown(event: KeyboardEvent): boolean {
     if (this.isBlacklisted()) {
       return false;
     }
@@ -50,7 +52,7 @@ export class KeyboardEventHandler {
   }
 
   // Return true if the event is handled.
-  handleKeyup(event: KeyboardEvent) {
+  handleKeyup(event: KeyboardEvent): boolean {
     if (this.isBlacklisted()) {
       return false;
     }
@@ -71,10 +73,6 @@ export class KeyboardEventHandler {
   // Return true if the event is handled.
   handleKeypress() {
     return this.hinter.isHinting;
-  }
-
-  handleMessage(event: MessageEvent<{ type?: string }>) {
-    this.blurer.handleMessageEvent(event);
   }
 
   private isBlacklisted() {

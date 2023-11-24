@@ -75,7 +75,7 @@ interface Messages {
 
   // Blur
   AfterBlur: {
-    payload: { rect: Rect };
+    payload: { rect: Rect | null };
     response: void;
   };
 }
@@ -150,12 +150,13 @@ export class Router<
     sender: chrome.runtime.MessageSender,
     sendResponse: (r: Response<T>) => void,
   ) {
-    console.debug("Router: recieve", message);
+    console.debug("Recieve: ", message);
     const handler = this.handlers.get(type(message));
     if (!handler) {
-      console.debug("Router: unknown type=%s", type(message));
+      console.debug("No hundler: ", message);
       return;
     }
+    console.debug("Handle: ", handler);
     const result = handler(message, sender, sendResponse);
     if (result instanceof Promise) {
       result.catch(printError);
@@ -167,12 +168,24 @@ export class Router<
   }
 }
 
+const messageIdGenerator = (function* (): Generator<number, number> {
+  let i = 0;
+  while (true) yield i++;
+})();
+
+function nextMessageId(): number {
+  return messageIdGenerator.next().value;
+}
+
 export function sendToRuntime<T extends keyof Messages>(
   type: T,
   payload: MessagePayload<T> = {},
 ): Promise<Response<T>> {
   return new Promise((resolve, reject) => {
+    const requestId = nextMessageId();
+    console.debug("sendToRuntime(id=%d): ", requestId, type, payload);
     chrome.runtime.sendMessage(message(type, payload), (r: Response<T>) => {
+      console.debug("sendToRuntime(id=%d) response: ", requestId, r);
       const cause = chrome.runtime.lastError;
       if (cause) {
         reject(Error(`Failed to sendToRuntime: type=${type}`, { cause }));
@@ -190,11 +203,14 @@ export function sendToTab<T extends keyof Messages>(
   options: chrome.tabs.MessageSendOptions = {},
 ): Promise<Response<T>> {
   return new Promise((resolve, reject) => {
+    const requestId = nextMessageId();
+    console.debug("sendToTab(id=%d): ", requestId, type, payload);
     chrome.tabs.sendMessage(
       tabId,
       message(type, payload),
       options,
       (r: Response<T>) => {
+        console.debug("sendToTab(id=%d) response: ", requestId, r);
         const cause = chrome.runtime.lastError;
         if (cause) {
           const values = [

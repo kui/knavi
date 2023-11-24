@@ -3,71 +3,65 @@ import * as vp from "./viewports";
 import { sendToRuntime } from "./chrome-messages";
 import * as rectUtils from "./rects";
 import { printError } from "./errors";
+import { postMessageTo } from "./dom-messages";
 
-// a message from a child frame indicates to blur.
-const BLUR_TYPE = "com.github.kui.knavi.Blur";
-
-interface Blur {
-  type: typeof BLUR_TYPE;
-  rect: Rect;
-}
+import type { MessagePayload } from "./dom-messages";
 
 export default class Blurer {
-  handleMessageEvent(event: MessageEvent<{ type?: string }>) {
-    if (!isBlurMessage(event)) return;
+  handleBlurMessage(
+    event: MessageEvent<MessagePayload<"com.github.kui.knavi.Blur">>,
+  ) {
     console.debug("blur", event.data, "location=", location.href);
 
     if (event.source === window) {
       // Blur then stop bubbling.
-      this.blur();
+      const activeElement = document.activeElement;
+      if (!activeElement || !("blur" in activeElement)) return;
+      (activeElement.blur as () => void)();
       sendToRuntime("AfterBlur", { rect: event.data.rect }).catch(printError);
       return;
     }
 
     // Bubble up the message to the parent frame.
 
-    const sourceIframe = first(
-      filter(
-        document.querySelectorAll("iframe"),
-        (i) => event.source === i.contentWindow,
-      ),
-    );
-    if (!sourceIframe) return;
-    const sourceRect = getFirstClientRectFromVisualVp(sourceIframe);
-    const offsettedTargetRect = rectUtils.move(event.data.rect, {
-      x: sourceRect.x,
-      y: sourceRect.y,
+    postMessageTo(parent, "com.github.kui.knavi.Blur", {
+      rect: buildBlurRect(event.source, event.data.rect),
     });
-    const rect = rectUtils.intersection(sourceRect, offsettedTargetRect);
-    if (!rect) {
-      console.debug(
-        "Blur target might not be visible: sourceRect=",
-        sourceRect,
-        "offsettedTargetRect=",
-        offsettedTargetRect,
-      );
-      return;
-    }
-    parent.postMessage({ type: BLUR_TYPE, rect }, "*");
   }
 
   blur() {
     if (!isBlurable()) return false;
     if (!document.activeElement) return false;
     const rect = getFirstClientRectFromVisualVp(document.activeElement);
-    parent.postMessage({ type: BLUR_TYPE, rect }, "*");
+    postMessageTo(parent, "com.github.kui.knavi.Blur", { rect });
     return true;
   }
 }
 
-function isBlurable() {
-  return !(parent === window && document.activeElement === document.body);
+function buildBlurRect(
+  source: MessageEventSource | null,
+  originRect: Rect | null,
+): Rect | null {
+  if (originRect === null || !(source instanceof Window)) return null;
+
+  const sourceIframe = first(
+    filter(
+      document.querySelectorAll("iframe"),
+      (i) => source === i.contentWindow,
+    ),
+  );
+  if (!sourceIframe) {
+    console.error("Blur target is not an iframe", event);
+    return null;
+  }
+
+  const sourceVvp = getFirstClientRectFromVisualVp(sourceIframe);
+  const offsettedTargetRect = rectUtils.move(originRect, sourceVvp);
+  return rectUtils.intersection(sourceVvp, offsettedTargetRect);
 }
 
-function isBlurMessage(
-  event: MessageEvent<{ type?: string }>,
-): event is MessageEvent<Blur> {
-  return event.data.type === BLUR_TYPE;
+function isBlurable() {
+  return !(parent === window && document.activeElement === document.body);
 }
 
 function getFirstClientRectFromVisualVp(element: Element) {
