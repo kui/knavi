@@ -128,7 +128,7 @@ export class RectFetcherService {
       const iframeViewport = rectUtils.excludeBorders(clientRect, borderWidth);
       const offsets = {
         x: iframeViewport.x,
-        y: iframeViewport.x,
+        y: iframeViewport.y,
       };
       const croppedRect = frame.holder.rects[0];
       const viewport = rectUtils.intersection(croppedRect, iframeViewport);
