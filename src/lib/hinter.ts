@@ -116,7 +116,7 @@ export class Hinter {
     if (context.hitTarget) {
       await this.rectFetcher.action(context.hitTarget.holder, options);
     }
-
+    this.context = null;
     await sendToRuntime("AfterRemoveHints");
   }
 

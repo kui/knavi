@@ -74,12 +74,8 @@ export default class BlurView {
   }
 
   router() {
-    return Router.newInstance().add(
-      "AfterBlur",
-      (payload, sender, sendResponse) => {
-        this.blur(payload.rect);
-        sendResponse();
-      },
+    return Router.newInstance().add("AfterBlur", (message) =>
+      this.blur(message.rect),
     );
   }
 }

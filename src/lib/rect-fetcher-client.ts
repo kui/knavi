@@ -44,7 +44,8 @@ export class RectFetcherClient {
         }
       };
     });
-    const timeout = wait(TIMEOUT_MS).then(() =>
+    const timeout = wait(TIMEOUT_MS);
+    const timeoutPromise = timeout.promise.then(() =>
       console.warn("Timeout: fetchAllRects"),
     );
 
@@ -54,24 +55,20 @@ export class RectFetcherClient {
       clientFrameId: await this.frameIdPromise,
     });
 
-    await Promise.race([fetchingPromise, timeout]);
+    await Promise.race([fetchingPromise, timeoutPromise]);
+    timeout.cancel();
     this.callback = null;
     return holders;
   }
 
   router() {
-    return Router.newInstance().add(
-      "ResponseRectsFragment",
-      (res, sender, sendResponse) => {
-        console.debug("RectsFragmentResponse", res);
-        if (this.callback) {
-          this.callback({ type: "recieve", holders: res.holders });
-        } else {
-          console.warn("Fetching phase is already completed.");
-        }
-        sendResponse();
-      },
-    );
+    return Router.newInstance().add("ResponseRectsFragment", (message) => {
+      if (this.callback) {
+        this.callback({ type: "recieve", holders: message.holders });
+      } else {
+        console.warn("Fetching phase is already completed.");
+      }
+    });
   }
 
   handleAllRectsResponseComplete() {

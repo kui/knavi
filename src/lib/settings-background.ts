@@ -20,19 +20,19 @@ function setup() {
 settings.init().then(setup).catch(printError);
 
 export const router = Router.newInstance()
-  .add("GetSettings", async (message, sender, sendResponse) => {
+  .add("GetSettings", async (message) => {
     const s = await settingValues;
     if (message.names) {
-      sendResponse(pick(s, message.names));
+      return pick(s, message.names);
     } else {
-      sendResponse(s);
+      return s;
     }
   })
-  .add("MatchBlacklist", async (message, sender, sendResponse) => {
-    sendResponse(await blackList.then((b) => b.match(message.url)));
+  .add("MatchBlacklist", async (message) => {
+    return await blackList.then((b) => b.match(message.url));
   })
-  .add("MatchAdditionalSelectors", async (message, sender, sendResponse) => {
-    sendResponse(await additionalSelectors.then((s) => s.match(message.url)));
+  .add("MatchAdditionalSelectors", async (message) => {
+    return await additionalSelectors.then((s) => s.match(message.url));
   });
 
 chrome.storage.onChanged.addListener(() => {

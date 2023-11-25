@@ -40,15 +40,13 @@ export class RectFetcherService {
 
   router() {
     return Router.newInstance()
-      .add("GetDescriptions", (req, sender, sendResponse) => {
-        const { element } = this.rectElements[req.index];
-        const descs = this.actionHandler.getDescriptions(element);
-        sendResponse(descs);
+      .add("GetDescriptions", (message) => {
+        const { element } = this.rectElements[message.index];
+        return this.actionHandler.getDescriptions(element);
       })
-      .add("ExecuteAction", (req, sender, sendResponse) => {
-        const { element } = this.rectElements[req.index];
-        this.actionHandler.handle(element, req.options);
-        sendResponse();
+      .add("ExecuteAction", (message) => {
+        const { element } = this.rectElements[message.index];
+        this.actionHandler.handle(element, message.options);
       });
   }
 

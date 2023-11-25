@@ -4,6 +4,8 @@ import * as blurerService from "./lib/blurer-service";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
 import { Router as DOMMessageRouter } from "./lib/dom-messages";
 
+globalThis.KNAVI_FILE = "content-root";
+
 chrome.runtime.onMessage.addListener(
   ChromeMessageRouter.newInstance()
     .merge(

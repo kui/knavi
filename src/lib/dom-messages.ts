@@ -63,7 +63,12 @@ export class Router {
 
     console.debug("Handlers: ", handlers);
     for (const h of handlers) {
-      const result = h(event);
+      let result;
+      try {
+        result = h(event);
+      } catch (e) {
+        console.error(e);
+      }
       if (result instanceof Promise) {
         result.catch(printError);
       }

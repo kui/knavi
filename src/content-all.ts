@@ -5,6 +5,8 @@ import { printError } from "./lib/errors";
 import Blurer from "./lib/blurer";
 import { Router as DOMMessageRouter } from "./lib/dom-messages";
 
+globalThis.KNAVI_FILE = "content-all";
+
 const blurer = new Blurer();
 const keyboardEventHandler = new KeyboardEventHandler(blurer);
 (async () => {
