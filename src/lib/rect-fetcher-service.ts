@@ -85,19 +85,18 @@ export class RectFetcherService {
 
     await sendToRuntime("ResponseRectsFragment", {
       holders: this.rectElements.map((e) => e.holder),
-      clientFrameId: req.clientFrameId,
     });
 
     // Propagate requests to child frames
     // Child frames require to be visible by above rect detection, and
     // be registered by a init "RegisterFrame" message.
     const frames = new Set(
-      filter(this.rectElements, ({ element }) => {
-        return (
+      filter(
+        this.rectElements,
+        ({ element }) =>
           "contentWindow" in element &&
-          this.registeredFrames.has(element.contentWindow as Window)
-        );
-      }),
+          this.registeredFrames.has(element.contentWindow as Window),
+      ),
     );
     if (frames.size === 0) {
       console.debug("No frames", location.href);
@@ -135,16 +134,13 @@ export class RectFetcherService {
       const viewport = rectUtils.intersection(croppedRect, iframeViewport);
       if (!viewport) {
         frames.delete(frame);
-        continue;
-      }
-      if (element.contentWindow) {
+      } else if (element.contentWindow) {
         postMessageTo(
           element.contentWindow,
           "com.github.kui.knavi.AllRectsRequest",
           {
             viewport: rectUtils.offsets(viewport, offsets),
             offsets,
-            clientFrameId: req.clientFrameId,
           },
         );
       } else {
@@ -160,22 +156,6 @@ export class RectFetcherService {
       );
       return;
     }
-
-    // Fetching complete timeout
-    const timeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
-      console.warn(
-        "Timeout: no response child frames=",
-        frames,
-        "location=",
-        location.href,
-      );
-      postMessageTo(
-        parent,
-        "com.github.kui.knavi.AllRectsResponseComplete",
-        null,
-      );
-      window.removeEventListener("message", responseCompleteHandler);
-    }, 1000);
 
     // Handle reqest complete
     // TODO Exporse message handlers
@@ -207,6 +187,22 @@ export class RectFetcherService {
         clearTimeout(timeoutId);
       }
     };
+
+    // Fetching complete timeout
+    const timeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
+      console.warn(
+        "Timeout: no response child frames=",
+        frames,
+        "location=",
+        location.href,
+      );
+      postMessageTo(
+        parent,
+        "com.github.kui.knavi.AllRectsResponseComplete",
+        null,
+      );
+      window.removeEventListener("message", responseCompleteHandler);
+    }, 1000);
 
     window.addEventListener("message", responseCompleteHandler);
   }

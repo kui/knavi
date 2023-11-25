@@ -55,7 +55,6 @@ interface Messages {
   ResponseRectsFragment: {
     payload: {
       holders: RectHolder[];
-      clientFrameId: number;
     };
     response: void;
   };

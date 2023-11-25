@@ -7,12 +7,6 @@ const TIMEOUT_MS = 2000;
 
 // TODO: Rename because this is not only to fetch rects but also to execute actions and get descriptions.
 export class RectFetcherClient {
-  private readonly frameIdPromise = sendToRuntime("GetFrameId").then((id) => {
-    if (id !== 0)
-      throw Error(`This script shoud run in top frame: frameId=${id}`);
-    return id;
-  });
-
   private callback:
     | ((
         arg:
@@ -23,6 +17,12 @@ export class RectFetcherClient {
             },
       ) => false) // return false to confirm handling for all types.
     | null = null;
+
+  constructor() {
+    if (window !== window.parent) {
+      throw Error("RectFetcherClient should be created in top frame");
+    }
+  }
 
   // Fetch all rects include elements inside iframe.
   // Requests are thrown by `postMessage` (frame message passing),
@@ -52,7 +52,6 @@ export class RectFetcherClient {
     postMessageTo(window, "com.github.kui.knavi.AllRectsRequest", {
       offsets: { x: 0, y: 0 },
       viewport: vp.visual.rect(),
-      clientFrameId: await this.frameIdPromise,
     });
 
     await Promise.race([fetchingPromise, timeoutPromise]);

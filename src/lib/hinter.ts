@@ -26,7 +26,6 @@ export class Hinter {
     };
     const holders = await this.rectFetcher.fetch();
     const hintTexts = [...head(this.generateHintTexts(), holders.length)];
-    hintTexts.sort(this.comparerByProvidedLetters);
     console.debug("hintTexts", hintTexts);
 
     const targets: HintTarget[] = holders.map((holder, index) => {
@@ -70,21 +69,6 @@ export class Hinter {
       index++;
     }
   }
-
-  private comparerByProvidedLetters = (a: string, b: string) => {
-    const length = Math.max(a.length, b.length);
-    for (let i = 0; i < length; i++) {
-      const aLetter = a[i];
-      if (!aLetter) return -1;
-      const bLetter = b[i];
-      if (!bLetter) return 1;
-      const aIndex = this.hintLetters.indexOf(aLetter);
-      const bIndex = this.hintLetters.indexOf(bLetter);
-      if (aIndex > bIndex) return 1;
-      if (aIndex < bIndex) return -1;
-    }
-    return 0;
-  };
 
   async hitHint(inputLetter: SingleLetter) {
     const context = this.context;

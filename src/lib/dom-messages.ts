@@ -5,7 +5,6 @@ interface MessageDefinition {
     payload: {
       viewport: Rect;
       offsets: Coordinates;
-      clientFrameId: number;
     };
   };
   "com.github.kui.knavi.Blur": {
