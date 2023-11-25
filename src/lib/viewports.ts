@@ -22,7 +22,11 @@ export const visual = {
   // get the coordinates of the top-left of the visual viewport from the top-left of the document.
   offsets(): Coordinates {
     if (!visualViewport) throw new Error("visualViewport is not supported");
-    return { y: visualViewport.pageTop, x: visualViewport.pageLeft };
+    return { x: visualViewport.pageLeft, y: visualViewport.pageTop };
+  },
+  offsetsFromLayoutVp(): Coordinates {
+    if (!visualViewport) throw new Error("visualViewport is not supported");
+    return { x: visualViewport.offsetLeft, y: visualViewport.offsetTop };
   },
   sizes(): Sizes {
     if (!visualViewport) throw new Error("visualViewport is not supported");

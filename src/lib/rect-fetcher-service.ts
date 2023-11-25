@@ -1,4 +1,3 @@
-import { filter, first } from "./iters";
 import RectFetcher from "./rect-fetcher";
 import ActionHandler from "./action-handlers";
 import settingsClient from "./settings-client";
@@ -6,11 +5,7 @@ import * as vp from "./viewports";
 import { Router, sendToRuntime } from "./chrome-messages";
 import * as rectUtils from "./rects";
 import CachedFetcher from "./cached-fetcher";
-import {
-  MessagePayload as DOMMessagePayload,
-  MessageTypes as DOMMessageTypes,
-  postMessageTo,
-} from "./dom-messages";
+import { postMessageTo } from "./dom-messages";
 
 interface ElementProfile {
   element: Element;
@@ -25,17 +20,12 @@ interface ElementProfile {
 export class RectFetcherService {
   private rectElements: ElementProfile[];
   private readonly actionHandler: ActionHandler;
-  private readonly registeredFrames: Set<Window>;
   private readonly frameIdPromise: Promise<number>;
 
   constructor() {
     this.rectElements = [];
     this.actionHandler = new ActionHandler();
-    this.registeredFrames = new Set();
     this.frameIdPromise = sendToRuntime("GetFrameId");
-    if (parent !== window) {
-      postMessageTo(parent, "com.github.kui.knavi.RegisterFrame", null);
-    }
   }
 
   router() {
@@ -52,31 +42,31 @@ export class RectFetcherService {
 
   // TODO refactor
   async handleAllRectsRequest(
-    req: DOMMessagePayload<"com.github.kui.knavi.AllRectsRequest">,
+    // The visual viewport relative to the root frame.
+    // This is cropped by the root frame's visual viewport.
+    currentVisualViewport: Rect,
+    // Coordinates of current frame relative to the root frame.
+    frameOffsets: Coordinates,
   ) {
-    console.debug("AllRectsRequest req=", req, "location=", location.href);
-
-    const visualVpOffsets = vp.visual.offsets();
-    const visualViewport = rectUtils.move(req.viewport, visualVpOffsets);
-    const styleFetcher = new CachedFetcher((e: Element) => getComputedStyle(e));
-    const clientRectsFetcher = new CachedFetcher(
-      (e: Element) => Array.from(e.getClientRects()) as DOMRectReadOnly[],
-    );
-    const additionalSelectors = await settingsClient.matchAdditionalSelectors(
+    console.debug(
+      "AllRectsRequest currentVisualViewport=",
+      currentVisualViewport,
+      "frameOffsets=",
+      frameOffsets,
+      "location=",
       location.href,
     );
-    const rectFetcher = new RectFetcher(
-      additionalSelectors,
+
+    const styleFetcher = new CachedFetcher((e: Element) => getComputedStyle(e));
+    const clientRectsFetcher = new CachedFetcher((e: Element) =>
+      Array.from(e.getClientRects()),
+    );
+    this.rectElements = await this.fetchRects(
+      currentVisualViewport,
+      frameOffsets,
       clientRectsFetcher,
       styleFetcher,
     );
-    const frameId = await this.frameIdPromise;
-    this.rectElements = rectFetcher
-      .getAll(visualViewport)
-      .map(({ element, rects }, index) => {
-        rects = rects.map((r) => rectUtils.move(r, req.offsets));
-        return { element, holder: { index, frameId, rects } } as ElementProfile;
-      });
 
     console.debug(
       "rectElements",
@@ -90,121 +80,87 @@ export class RectFetcherService {
     // Propagate requests to child frames
     // Child frames require to be visible by above rect detection, and
     // be registered by a init "RegisterFrame" message.
-    const frames = new Set(
-      filter(
-        this.rectElements,
-        ({ element }) =>
-          "contentWindow" in element &&
-          this.registeredFrames.has(element.contentWindow as Window),
-      ),
+    const layoutVpOffsetsFromRootVvp = rectUtils.offsets(
+      frameOffsets,
+      vp.visual.offsetsFromLayoutVp(),
     );
-    if (frames.size === 0) {
-      console.debug("No frames", location.href);
-      postMessageTo(
-        parent,
-        "com.github.kui.knavi.AllRectsResponseComplete",
-        null,
-      );
-      return;
-    }
-
-    console.debug("Send request to child frames", location.href);
-
-    const layoutVpOffsets = vp.layout.offsets();
-    const layoutVpOffsetsFromRootVisualVp = {
-      x: layoutVpOffsets.x - visualVpOffsets.x + req.offsets.x,
-      y: layoutVpOffsets.y - visualVpOffsets.y + req.offsets.y,
-    };
-    for (const frame of frames) {
-      // TODO Safe cast
-      const element = frame.element as HTMLIFrameElement;
+    for (const frame of this.rectElements) {
+      const element = frame.element;
+      if (!(element instanceof HTMLIFrameElement)) continue;
+      if (!element.contentWindow) {
+        console.debug("No contentWindow to post message", element);
+        continue;
+      }
       const rects = clientRectsFetcher.get(element);
       const style = styleFetcher.get(element);
-      const borderWidth = this.getBorderWidth(element, rects, style);
-      const clientRect = rectUtils.move(
+      const clientRectFromRootVvp = rectUtils.move(
         clientRectsFetcher.get(element)[0],
-        layoutVpOffsetsFromRootVisualVp,
+        layoutVpOffsetsFromRootVvp,
       );
-      const iframeViewport = rectUtils.excludeBorders(clientRect, borderWidth);
-      const offsets = {
-        x: iframeViewport.x,
-        y: iframeViewport.y,
-      };
+      const iframeViewportFromRootVvp = rectUtils.excludeBorders(
+        clientRectFromRootVvp,
+        this.getBorderWidth(element, rects, style),
+      );
       const croppedRect = frame.holder.rects[0];
-      const viewport = rectUtils.intersection(croppedRect, iframeViewport);
-      if (!viewport) {
-        frames.delete(frame);
-      } else if (element.contentWindow) {
-        postMessageTo(
-          element.contentWindow,
-          "com.github.kui.knavi.AllRectsRequest",
-          {
-            viewport: rectUtils.offsets(viewport, offsets),
-            offsets,
-          },
-        );
-      } else {
-        console.warn("No contentWindow to post message", element);
+      const actualIframeViewportFromRootVvp = rectUtils.intersection(
+        croppedRect,
+        iframeViewportFromRootVvp,
+      );
+      if (!actualIframeViewportFromRootVvp) {
+        console.debug("No viewport", croppedRect, iframeViewportFromRootVvp);
+        continue;
       }
-    }
-    if (frames.size === 0) {
-      console.debug("No visible frames", location.href);
+      const requestPayload = {
+        viewport: actualIframeViewportFromRootVvp,
+        offsets: {
+          x: iframeViewportFromRootVvp.x,
+          y: iframeViewportFromRootVvp.y,
+        },
+      };
       postMessageTo(
-        parent,
-        "com.github.kui.knavi.AllRectsResponseComplete",
-        null,
+        element.contentWindow,
+        "com.github.kui.knavi.AllRectsRequest",
+        requestPayload,
       );
-      return;
     }
+  }
 
-    // Handle reqest complete
-    // TODO Exporse message handlers
-    const responseCompleteHandler = (
-      event: MessageEvent<{ type?: DOMMessageTypes }>,
-    ) => {
-      if (event.source === window) return;
-      if (event.data.type !== "com.github.kui.knavi.AllRectsResponseComplete")
-        return;
+  async fetchRects(
+    currentVisualViewport: Rect,
+    // Coordinates of current frame relative to the root frame.
+    frameOffsets: Coordinates,
+    clientRectsFetcher: CachedFetcher<Element, DOMRect[]>,
+    styleFetcher: CachedFetcher<Element, CSSStyleDeclaration>,
+  ): Promise<ElementProfile[]> {
+    // Don't use `vp.visual.rect()` because it is not cropped by the root frame.
+    const actualVisualViewport = rectUtils.offsets(
+      currentVisualViewport,
+      frameOffsets,
+    );
 
-      const frame = first(
-        filter(
-          frames.values(),
-          ({ element }) =>
-            (element as HTMLIFrameElement).contentWindow === event.source,
-        ),
-      );
-      if (!frame) return;
-      frames.delete(frame);
-      console.debug("Request complete: ", frame, "frames.size=", frames.size);
-
-      if (frames.size === 0) {
-        postMessageTo(
-          parent,
-          "com.github.kui.knavi.AllRectsResponseComplete",
-          null,
-        );
-        window.removeEventListener("message", responseCompleteHandler);
-        clearTimeout(timeoutId);
-      }
-    };
-
-    // Fetching complete timeout
-    const timeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
-      console.warn(
-        "Timeout: no response child frames=",
-        frames,
-        "location=",
-        location.href,
-      );
-      postMessageTo(
-        parent,
-        "com.github.kui.knavi.AllRectsResponseComplete",
-        null,
-      );
-      window.removeEventListener("message", responseCompleteHandler);
-    }, 1000);
-
-    window.addEventListener("message", responseCompleteHandler);
+    const additionalSelectors = await settingsClient.matchAdditionalSelectors(
+      location.href,
+    );
+    const rectFetcher = new RectFetcher(
+      additionalSelectors,
+      clientRectsFetcher,
+      styleFetcher,
+    );
+    const frameId = await this.frameIdPromise;
+    return rectFetcher.getAll(actualVisualViewport).map(
+      (
+        {
+          element,
+          // relative to the visual viewport.
+          rects,
+        },
+        index,
+      ) => {
+        // Make rects relative to the root frame.
+        rects = rects.map((r) => rectUtils.move(r, currentVisualViewport));
+        return { element, holder: { index, frameId, rects } };
+      },
+    );
   }
 
   // TODO better way to get border width
@@ -235,19 +191,5 @@ export class RectFetcherService {
       left: f("left", 0, "width"),
       right: f("right", "last", "width"),
     };
-  }
-
-  handleRegisterFrame(
-    event: MessageEvent<
-      DOMMessagePayload<"com.github.kui.knavi.RegisterFrame">
-    >,
-  ) {
-    const frame = event.source;
-    if (!(frame instanceof Window)) return;
-    if (this.registeredFrames.has(frame)) return;
-    // "frame" cannot be touched in this phase because of the cross-origin frame
-    // console.debug("New child frame", frame, "parent-location=", location.href);
-    console.debug("New child frame: parent-location=", location.href);
-    this.registeredFrames.add(frame);
   }
 }

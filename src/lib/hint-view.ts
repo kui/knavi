@@ -51,11 +51,14 @@ export class HintView {
 
   async render(targets: HintTarget[]) {
     await waitUntil(() => Boolean(document.body));
-    const body = document.body;
-    this.initStyles();
-    body.insertBefore(this.container, body.firstChild);
 
-    this.hints = new Hints();
+    if (!this.hints) {
+      const body = document.body;
+      this.initStyles();
+      body.insertBefore(this.container, body.firstChild);
+      this.hints = new Hints();
+    }
+
     const df = document.createDocumentFragment();
     for (const hint of generateHintElements(targets)) {
       this.hints.add(hint);

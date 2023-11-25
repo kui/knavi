@@ -10,19 +10,19 @@ export function rectByOffsetsAndSizes(
   };
 }
 
-export function move(rect: Rect, offsets: Coordinates): Rect {
+export function move<C extends Coordinates>(c: C, offsets: Coordinates): C {
   return {
-    ...rect,
-    x: rect.x + offsets.x,
-    y: rect.y + offsets.y,
+    ...c,
+    x: c.x + offsets.x,
+    y: c.y + offsets.y,
   };
 }
 
-export function offsets(rect: Rect, offsets: Coordinates): Rect {
+export function offsets<C extends Coordinates>(c: C, offsets: Coordinates): C {
   return {
-    ...rect,
-    x: rect.x - offsets.x,
-    y: rect.y - offsets.y,
+    ...c,
+    x: c.x - offsets.x,
+    y: c.y - offsets.y,
   };
 }
 

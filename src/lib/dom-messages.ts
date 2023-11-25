@@ -3,7 +3,9 @@ import { printError } from "./errors";
 interface MessageDefinition {
   "com.github.kui.knavi.AllRectsRequest": {
     payload: {
+      // Target visual viewport relative to the root visual viewport.
       viewport: Rect;
+      // Coordinates of Target frame relative to the root visual viewport.
       offsets: Coordinates;
     };
   };
@@ -13,12 +15,6 @@ interface MessageDefinition {
       // if the rect is null, it means the target is out of the visual viewport.
       rect: Rect | null;
     };
-  };
-  "com.github.kui.knavi.AllRectsResponseComplete": {
-    payload: null;
-  };
-  "com.github.kui.knavi.RegisterFrame": {
-    payload: null;
   };
 }
 

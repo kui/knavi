@@ -2,7 +2,6 @@ import settingsClient from "./lib/settings-client";
 import * as hinterService from "./lib/hinter-service";
 import * as blurerService from "./lib/blurer-service";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
-import { Router as DOMMessageRouter } from "./lib/dom-messages";
 
 globalThis.KNAVI_FILE = "content-root";
 
@@ -15,14 +14,5 @@ chrome.runtime.onMessage.addListener(
     )
     .merge(hinterService.router)
     .merge(blurerService.router)
-    .buildListener(),
-);
-
-addEventListener(
-  "message",
-  new DOMMessageRouter()
-    .add("com.github.kui.knavi.AllRectsResponseComplete", () => {
-      hinterService.rectFetcher.handleAllRectsResponseComplete();
-    })
     .buildListener(),
 );

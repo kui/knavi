@@ -7,6 +7,7 @@ import CachedFetcher from "./cached-fetcher";
 
 interface ElementRects {
   element: Element;
+  // The rects are relative to "visual viewport".
   rects: Rect[];
   maybeClickable: boolean;
   filteredOutBy?: ElementRects;

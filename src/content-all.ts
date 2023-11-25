@@ -60,11 +60,9 @@ window.addEventListener(
   "message",
   new DOMMessageRouter()
     .add("com.github.kui.knavi.Blur", (e) => blurer.handleBlurMessage(e))
-    .add("com.github.kui.knavi.AllRectsRequest", (e) =>
-      rectFetcherService.handleAllRectsRequest(e.data),
-    )
-    .add("com.github.kui.knavi.RegisterFrame", (e) =>
-      rectFetcherService.handleRegisterFrame(e),
-    )
+    .add("com.github.kui.knavi.AllRectsRequest", async (e) => {
+      const { viewport, offsets } = e.data;
+      await rectFetcherService.handleAllRectsRequest(viewport, offsets);
+    })
     .buildListener(),
 );

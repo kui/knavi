@@ -1,22 +1,10 @@
 import * as vp from "./viewports";
 import { sendToRuntime, Router } from "./chrome-messages";
-import { wait } from "./promises";
 import { postMessageTo } from "./dom-messages";
-
-const TIMEOUT_MS = 2000;
 
 // TODO: Rename because this is not only to fetch rects but also to execute actions and get descriptions.
 export class RectFetcherClient {
-  private callback:
-    | ((
-        arg:
-          | { type: "complete" }
-          | {
-              type: "recieve";
-              holders: RectHolder[];
-            },
-      ) => false) // return false to confirm handling for all types.
-    | null = null;
+  private callback: ((holders: RectHolder[]) => void) | null = null;
 
   constructor() {
     if (window !== window.parent) {
@@ -26,66 +14,48 @@ export class RectFetcherClient {
 
   // Fetch all rects include elements inside iframe.
   // Requests are thrown by `postMessage` (frame message passing),
-  // because the requests should reach only visible frames.
   // TODO Simplify this logic especially callback handling.
-  async fetch(): Promise<RectHolder[]> {
+  async *fetch(): AsyncGenerator<RectHolder[]> {
     if (this.callback) throw Error("Illegal state: already fetching");
-
-    const holders: RectHolder[] = [];
-    const fetchingPromise = new Promise<void>((resolve) => {
-      this.callback = (arg) => {
-        switch (arg.type) {
-          case "recieve":
-            holders.push(...arg.holders);
-            return false;
-          case "complete":
-            resolve();
-            return false;
-        }
-      };
-    });
-    const timeout = wait(TIMEOUT_MS);
-    const timeoutPromise = timeout.promise.then(() =>
-      console.warn("Timeout: fetchAllRects"),
-    );
 
     postMessageTo(window, "com.github.kui.knavi.AllRectsRequest", {
       offsets: { x: 0, y: 0 },
       viewport: vp.visual.rect(),
     });
 
-    await Promise.race([fetchingPromise, timeoutPromise]);
-    timeout.cancel();
-    this.callback = null;
-    return holders;
+    while (true) {
+      yield await this.awaitFetch();
+      if (!this.callback) break;
+    }
+  }
+
+  async awaitFetch(): Promise<RectHolder[]> {
+    return new Promise<RectHolder[]>((resolve) => (this.callback = resolve));
   }
 
   router() {
     return Router.newInstance().add("ResponseRectsFragment", (message) => {
       if (this.callback) {
-        this.callback({ type: "recieve", holders: message.holders });
-      } else {
-        console.warn("Fetching phase is already completed.");
+        this.callback(message.holders);
       }
     });
   }
 
-  handleAllRectsResponseComplete() {
-    if (this.callback) {
-      this.callback({ type: "complete" });
-    } else {
-      console.warn("Fetching phase is already completed.");
-    }
-  }
-
   getDescriptions(elementId: { frameId: number; index: number }) {
+    if (!this.callback) throw Error("Illegal state: not fetching");
     return sendToRuntime("GetDescriptions", elementId);
   }
 
   action(
-    elementId: { frameId: number; index: number },
+    // Provide null to execute no action.
+    elementId: { frameId: number; index: number } | null,
     options: ActionOptions,
   ) {
-    return sendToRuntime("ExecuteAction", { ...elementId, options });
+    if (!this.callback) throw Error("Illegal state: not fetching");
+    const callback = this.callback;
+    this.callback = null;
+    callback([]);
+    if (elementId)
+      return sendToRuntime("ExecuteAction", { ...elementId, options });
   }
 }

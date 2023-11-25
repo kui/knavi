@@ -24,21 +24,19 @@ export class Hinter {
       targets: [],
       hitTarget: null,
     };
-    const holders = await this.rectFetcher.fetch();
-    const hintTexts = [...head(this.generateHintTexts(), holders.length)];
-    console.debug("hintTexts", hintTexts);
 
-    const targets: HintTarget[] = holders.map((holder, index) => {
-      const t = hintTexts[index];
-      return {
-        hint: t,
-        holder,
-        state: "init",
-      };
-    });
-
-    this.context.targets = targets;
-    await sendToRuntime("RenderTargets", { targets });
+    const hintTextGenerator = this.generateHintTexts();
+    for await (const holders of this.rectFetcher.fetch()) {
+      if (holders.length === 0) continue;
+      const hintTexts = [...head(hintTextGenerator, holders.length)];
+      console.debug("hintTexts", hintTexts);
+      const targets: HintTarget[] = holders.map((holder, index) => {
+        const hint = hintTexts[index];
+        return { state: "init", hint, holder };
+      });
+      this.context.targets.push(...targets);
+      await sendToRuntime("RenderTargets", { targets });
+    }
   }
 
   // TODO We can meke this function better for keyboard typing.
@@ -99,6 +97,8 @@ export class Hinter {
     }
     if (context.hitTarget) {
       await this.rectFetcher.action(context.hitTarget.holder, options);
+    } else {
+      await this.rectFetcher.action(null, options);
     }
     this.context = null;
     await sendToRuntime("AfterRemoveHints");
