@@ -70,7 +70,7 @@ fix: node_modules
 .PHONY: watch
 watch: node_modules
 	rm -fr $(BUILD)/**/*.js
-	npx chokidar 'Makefile' 'src' '!src/**/*.js' -c 'make' & \
+	npx --package=chokidar-cli -- chokidar 'Makefile' 'src' '!src/**/*.js' -c 'make' & \
 	npx webpack --watch & \
 	npx http-server docs -d=false -c=-1 & \
 	wait
