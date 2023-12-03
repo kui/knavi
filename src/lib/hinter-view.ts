@@ -68,32 +68,41 @@ export class HintView {
   private initStyles(body: HTMLElement) {
     const vpRect = vp.layout.rect();
 
+    let overlayRect: Rect<"element-border", "element-padding">;
     // The coordinates of the <body> element may need to be used as the offset of the "container"
     // depending on the CSS position of the <body> element.
     // See https://developer.mozilla.org/en-US/docs/Web/CSS/position#absolute_positioning
     // > The absolutely positioned element is positioned relative to its nearest positioned
     // > ancestor (i.e., the nearest ancestor that is not static).
-    const bodyOffsets: Coordinates<"element-padding", "root-viewport"> =
-      getComputedStyle(body).position === "static"
-        ? new Coordinates({
-            type: "element-padding",
-            origin: "root-viewport",
-            x: 0,
-            y: 0,
-          })
-        : new Coordinates({
-            ...getPaddingRects(body)[0],
-            origin: "root-viewport",
-          });
+    if (getComputedStyle(body).position === "static") {
+      overlayRect = new Rect({
+        ...vpRect,
+
+        // The "overlay" element overlays the viewport,
+        // so "layout-viewport" is treated as an "element-border".
+        type: "element-border",
+
+        // TODO "initial-containing-block" can be treated as an "element-padding"?
+        origin: "element-padding",
+      });
+    } else {
+      const bodyCoords = new Coordinates({ ...getPaddingRects(body)[0] });
+      overlayRect = new Rect({
+        ...bodyCoords.reverse(),
+        width: vpRect.width,
+        height: vpRect.height,
+
+        // The "overlay" element overlays the viewport,
+        // so "layout-viewport" is treated as an "element-border".
+        type: "element-border",
+      });
+    }
 
     applyStyle(this.container, {
       position: "absolute",
       display: "block",
 
-      top: px(vpRect.y - bodyOffsets.y),
-      left: px(vpRect.x - bodyOffsets.x),
-      width: px(vpRect.width),
-      height: px(vpRect.height),
+      ...styleByRect(overlayRect),
 
       margin: "0",
       outlineWidth: "0",
