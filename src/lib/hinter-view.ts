@@ -1,4 +1,3 @@
-import { waitUntil } from "./animations";
 import {
   Z_INDEX_OFFSET,
   applyStyle,
@@ -46,9 +45,12 @@ export class HintView {
     this.style.textContent = css;
   }
 
-  async start() {
+  isStarted(): boolean {
+    return Boolean(this.hints);
+  }
+
+  start() {
     if (this.hints) throw Error("Illegal state");
-    await waitUntil(() => Boolean(document.body));
     const body = document.body;
     this.initStyles(body);
     body.insertBefore(this.container, body.firstChild);

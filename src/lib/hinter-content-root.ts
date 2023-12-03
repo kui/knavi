@@ -1,3 +1,4 @@
+import { waitUntil } from "./animations";
 import { HintView } from "./hinter-view";
 import { head, map, zip } from "./iters";
 import type { RectFetcherClient } from "./rect-fetcher-client";
@@ -28,13 +29,13 @@ export class HinterContentRoot {
       hitTarget: null,
     };
 
-    await this.view.start();
+    await waitUntil(() => Boolean(document.body));
 
     const hintTextGenerator = this.generateHintTexts();
     for await (const elementRects of this.rectFetcher.fetch()) {
+      if (!this.view.isStarted()) this.view.start();
       if (elementRects.length === 0) continue;
       const hintTexts = [...head(hintTextGenerator, elementRects.length)];
-      console.debug("hintTexts", hintTexts);
       const targets: HintedElement[] = [
         ...map(
           zip(elementRects, hintTexts),
