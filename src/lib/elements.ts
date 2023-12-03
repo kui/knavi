@@ -96,10 +96,14 @@ export function getClientCoordinates(
 export function getBoundingClientRect(
   element: Element,
 ): Rect<"element-border", "layout-viewport"> {
+  const { x, y, width, height } = element.getBoundingClientRect();
   return new Rect({
     type: "element-border",
     origin: "layout-viewport",
-    ...element.getBoundingClientRect(),
+    x,
+    y,
+    width,
+    height,
   });
 }
 
@@ -108,9 +112,8 @@ export function getBoundingClientRectInRootFrame(
 ): Rect<"element-border", "root-viewport"> {
   if (window !== window.parent) throw new Error("Not in root frame");
   return new Rect({
-    type: "element-border",
+    ...getBoundingClientRect(element),
     origin: "root-viewport",
-    ...element.getBoundingClientRect(),
   });
 }
 
@@ -131,11 +134,14 @@ export function getClientRects(
   return [
     ...map(
       element.getClientRects(),
-      (rect) =>
+      ({ x, y, width, height }: DOMRectReadOnly) =>
         new Rect({
           type: "element-border",
           origin: "layout-viewport",
-          ...rect,
+          x,
+          y,
+          width,
+          height,
         }),
     ),
   ];
