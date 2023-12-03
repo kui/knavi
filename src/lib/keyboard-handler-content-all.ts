@@ -1,20 +1,22 @@
 import KeyboardEventMatcher from "key-input-elements/lib/event-matcher.js";
 import settingsClient from "./settings-client";
-import HinterClient from "./hinter-client";
-import Blurer from "./blurer";
+import Hinter from "./hinter-client";
+import Blurer from "./blurer-client";
 import { isEditable } from "./elements";
 import { isSigleLetter } from "./strings";
 import { printError } from "./errors";
 
 // TODO: Factor out the blurer and then rename this class.
-export class KeyboardEventHandler {
-  private readonly hinter = new HinterClient();
+export class KeyboardHandlerContentAll {
   private hitMatcher: KeyboardEventMatcher | null = null;
   private blurMatcher: KeyboardEventMatcher | null = null;
   private hintLetters = "";
   private matchedBlacklist: string[] = [];
 
-  constructor(private readonly blurer: Blurer) {}
+  constructor(
+    private readonly blurer: Blurer,
+    private readonly hinter: Hinter,
+  ) {}
 
   async setup(settings: Pick<Settings, "magicKey" | "blurKey" | "hints">) {
     this.hintLetters = settings.hints;

@@ -1,10 +1,13 @@
 import * as vp from "./viewports";
-import { sendToRuntime, Router } from "./chrome-messages";
+import { sendToRuntime } from "./chrome-messages";
 import { postMessageTo } from "./dom-messages";
+import { createQueue } from "./generators";
 
-// TODO: Rename because this is not only to fetch rects but also to execute actions and get descriptions.
 export class RectFetcherClient {
-  private callback: ((holders: RectHolder[]) => void) | null = null;
+  private requestIndex = 0;
+  private callback:
+    | ((elementRects: ElementRects[] | "Complete") => void)
+    | null = null;
 
   constructor() {
     if (window !== window.parent) {
@@ -14,48 +17,59 @@ export class RectFetcherClient {
 
   // Fetch all rects include elements inside iframe.
   // Requests are thrown by `postMessage` (frame message passing),
-  // TODO Simplify this logic especially callback handling.
-  async *fetch(): AsyncGenerator<RectHolder[]> {
+  async *fetch(): AsyncGenerator<ElementRects[]> {
     if (this.callback) throw Error("Illegal state: already fetching");
 
     postMessageTo(window, "com.github.kui.knavi.AllRectsRequest", {
-      offsets: { x: 0, y: 0 },
-      viewport: vp.visual.rect(),
+      id: ++this.requestIndex,
+      viewport: {
+        type: "actual-viewport",
+        origin: "root-viewport",
+        x: 0,
+        y: 0,
+        ...vp.layout.sizes(),
+      },
+      offsets: { type: "layout-viewport", origin: "root-viewport", x: 0, y: 0 },
     });
 
-    while (true) {
-      yield await this.awaitFetch();
-      if (!this.callback) break;
+    const { enqueue, dequeue } = createQueue<ElementRects[] | "Complete">();
+
+    this.callback = (rects) => enqueue.next(rects);
+    for await (const rects of dequeue) {
+      if (rects === "Complete") {
+        this.callback = null;
+        return;
+      } else if (rects) {
+        yield rects;
+      }
     }
   }
 
-  async awaitFetch(): Promise<RectHolder[]> {
-    return new Promise<RectHolder[]>((resolve) => (this.callback = resolve));
+  handleRects(requestId: number, rects: ElementRects[]) {
+    if (requestId !== this.requestIndex) {
+      console.warn("Unexpected requestId: ", requestId);
+      return;
+    }
+    if (!this.callback) {
+      console.warn("Not fetching phase: ", rects);
+      return;
+    }
+    this.callback(rects);
   }
 
-  router() {
-    return Router.newInstance().add("ResponseRectsFragment", (message) => {
-      if (this.callback) {
-        this.callback(message.holders);
-      }
-    });
-  }
-
-  getDescriptions(elementId: { frameId: number; index: number }) {
+  getDescriptions(elementId: ElementId) {
     if (!this.callback) throw Error("Illegal state: not fetching");
-    return sendToRuntime("GetDescriptions", elementId);
+    return sendToRuntime("GetDescriptions", { id: elementId });
   }
 
   action(
     // Provide null to execute no action.
-    elementId: { frameId: number; index: number } | null,
+    elementId: ElementId | null,
     options: ActionOptions,
   ) {
     if (!this.callback) throw Error("Illegal state: not fetching");
-    const callback = this.callback;
-    this.callback = null;
-    callback([]);
+    this.callback("Complete");
     if (elementId)
-      return sendToRuntime("ExecuteAction", { ...elementId, options });
+      return sendToRuntime("ExecuteAction", { id: elementId, options });
   }
 }

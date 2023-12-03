@@ -1,87 +1,164 @@
 import { map } from "./iters";
 
-export function rectByOffsetsAndSizes(
-  offsets: Coordinates,
-  sizes: Sizes,
-): Rect {
-  return {
-    ...offsets,
-    ...sizes,
-  };
+export class Coordinates<
+  Type extends CoordinateType,
+  Origin extends CoordinateType,
+> implements CoordinatesJSON<Type, Origin>
+{
+  readonly type: Type;
+  readonly origin: Origin;
+  readonly x: number;
+  readonly y: number;
+
+  constructor(json: CoordinatesJSON<Type, Origin>) {
+    this.type = json.type;
+    this.origin = json.origin;
+    this.x = json.x;
+    this.y = json.y;
+  }
+
+  offsets<NewOrigin extends CoordinateType>(
+    c: Coordinates<NewOrigin, Origin>,
+  ): Coordinates<Type, NewOrigin> {
+    return new Coordinates({
+      type: this.type,
+      origin: c.type,
+      x: this.x - c.x,
+      y: this.y - c.y,
+    });
+  }
+
+  reverse(): Coordinates<Origin, Type> {
+    return new Coordinates({
+      type: this.origin,
+      origin: this.type,
+      x: -this.x,
+      y: -this.y,
+    });
+  }
 }
 
-export function move<C extends Coordinates>(c: C, offsets: Coordinates): C {
-  return {
-    ...c,
-    x: c.x + offsets.x,
-    y: c.y + offsets.y,
-  };
-}
+// Indicates Rect that is relative to the origin.
+// The coordinates (x, y) indicate the top-left corner of the rect.
+export class Rect<Type extends CoordinateType, Origin extends CoordinateType>
+  extends Coordinates<Type, Origin>
+  implements RectJSON<Type, Origin>
+{
+  readonly width: number;
+  readonly height: number;
 
-export function offsets<C extends Coordinates>(c: C, offsets: Coordinates): C {
-  return {
-    ...c,
-    x: c.x - offsets.x,
-    y: c.y - offsets.y,
-  };
-}
+  constructor(json: RectJSON<Type, Origin>) {
+    super(json);
+    this.width = json.width;
+    this.height = json.height;
+  }
 
-export function intersection(...rects: Rect[]): Rect | null {
-  const domRects = rects.map((r) => DOMRectReadOnly.fromRect(r));
-  const left = Math.max(...map(domRects, (r) => r.left));
-  const right = Math.min(...map(domRects, (r) => r.right));
-  const top = Math.max(...map(domRects, (r) => r.top));
-  const bottom = Math.min(...map(domRects, (r) => r.bottom));
+  static intersectionWithSameType<
+    Type extends CoordinateType,
+    Origin extends CoordinateType,
+  >(...rects: RectJSON<Type, Origin>[]): Rect<Type, Origin> | null {
+    if (rects.length === 0) return null;
+    return Rect.intersection(rects[0].type, ...rects);
+  }
 
-  if (left >= right || top >= bottom) return null;
-  return {
-    x: left,
-    y: top,
-    width: right - left,
-    height: bottom - top,
-  };
-}
+  // Returns null if the rects don't intersect.
+  static intersection<
+    Type extends CoordinateType,
+    Origin extends CoordinateType,
+  >(
+    type: Type,
+    ...rects: RectJSON<CoordinateType, Origin>[]
+  ): Rect<Type, Origin> | null {
+    if (rects.length === 0) return null;
 
-export function getBoundingRect(rects: Rect[]): Rect {
-  const domRects = rects.map((r) => DOMRectReadOnly.fromRect(r));
-  const left = Math.min(...map(domRects, (r) => r.left));
-  const right = Math.max(...map(domRects, (r) => r.right));
-  const top = Math.min(...map(domRects, (r) => r.top));
-  const bottom = Math.max(...map(domRects, (r) => r.bottom));
+    const domRects = rects.map((r) => DOMRectReadOnly.fromRect(r));
+    const left = Math.max(...map(domRects, (r) => r.left));
+    const right = Math.min(...map(domRects, (r) => r.right));
+    const top = Math.max(...map(domRects, (r) => r.top));
+    const bottom = Math.min(...map(domRects, (r) => r.bottom));
 
-  return {
-    x: left,
-    y: top,
-    width: right - left,
-    height: bottom - top,
-  };
-}
+    if (left >= right || top >= bottom) return null;
+    return new Rect({
+      type,
+      origin: rects[0].origin,
+      x: left,
+      y: top,
+      width: right - left,
+      height: bottom - top,
+    });
+  }
 
-export function excludeBorders(
-  rect: Rect,
-  borders: { top: number; right: number; bottom: number; left: number },
-): Rect {
-  return {
-    x: rect.x + borders.left,
-    y: rect.y + borders.top,
-    width: rect.width - borders.left - borders.right,
-    height: rect.height - borders.top - borders.bottom,
-  };
-}
+  static boundRects<Type extends CoordinateType, Origin extends CoordinateType>(
+    ...rects: RectJSON<Type, Origin>[]
+  ): Rect<Type, Origin> {
+    if (rects.length === 0) throw new Error("rects must not be empty");
 
-export function addPadding(rect: Rect, padding: number): Rect {
-  return {
-    x: rect.x - padding,
-    y: rect.y - padding,
-    width: rect.width + padding * 2,
-    height: rect.height + padding * 2,
-  };
-}
+    const domRects = rects.map((r) => DOMRectReadOnly.fromRect(r));
+    const left = Math.min(...map(domRects, (r) => r.left));
+    const right = Math.max(...map(domRects, (r) => r.right));
+    const top = Math.min(...map(domRects, (r) => r.top));
+    const bottom = Math.max(...map(domRects, (r) => r.bottom));
 
-export function empty(offset: Coordinates): Rect {
-  return {
-    ...offset,
-    width: 0,
-    height: 0,
-  };
+    return new Rect({
+      type: rects[0].type,
+      origin: rects[0].origin,
+      x: left,
+      y: top,
+      width: right - left,
+      height: bottom - top,
+    });
+  }
+
+  offsets<NewOrigin extends CoordinateType>(
+    c: CoordinatesJSON<NewOrigin, Origin>,
+  ): Rect<Type, NewOrigin> {
+    return new Rect({
+      type: this.type,
+      origin: c.type,
+      x: this.x - c.x,
+      y: this.y - c.y,
+      width: this.width,
+      height: this.height,
+    });
+  }
+
+  reverse(): Rect<Origin, Type> {
+    return new Rect({
+      type: this.origin,
+      origin: this.type,
+      x: -this.x,
+      y: -this.y,
+      width: this.width,
+      height: this.height,
+    });
+  }
+
+  // Resize the rect by the given sides.
+  // Positive value means expanding the rect.
+  // Negative value means shrinking the rect.
+  resize(
+    arg:
+      | {
+          top: number;
+          right: number;
+          bottom: number;
+          left: number;
+        }
+      | number,
+  ): Rect<Type, Origin> {
+    let edges: { top: number; right: number; bottom: number; left: number };
+    if (typeof arg === "number") {
+      edges = { top: arg, right: arg, bottom: arg, left: arg };
+    } else {
+      edges = arg;
+    }
+    return new Rect({
+      type: this.type,
+      origin: this.origin,
+      x: this.x - edges.left,
+      y: this.y - edges.top,
+      width: this.width + edges.left + edges.right,
+      height: this.height + edges.top + edges.bottom,
+    });
+  }
 }

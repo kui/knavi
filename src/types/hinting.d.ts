@@ -5,42 +5,26 @@ interface ActionOptions {
   metaKey: boolean;
 }
 
-interface Coordinates {
-  x: number;
-  y: number;
-}
-
-interface Sizes {
-  width: number;
-  height: number;
-}
-
-type Rect = Coordinates & Sizes;
-
-interface RectHolder {
+// Identifier for a element in a frame.
+interface ElementId {
   index: number;
   frameId: number;
-  // The rects are relative to ***
-  // TODO Write the ***
-  rects: Rect[];
 }
 
-interface HintTarget {
-  holder: RectHolder;
+interface ElementRects {
+  id: ElementId;
+  rects: RectJSON<"element-border", "root-viewport">[];
+}
+
+interface HintedElement extends ElementRects {
   hint: string;
   state: "init" | "candidate" | "hit" | "disabled";
 }
 
-interface HintTargetChange {
-  target: HintTarget;
-  oldState: HintTarget["state"];
-  newState: HintTarget["state"];
-}
-
 interface HintContext {
-  targets: HintTarget[];
+  targets: HintedElement[];
   inputSequence: string[];
-  hitTarget: HintTarget | null;
+  hitTarget: HintedElement | null;
 }
 
 interface ActionDescriptions {

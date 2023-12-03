@@ -1,10 +1,13 @@
-import { applyStyle } from "./elements";
-import * as vp from "./viewports";
-import * as rectUtils from "./rects";
-import { Router } from "./chrome-messages";
+import {
+  Z_INDEX_OFFSET,
+  applyRect,
+  applyStyle,
+  getPaddingRects,
+  rectAsRootViewport,
+} from "./elements";
+import { Rect } from "./rects";
 
 const ANIMATION_DURATION_MS = 400;
-const Z_INDEX_OFFSET = 2147483640;
 
 export default class BlurView {
   private overlay: HTMLDivElement;
@@ -16,6 +19,8 @@ export default class BlurView {
       display: "block",
       border: "none",
       outline: "none",
+      padding: "0",
+      margin: "0",
       zIndex: Z_INDEX_OFFSET.toString(),
     });
   }
@@ -26,33 +31,14 @@ export default class BlurView {
     body.removeChild(this.overlay);
   }
 
-  blur(
-    // Offsetted by visual viewport.
-    rect: Rect | null,
-  ) {
-    if (!rect) return;
-
+  blur(rect: Rect<"element-border", "root-viewport">) {
     const body = document.body;
     if (!body) return;
 
     this.remove();
 
-    const bodyPosition = window.getComputedStyle(document.body).position;
-    let bodyOffsets: Coordinates;
-    if (bodyPosition === "static") {
-      bodyOffsets = { x: 0, y: 0 };
-    } else {
-      const bodyRect = vp.getBoundingClientRectFromRoot(body);
-      bodyOffsets = { y: bodyRect.y, x: bodyRect.x };
-    }
-
-    rect = rectUtils.move(rect, vp.visual.offsets());
-    applyStyle(this.overlay, {
-      top: `${rect.y - bodyOffsets.y}px`,
-      left: `${rect.x - bodyOffsets.x}px`,
-      height: `${rect.height}px`,
-      width: `${rect.width}px`,
-    });
+    const bodyOffsets = rectAsRootViewport(getPaddingRects(body)[0]);
+    applyRect(this.overlay, rect.offsets(bodyOffsets));
     body.insertBefore(this.overlay, body.firstChild);
 
     const animation = this.overlay.animate(
@@ -71,11 +57,5 @@ export default class BlurView {
       },
     );
     animation.addEventListener("finish", () => this.remove());
-  }
-
-  router() {
-    return Router.newInstance().add("AfterBlur", (message) =>
-      this.blur(message.rect),
-    );
   }
 }

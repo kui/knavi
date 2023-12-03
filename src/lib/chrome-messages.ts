@@ -45,42 +45,18 @@ interface Messages {
     response: number;
   };
   GetDescriptions: {
-    payload: { frameId: number; index: number };
+    payload: { id: ElementId };
     response: ActionDescriptions;
   };
   ExecuteAction: {
-    payload: { frameId: number; index: number; options: ActionOptions };
+    payload: { id: ElementId; options: ActionOptions };
     response: void;
   };
   ResponseRectsFragment: {
     payload: {
-      holders: RectHolder[];
+      requestId: number;
+      rects: ElementRects[];
     };
-    response: void;
-  };
-
-  // HintView
-  RenderTargets: {
-    payload: { targets: HintTarget[] };
-    response: void;
-  };
-  AfterHitHint: {
-    payload: {
-      input: SingleLetter;
-      // Targets whose state is changed.
-      changes: HintTarget[];
-      actionDescriptions: ActionDescriptions | null;
-    };
-    response: void;
-  };
-  AfterRemoveHints: {
-    payload: void;
-    response: void;
-  };
-
-  // Blur
-  AfterBlur: {
-    payload: { rect: Rect | null };
     response: void;
   };
 }

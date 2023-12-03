@@ -13,7 +13,7 @@ export const router = Router.newInstance()
     ["GetDescriptions", "ExecuteAction"],
     (type) => async (message, sender) => {
       return await sendToTab(sender.tab!.id!, type, message, {
-        frameId: message.frameId,
+        frameId: message.id.frameId,
       });
     },
   );

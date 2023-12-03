@@ -1,34 +1,47 @@
+import { RectFetcherContentAll as RectFetcher } from "./lib/rect-fetcher-content-all";
+import { KeyboardHandlerContentAll as KeyboardHandler } from "./lib/keyboard-handler-content-all";
+import { BlurerContentAll as Blurer } from "./lib/blurer-content-all";
 import settingsClient from "./lib/settings-client";
-import { RectFetcherService } from "./lib/rect-fetcher-service";
-import { KeyboardEventHandler } from "./lib/keyboard-event-handler";
 import { printError } from "./lib/errors";
-import Blurer from "./lib/blurer";
+import BlurerClient from "./lib/blurer-client";
+import HinterClient from "./lib/hinter-client";
 import { Router as DOMMessageRouter } from "./lib/dom-messages";
+import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
+import { Coordinates, Rect } from "./lib/rects";
 
 globalThis.KNAVI_FILE = "content-all";
 
+const blurerClient = new BlurerClient();
+const hinterClient = new HinterClient();
+const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
+const rectFetcher = new RectFetcher();
 const blurer = new Blurer();
-const keyboardEventHandler = new KeyboardEventHandler(blurer);
 (async () => {
   const setting = await settingsClient.get(["magicKey", "blurKey", "hints"]);
-  await keyboardEventHandler.setup(setting);
+  await keyboardHandler.setup(setting);
   console.debug("settings loaded");
 })().catch(printError);
 
-const rectFetcherService = new RectFetcherService();
-
-const router = rectFetcherService.router().merge(
-  settingsClient.subscribeRouter(async (settings) => {
-    await keyboardEventHandler.setup(settings);
-    console.debug("settings changed");
-  }),
+chrome.runtime.onMessage.addListener(
+  ChromeMessageRouter.newInstance()
+    .merge(
+      settingsClient.subscribeRouter(async (settings) => {
+        await keyboardHandler.setup(settings);
+      }),
+    )
+    .add("GetDescriptions", ({ id }) =>
+      rectFetcher.handleGetDescription(id.index),
+    )
+    .add("ExecuteAction", ({ id, options }) =>
+      rectFetcher.handleExecuteAction(id.index, options),
+    )
+    .buildListener(),
 );
-chrome.runtime.onMessage.addListener(router.buildListener());
 
 window.addEventListener(
   "keydown",
   (event) => {
-    if (keyboardEventHandler.handleKeydown(event)) {
+    if (keyboardHandler.handleKeydown(event)) {
       event.preventDefault();
       event.stopImmediatePropagation();
     }
@@ -38,7 +51,7 @@ window.addEventListener(
 window.addEventListener(
   "keyup",
   (event) => {
-    if (keyboardEventHandler.handleKeyup(event)) {
+    if (keyboardHandler.handleKeyup(event)) {
       event.preventDefault();
       event.stopImmediatePropagation();
     }
@@ -48,7 +61,7 @@ window.addEventListener(
 window.addEventListener(
   "keypress",
   (event) => {
-    if (keyboardEventHandler.handleKeypress()) {
+    if (keyboardHandler.handleKeypress()) {
       event.preventDefault();
       event.stopImmediatePropagation();
     }
@@ -59,10 +72,16 @@ window.addEventListener(
 window.addEventListener(
   "message",
   new DOMMessageRouter()
-    .add("com.github.kui.knavi.Blur", (e) => blurer.handleBlurMessage(e))
+    .add("com.github.kui.knavi.Blur", (e) =>
+      blurer.handleBlurMessage(e.source, e.data.rect),
+    )
     .add("com.github.kui.knavi.AllRectsRequest", async (e) => {
-      const { viewport, offsets } = e.data;
-      await rectFetcherService.handleAllRectsRequest(viewport, offsets);
+      const { id, viewport, offsets } = e.data;
+      await rectFetcher.handleAllRectsRequest(
+        id,
+        new Rect(viewport),
+        new Coordinates(offsets),
+      );
     })
     .buildListener(),
 );

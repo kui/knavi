@@ -3,17 +3,17 @@ import { printError } from "./errors";
 interface MessageDefinition {
   "com.github.kui.knavi.AllRectsRequest": {
     payload: {
-      // Target visual viewport relative to the root visual viewport.
-      viewport: Rect;
-      // Coordinates of Target frame relative to the root visual viewport.
-      offsets: Coordinates;
+      id: number;
+      // This viewport is cropped by the root viewport and actually visible area to the user.
+      viewport: RectJSON<"actual-viewport", "root-viewport">;
+      // This viewport is not cropped by the root viewport
+      // and also indicates the position of the content area of a frame in the parent frame.
+      offsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
     };
   };
   "com.github.kui.knavi.Blur": {
     payload: {
-      // The rect is relative to the visual viewport.
-      // if the rect is null, it means the target is out of the visual viewport.
-      rect: Rect | null;
+      rect: RectJSON<"element-border", "layout-viewport"> | null;
     };
   };
 }
@@ -62,7 +62,7 @@ export class Router {
       try {
         result = h(event);
       } catch (e) {
-        console.error(e);
+        printError(e);
       }
       if (result instanceof Promise) {
         result.catch(printError);

@@ -1,13 +1,17 @@
+import { printError } from "./errors";
+import { HintView } from "./hinter-view";
+import { head, map, zip } from "./iters";
 import type { RectFetcherClient } from "./rect-fetcher-client";
-import { Router, sendToRuntime } from "./chrome-messages";
-import { head } from "./iters";
 import { SingleLetter } from "./strings";
 
-export class Hinter {
+export class HinterContentRoot {
   private context: HintContext | null = null;
   private hintLetters = "";
 
-  constructor(private rectFetcher: RectFetcherClient) {}
+  constructor(
+    private rectFetcher: RectFetcherClient,
+    private view: HintView,
+  ) {}
 
   setup(hintLetters: string) {
     this.hintLetters = hintLetters;
@@ -26,16 +30,18 @@ export class Hinter {
     };
 
     const hintTextGenerator = this.generateHintTexts();
-    for await (const holders of this.rectFetcher.fetch()) {
-      if (holders.length === 0) continue;
-      const hintTexts = [...head(hintTextGenerator, holders.length)];
+    for await (const elementRects of this.rectFetcher.fetch()) {
+      if (elementRects.length === 0) continue;
+      const hintTexts = [...head(hintTextGenerator, elementRects.length)];
       console.debug("hintTexts", hintTexts);
-      const targets: HintTarget[] = holders.map((holder, index) => {
-        const hint = hintTexts[index];
-        return { state: "init", hint, holder };
-      });
+      const targets: HintedElement[] = [
+        ...map(
+          zip(elementRects, hintTexts),
+          ([er, hint]) => ({ state: "init", hint, ...er }) as HintedElement,
+        ),
+      ];
       this.context.targets.push(...targets);
-      await sendToRuntime("RenderTargets", { targets });
+      this.view.render(targets).catch(printError);
     }
   }
 
@@ -79,15 +85,10 @@ export class Hinter {
     let actionDescriptions = null;
     if (context.hitTarget) {
       actionDescriptions = await this.rectFetcher.getDescriptions(
-        context.hitTarget.holder,
+        context.hitTarget.id,
       );
     }
-
-    await sendToRuntime("AfterHitHint", {
-      input: inputLetter,
-      changes,
-      actionDescriptions,
-    });
+    this.view.hit(changes, actionDescriptions);
   }
 
   async removeHints(options: ActionOptions) {
@@ -96,24 +97,17 @@ export class Hinter {
       throw Error("Ilegal state invocation: hinting not started");
     }
     if (context.hitTarget) {
-      await this.rectFetcher.action(context.hitTarget.holder, options);
+      await this.rectFetcher.action(context.hitTarget.id, options);
     } else {
       await this.rectFetcher.action(null, options);
     }
     this.context = null;
-    await sendToRuntime("AfterRemoveHints");
-  }
-
-  router() {
-    return Router.newInstance()
-      .add("AttachHints", () => this.attachHints())
-      .add("HitHint", ({ key }) => this.hitHint(key))
-      .add("RemoveHints", ({ options }) => this.removeHints(options));
+    this.view.remove();
   }
 }
 
 // Return true if the state is changed.
-function updateTargetState(target: HintTarget, input: string): boolean {
+function updateTargetState(target: HintedElement, input: string): boolean {
   const oldState = target.state;
   if (target.hint === input) {
     target.state = "hit";
@@ -129,7 +123,7 @@ function updateTargetState(target: HintTarget, input: string): boolean {
 function* updateContext(
   context: HintContext,
   inputLetter: SingleLetter,
-): Generator<HintTarget> {
+): Generator<HintedElement> {
   context.inputSequence.push(inputLetter);
   const input = context.inputSequence.join("");
   for (const t of context.targets) {

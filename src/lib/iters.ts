@@ -65,3 +65,15 @@ export function groupIntoObjectBy<E>(
     {},
   );
 }
+
+export function* zip<E1, E2>(
+  i1: Iterable<E1>,
+  i2: Iterable<E2>,
+): Generator<[E1, E2]> {
+  const g1 = map(i1, (e) => e);
+  for (const e2 of i2) {
+    const e1 = g1.next();
+    if (e1.done) break;
+    yield [e1.value, e2];
+  }
+}

@@ -185,7 +185,7 @@ handlers.push({
     };
   },
   isSupported(target) {
-    return isScrollable(target, getComputedStyle(target));
+    return isScrollable(target, target.computedStyleMap());
   },
   handle(element) {
     if (!(element instanceof HTMLElement)) {

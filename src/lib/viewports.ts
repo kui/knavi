@@ -1,44 +1,53 @@
-import * as rects from "./rects";
+import { Coordinates, Rect } from "./rects";
 
 export const layout = {
-  // get the coordinates of the top-left of the layout viewport from the top-left of the document.
-  offsets(): Coordinates {
-    return { y: scrollY, x: scrollX };
+  offsets(): Coordinates<"layout-viewport", "initial-containing-block"> {
+    return new Coordinates({
+      type: "layout-viewport",
+      origin: "initial-containing-block",
+      y: scrollY,
+      x: scrollX,
+    });
   },
   sizes(): Sizes {
     const documentElement = document.documentElement;
-    if (!documentElement) return { height: 0, width: 0 };
     return {
       height: documentElement.clientHeight,
       width: documentElement.clientWidth,
     };
   },
-  rect(): Rect {
-    return rects.rectByOffsetsAndSizes(this.offsets(), this.sizes());
+  rect(): Rect<"layout-viewport", "initial-containing-block"> {
+    return new Rect({ ...this.offsets(), ...this.sizes() });
   },
 };
 
 export const visual = {
-  // get the coordinates of the top-left of the visual viewport from the top-left of the document.
-  offsets(): Coordinates {
+  offsets(): Coordinates<"visual-viewport", "initial-containing-block"> {
     if (!visualViewport) throw new Error("visualViewport is not supported");
-    return { x: visualViewport.pageLeft, y: visualViewport.pageTop };
+    return new Coordinates({
+      type: "visual-viewport",
+      origin: "initial-containing-block",
+      y: visualViewport.pageTop,
+      x: visualViewport.pageLeft,
+    });
   },
-  offsetsFromLayoutVp(): Coordinates {
+  offsetsFromLayoutViewport(): Coordinates<
+    "visual-viewport",
+    "layout-viewport"
+  > {
     if (!visualViewport) throw new Error("visualViewport is not supported");
-    return { x: visualViewport.offsetLeft, y: visualViewport.offsetTop };
+    return new Coordinates({
+      type: "visual-viewport",
+      origin: "layout-viewport",
+      y: visualViewport.offsetTop,
+      x: visualViewport.offsetLeft,
+    });
   },
   sizes(): Sizes {
     if (!visualViewport) throw new Error("visualViewport is not supported");
     return { height: visualViewport.height, width: visualViewport.width };
   },
-  rect(): Rect {
-    return rects.rectByOffsetsAndSizes(this.offsets(), this.sizes());
+  rect(): Rect<"visual-viewport", "initial-containing-block"> {
+    return new Rect({ ...this.offsets(), ...this.sizes() });
   },
 };
-
-export function getBoundingClientRectFromRoot(element: Element): Rect {
-  const layoutVpOffsets = layout.offsets();
-  const rectFromLayoutVp = element.getBoundingClientRect();
-  return rects.move(rectFromLayoutVp, layoutVpOffsets);
-}
