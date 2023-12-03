@@ -3,9 +3,8 @@ import {
   applyRect,
   applyStyle,
   getPaddingRects,
-  rectAsRootViewport,
 } from "./elements";
-import { Rect } from "./rects";
+import { Coordinates, Rect } from "./rects";
 
 const ANIMATION_DURATION_MS = 400;
 
@@ -37,7 +36,24 @@ export default class BlurView {
 
     this.remove();
 
-    const bodyOffsets = rectAsRootViewport(getPaddingRects(body)[0]);
+    // The coordinates of the <body> element may need to be used as the offset of the "container"
+    // depending on the CSS position of the <body> element.
+    // See https://developer.mozilla.org/en-US/docs/Web/CSS/position#absolute_positioning
+    // > The absolutely positioned element is positioned relative to its nearest positioned
+    // > ancestor (i.e., the nearest ancestor that is not static).
+    const bodyOffsets: Coordinates<"element-padding", "root-viewport"> =
+      getComputedStyle(body).position === "static"
+        ? new Coordinates({
+            type: "element-padding",
+            origin: "root-viewport",
+            x: 0,
+            y: 0,
+          })
+        : new Coordinates({
+            ...getPaddingRects(body)[0],
+            origin: "root-viewport",
+          });
+
     applyRect(this.overlay, rect.offsets(bodyOffsets));
     body.insertBefore(this.overlay, body.firstChild);
 

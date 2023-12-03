@@ -3,11 +3,10 @@ import {
   Z_INDEX_OFFSET,
   applyStyle,
   getPaddingRects,
-  rectAsRootViewport,
   styleByRect,
 } from "./elements";
 import { flatMap } from "./iters";
-import { Rect } from "./rects";
+import { Coordinates, Rect } from "./rects";
 import * as vp from "./viewports";
 
 const CONTAINER_ID = "com-github-kui-knavi-container";
@@ -67,7 +66,24 @@ export class HintView {
 
   private initStyles(body: HTMLElement) {
     const vpRect = vp.layout.rect();
-    const bodyOffsets = rectAsRootViewport(getPaddingRects(body)[0]);
+
+    // The coordinates of the <body> element may need to be used as the offset of the "container"
+    // depending on the CSS position of the <body> element.
+    // See https://developer.mozilla.org/en-US/docs/Web/CSS/position#absolute_positioning
+    // > The absolutely positioned element is positioned relative to its nearest positioned
+    // > ancestor (i.e., the nearest ancestor that is not static).
+    const bodyOffsets: Coordinates<"element-padding", "root-viewport"> =
+      getComputedStyle(body).position === "static"
+        ? new Coordinates({
+            type: "element-padding",
+            origin: "root-viewport",
+            x: 0,
+            y: 0,
+          })
+        : new Coordinates({
+            ...getPaddingRects(body)[0],
+            origin: "root-viewport",
+          });
 
     applyStyle(this.container, {
       position: "absolute",

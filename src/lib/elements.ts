@@ -170,16 +170,6 @@ export function getPaddingRects(
   return clientRects.map((r) => paddingRect.offsets(r.reverse()));
 }
 
-export function rectAsRootViewport<Type extends CoordinateType>(
-  rect: RectJSON<Type, "layout-viewport">,
-): Rect<Type, "root-viewport"> {
-  if (window !== window.parent) throw new Error("Not in root frame");
-  return new Rect({
-    ...rect,
-    origin: "root-viewport",
-  });
-}
-
 // https://developer.mozilla.org/ja/play?id=DHsQtf%2Bkx53WFGR2KG1novl1TT5ML%2F0VHABLcyh94WFJ5QGkScrEmjxke24Zi62Kjv%2FHXvZWdWHqC7yP
 export function getContentRects(
   element: HTMLElement,

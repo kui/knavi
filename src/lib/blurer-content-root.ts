@@ -1,5 +1,5 @@
 import BlurView from "./blurer-view";
-import { rectAsRootViewport } from "./elements";
+import { Rect } from "./rects";
 
 if (parent !== window)
   throw Error("This script must be loaded in the root frame.");
@@ -27,6 +27,6 @@ export class BlurerContentRoot {
     (activeElement.blur as () => void)();
 
     // We can treat layout viewport as root viewport in the root frame.
-    this.view.blur(rectAsRootViewport(rect));
+    this.view.blur(new Rect({ ...rect, origin: "root-viewport" }));
   }
 }
