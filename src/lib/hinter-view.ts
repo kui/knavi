@@ -46,16 +46,17 @@ export class HintView {
     this.style.textContent = css;
   }
 
-  async render(targets: HintedElement[]) {
+  async start() {
+    if (this.hints) throw Error("Illegal state");
     await waitUntil(() => Boolean(document.body));
+    const body = document.body;
+    this.initStyles(body);
+    body.insertBefore(this.container, body.firstChild);
+    this.hints = new Hints();
+  }
 
-    if (!this.hints) {
-      const body = document.body;
-      this.initStyles(body);
-      body.insertBefore(this.container, body.firstChild);
-      this.hints = new Hints();
-    }
-
+  render(targets: HintedElement[]) {
+    if (!this.hints) throw Error("Illegal state");
     const df = document.createDocumentFragment();
     for (const [target, hintElements] of generateHintElements(targets)) {
       this.hints.add(target, hintElements);

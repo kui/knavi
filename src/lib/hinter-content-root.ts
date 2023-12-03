@@ -1,4 +1,3 @@
-import { printError } from "./errors";
 import { HintView } from "./hinter-view";
 import { head, map, zip } from "./iters";
 import type { RectFetcherClient } from "./rect-fetcher-client";
@@ -29,6 +28,8 @@ export class HinterContentRoot {
       hitTarget: null,
     };
 
+    await this.view.start();
+
     const hintTextGenerator = this.generateHintTexts();
     for await (const elementRects of this.rectFetcher.fetch()) {
       if (elementRects.length === 0) continue;
@@ -41,7 +42,7 @@ export class HinterContentRoot {
         ),
       ];
       this.context.targets.push(...targets);
-      this.view.render(targets).catch(printError);
+      this.view.render(targets);
     }
   }
 
