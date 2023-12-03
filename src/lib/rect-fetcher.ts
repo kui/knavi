@@ -53,14 +53,17 @@ export default class RectFetcher {
 
   get() {
     const visibles = [...this.getVisibles()];
-    return this.distinctSimilarTarget(visibles);
+    console.debug("visibles", visibles);
+    const distincteds = this.distinctSimilarTarget(visibles);
+    console.debug("distinct visibles", distincteds);
+    return distincteds;
   }
 
   // TODO Integrate with ActionHandler
   *getVisibles(): Generator<ElementRects> {
     for (const element of listAll()) {
       if (
-        element.checkVisibility({
+        !element.checkVisibility({
           checkOpacity: true,
           checkVisibilityCSS: true,
         })
