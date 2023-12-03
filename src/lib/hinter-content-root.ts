@@ -118,7 +118,7 @@ function updateTargetState(target: HintedElement, input: string): boolean {
   } else {
     target.state = "disabled";
   }
-  return oldState === target.state;
+  return oldState !== target.state;
 }
 
 // Return targets whose state is changed.
