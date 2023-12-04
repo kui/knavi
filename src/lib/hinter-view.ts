@@ -103,6 +103,7 @@ export class HintView {
     applyStyle(this.container, {
       position: "absolute",
       display: "block",
+      background: "transparent",
 
       ...styleByRect(overlayRect),
 
