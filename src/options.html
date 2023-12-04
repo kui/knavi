@@ -2,7 +2,6 @@
   <head>
     <meta charset="utf-8" />
     <title>KNavi Settings</title>
-    <link rel="stylesheet" type="text/css" href="codemirror.css" />
     <link rel="stylesheet" type="text/css" href="options.css" />
     <script src="options.js" async></script>
   </head>
@@ -49,8 +48,7 @@
             />
             <button
               type="button"
-              class="js-clear-button"
-              data-target="#blur-key"
+              data-clear-target="#blur-key"
               alt="Clear to disable"
               title="Clear to disable"
             >
@@ -62,11 +60,10 @@
 
       <h2>Style</h2>
       <p>Styles for Hint elements and overlays.</p>
-      <textarea id="css" name="css"></textarea>
-      <div class="js-cm-wrapper" data-target="#css" data-mode="css"></div>
+      <textarea id="css" name="css" data-lang="css"></textarea>
       <p>
-        <button type="button" class="js-revert-button" data-target="#css">
-          Revert to Default Style
+        <button type="button" data-restore-target="#css">
+          Restore Default Style
         </button>
         <span class="js-bytes-display" data-name="css"></span> bytes /
         <span class="js-bytes-max-display"></span> bytes (<span
@@ -103,12 +100,11 @@
         >). A JSON value is CSS selector or array. This JSON is serialized as
         <a href="https://github.com/json5/json5#example">JSON5</a>.
       </p>
-      <textarea id="additional-selectors" name="additionalSelectors"></textarea>
-      <div
-        class="js-cm-wrapper"
-        data-target="#additional-selectors"
-        data-mode="json"
-      ></div>
+      <textarea
+        id="additional-selectors"
+        name="additionalSelectors"
+        data-lang="json5"
+      ></textarea>
       <p>
         <span class="js-bytes-display" data-name="additionalSelectors"></span>
         bytes / <span class="js-bytes-max-display"></span> bytes (<span

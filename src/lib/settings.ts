@@ -121,7 +121,7 @@ export default {
       ...(await (await getStorage()).get(SETTINGS_KEYS)),
     };
   },
-  loadDefaults() {
+  defaults() {
     return DEFAULT_SETTINGS;
   },
   async getBytesInUse<K extends keyof Settings>(names: K[]): Promise<number> {

@@ -7,7 +7,7 @@ STATICS = $(patsubst $(SRC)/%, $(BUILD)/%, $(wildcard $(SRC)/*.html $(SRC)/*.css
 ICONS = $(addprefix $(BUILD)/icon, $(addsuffix .png, 16 48 128))
 PNG = $(patsubst $(SRC)/%.svg, $(BUILD)/%.png, $(wildcard $(SRC)/*.svg))
 
-FILES = $(BUILD) $(BUILD)/manifest.json $(BUILD)/codemirror.css $(STATICS) $(ICONS) $(PNG)
+FILES = $(BUILD) $(BUILD)/manifest.json $(STATICS) $(ICONS) $(PNG)
 
 .PHONY: all
 all: $(FILES) $(JS)
@@ -33,9 +33,6 @@ $(BUILD)/%.png: $(SRC)/%.svg
 		--width 40 \
 		--keep-aspect-ratio \
 		--output $@
-
-$(BUILD)/codemirror.css: node_modules
-	cp -v node_modules/codemirror/lib/codemirror.css $@
 
 $(BUILD)/%: $(SRC)/%
 	cp -v $< $@
