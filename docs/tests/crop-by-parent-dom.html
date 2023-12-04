@@ -3,10 +3,11 @@
     position: absolute;
     width: 256px;
     height: 128px;
-    top: 8px;
+    top: 32px;
     left: 16px;
     padding: 32px;
     overflow: scroll;
+    background-color: mediumpurple;
   }
   a {
     position: absolute;
@@ -20,6 +21,17 @@
     background-color: red;
   }
 </style>
+
+<script>
+  function scrollDiv(px) {
+    var div = document.querySelector("div");
+    div.scrollTop = px;
+  }
+</script>
+
+<button onclick="scrollDiv(100)">Scroll 100px</button>
+<button onclick="scrollDiv(200)">Scroll 200px</button>
+<button onclick="scrollDiv(300)">Scroll 300px</button>
 
 <div>
   <a onclick="alert('clicked');">click</a>
