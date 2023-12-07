@@ -153,14 +153,12 @@ export class Router<
     sender: chrome.runtime.MessageSender,
     sendResponse: (arg: SendResponseArg<T>) => void,
   ): boolean | void {
-    console.debug("Recieve: ", message);
     const handler = this.handlers.get(type(message));
-    if (!handler) {
-      console.debug("No hundler: ", message);
-      return;
-    }
+    if (!handler) return;
 
+    console.debug("Recieve: ", message);
     console.debug("Handle: ", handler);
+
     let response: Response<T> | Promise<Response<T>> | undefined;
     let error;
     try {

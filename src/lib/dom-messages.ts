@@ -50,13 +50,14 @@ export class Router {
   }
 
   private handleMessage(event: MessageEvent<BaseMessage>) {
-    console.debug("Received: ", event);
     const handlers = this.handlers.get(event.data["@type"]);
     if (!handlers) {
       return;
     }
 
+    console.debug("Received: ", event);
     console.debug("Handlers: ", handlers);
+
     for (const h of handlers) {
       let result;
       try {
