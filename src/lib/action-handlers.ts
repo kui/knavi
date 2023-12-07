@@ -82,7 +82,6 @@ handlers.push({
   isSupported(target) {
     return (
       target instanceof HTMLInputElement &&
-      !target.readOnly &&
       !target.disabled &&
       CLICKABLE_INPUT_TYPES.has(target.type)
     );
