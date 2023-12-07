@@ -167,10 +167,14 @@ handlers.push({
     };
   },
   isSupported(target) {
-    return target instanceof HTMLSelectElement;
+    return target instanceof HTMLSelectElement && !target.disabled;
   },
-  handle(target: HTMLSelectElement) {
+  async handle(target: HTMLSelectElement) {
     target.focus();
+    await nextAnimationFrame();
+    if ("showPicker" in target && typeof target.showPicker === "function") {
+      target.showPicker();
+    }
   },
 });
 
