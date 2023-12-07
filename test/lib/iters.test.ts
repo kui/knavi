@@ -1,4 +1,4 @@
-import * as iters from "../../src/lib/iters";
+import * as iters from "../../src/lib/iters.ts";
 
 describe("iters", () => {
   describe("#length", () => {

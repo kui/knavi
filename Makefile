@@ -74,7 +74,7 @@ watch: node_modules
 
 .PHONY: test
 test: node_modules
-	npx mocha test/**/*_test.js
+	npx jest test
 
 .PHONY: clean
 clean:

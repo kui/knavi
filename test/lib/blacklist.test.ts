@@ -1,4 +1,4 @@
-import { BlackList } from "../../src/lib/blacklist";
+import { BlackList } from "../../src/lib/blacklist.ts";
 
 const patterns = `https://www.google.co.jp/search
 https://twitter.com/*/status/*`;

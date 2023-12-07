@@ -1,4 +1,4 @@
-import { AdditionalSelectors } from "../../src/lib/additional-selectors";
+import { AdditionalSelectors } from "../../src/lib/additional-selectors.ts";
 
 describe("AdditionalSelectors", () => {
   describe("#constructor", () => {

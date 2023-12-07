@@ -5,8 +5,10 @@
     "strict": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
     "target": "ESNext",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "allowImportingTsExtensions": true,
     "noEmit": true
   }
 }
