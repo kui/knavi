@@ -7,25 +7,22 @@ import globals from "globals";
 
 const compat = new FlatCompat();
 
-export default [
-  { ignores: ["{,prod-}build"] },
-  js.configs.recommended,
-  eslintConfigPrettier,
-  ...compat
+function ts(files, project) {
+  return compat
     .extends(
       "plugin:@typescript-eslint/recommended-type-checked",
       "plugin:@typescript-eslint/stylistic-type-checked",
     )
     .map((config) => ({
       ...config,
-      files: ["src/**/*.ts"],
+      files,
       languageOptions: {
         parser: parserTs,
         parserOptions: {
           // https://typescript-eslint.io/packages/typescript-estree/#parsing
           // https://github.com/babel/babel/pull/16029
           allowAutomaticSingleRunInference: true,
-          project: "./src/tsconfig.json",
+          project,
         },
       },
       plugins: { "@typescript-eslint": pluginTs },
@@ -33,9 +30,17 @@ export default [
         ...config.rules,
         "@typescript-eslint/prefer-namespace-keyword": "off",
       },
-    })),
+    }));
+}
+
+export default [
+  { ignores: ["{,prod-}build"] },
+  js.configs.recommended,
+  eslintConfigPrettier,
+  ...ts(["src/**/*.ts"], "./src/tsconfig.json"),
+  ...ts(["*.ts", "test/**/*.ts"], "./tsconfig.json"),
   {
-    files: ["*.config.js"],
+    files: ["*.config.{js,ts}"],
     languageOptions: {
       globals: {
         ...globals.node,
@@ -52,10 +57,9 @@ export default [
     },
   },
   {
-    files: ["test/**/*.js"],
+    files: ["test/**/*.test.ts"],
     languageOptions: {
       globals: {
-        ...globals.mocha,
         ...globals.node,
       },
     },

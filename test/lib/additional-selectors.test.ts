@@ -1,12 +1,11 @@
-import assert from "node:assert";
-import AdditionalSelectors from "../../src/lib/additional-selectors.js";
+import { AdditionalSelectors } from "../../src/lib/additional-selectors";
 
 describe("AdditionalSelectors", () => {
   describe("#constructor", () => {
     it("should throw an Error if invalid syntax", () => {
-      assert.throws(() => {
+      expect(() => {
         new AdditionalSelectors("{");
-      });
+      }).toThrow();
     });
   });
   describe("#match", () => {
@@ -19,12 +18,14 @@ describe("AdditionalSelectors", () => {
       ],
     }`);
     it("should return empty if no match", () => {
-      const actual = additionalSelectors.match("http://google.com/");
-      assert.deepEqual(actual, []);
+      expect(additionalSelectors.match("http://google.com/")).toEqual([]);
     });
     it("should return a flatten array if matched", () => {
-      const actual = additionalSelectors.match("http://tumblr.com/dashbord");
-      assert.deepEqual(actual, ["a", "b", "c"]);
+      expect(additionalSelectors.match("http://tumblr.com/dashbord")).toEqual([
+        "a",
+        "b",
+        "c",
+      ]);
     });
   });
 });
