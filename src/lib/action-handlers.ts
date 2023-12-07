@@ -12,7 +12,7 @@ export default class ActionHandlerDelegater {
   handle(target: Element, options: MouseEventInit) {
     const h = getHandler(target);
     const d = h.getDescriptions();
-    console.debug(d.long ?? d.short);
+    console.debug("element=", target, "desc=", d.long ?? d.short);
     h.handle(target, options);
   }
 
