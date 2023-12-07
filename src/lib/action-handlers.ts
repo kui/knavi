@@ -62,6 +62,15 @@ handlers.push({
   },
 });
 
+const CLICKABLE_INPUT_TYPES = new Set([
+  "checkbox",
+  "radio",
+  "button",
+  "image",
+  "submit",
+  "reset",
+]);
+
 // input elements for clickable types.
 handlers.push({
   getDescriptions() {
@@ -75,9 +84,7 @@ handlers.push({
       target instanceof HTMLInputElement &&
       !target.readOnly &&
       !target.disabled &&
-      ["checkbox", "radio", "button", "image", "submit", "reset"].includes(
-        target.type,
-      )
+      CLICKABLE_INPUT_TYPES.has(target.type)
     );
   },
   async handle(target: HTMLInputElement, options) {
