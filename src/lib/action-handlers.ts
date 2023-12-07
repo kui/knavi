@@ -189,7 +189,7 @@ handlers.push({
     return target.hasAttribute("tabindex");
   },
   handle(target) {
-    if (target instanceof HTMLElement) {
+    if ("focus" in target && typeof target.focus === "function") {
       target.focus();
     } else {
       console.warn("Cannot focus", target);
@@ -208,7 +208,7 @@ handlers.push({
     return isScrollable(target, target.computedStyleMap());
   },
   handle(element) {
-    if (!(element instanceof HTMLElement)) {
+    if (!("focus" in element && typeof element.focus === "function")) {
       console.warn("Cannot focus", element);
       return;
     }
