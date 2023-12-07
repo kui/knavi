@@ -21,15 +21,10 @@ export function isScrollable(
 }
 
 export function isEditable(element: EventTarget) {
-  try {
-    // Non-selectable <input> throws an error when "selectionStart" are referred.
-    if ("selectionStart" in element && element.selectionStart != null)
-      return true;
-  } catch (e) {
-    return false;
-  }
+  if ("selectionStart" in element && element.selectionStart != null)
+    return true;
 
-  return "contentEditable" in element && element.contentEditable === "true";
+  return "isContentEditable" in element && Boolean(element.isContentEditable);
 }
 
 export function* traverseParent(
