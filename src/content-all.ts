@@ -32,8 +32,10 @@ chrome.runtime.onMessage.addListener(
     .add("GetDescriptions", ({ id }) =>
       rectFetcher.handleGetDescription(id.index),
     )
-    .add("ExecuteAction", ({ id, options }) =>
-      rectFetcher.handleExecuteAction(id.index, options),
+    .add(
+      "ExecuteAction",
+      async ({ id, options }) =>
+        await rectFetcher.handleExecuteAction(id.index, options),
     )
     .buildListener(),
 );

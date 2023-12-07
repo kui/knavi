@@ -37,5 +37,20 @@
     <li>type=time <input type="time" value="08:30" /></li>
     <li>type=url <input type="url" value="https://example.com" /></li>
     <li>type=week <input type="week" value="2017-W26" /></li>
+    <li>
+      type=text with datalist
+      <input
+        list="ice-cream-flavors"
+        id="ice-cream-choice"
+        name="ice-cream-choice"
+      />
+      <datalist id="ice-cream-flavors">
+        <option value="Chocolate"></option>
+        <option value="Coconut"></option>
+        <option value="Mint"></option>
+        <option value="Strawberry"></option>
+        <option value="Vanilla"></option>
+      </datalist>
+    </li>
   </ul>
 </form>

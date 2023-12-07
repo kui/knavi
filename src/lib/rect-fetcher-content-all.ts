@@ -148,8 +148,8 @@ export class RectFetcherContentAll {
     return this.actionHandler.getDescriptions(element);
   }
 
-  handleExecuteAction(index: number, options: ActionOptions) {
+  async handleExecuteAction(index: number, options: ActionOptions) {
     const { element } = this.rectElements[index];
-    this.actionHandler.handle(element, options);
+    await this.actionHandler.handle(element, options);
   }
 }

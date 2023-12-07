@@ -1,19 +1,18 @@
 import { nextAnimationFrame } from "./animations";
 import { isEditable, isScrollable } from "./elements";
-import { printError } from "./errors";
 
 interface ActionHandler {
   getDescriptions(): ActionDescriptions;
   isSupported(target: Element): boolean;
-  handle(target: Element, options: MouseEventInit): void;
+  handle(target: Element, options: MouseEventInit): Promise<void> | void;
 }
 
 export default class ActionHandlerDelegater {
-  handle(target: Element, options: MouseEventInit) {
+  async handle(target: Element, options: MouseEventInit) {
     const h = getHandler(target);
     const d = h.getDescriptions();
     console.debug("element=", target, "desc=", d.long ?? d.short);
-    h.handle(target, options);
+    await h.handle(target, options);
   }
 
   getDescriptions(target: Element): ActionDescriptions {
@@ -29,31 +28,6 @@ function getHandler(target: Element) {
   if (h == null) throw Error("Unreachable code");
   return h;
 }
-
-const CLICKABLE_SELECTORS = [
-  "a[href]",
-  "area[href]",
-  "button:not([disabled])",
-  "[onclick]",
-  "[onmousedown]",
-  "[onmouseup]",
-  "[role=link]",
-  "[role=button]",
-].join(",");
-handlers.push({
-  getDescriptions() {
-    return {
-      short: "Click",
-      long: "Click anchor, button or other clickable elements",
-    };
-  },
-  isSupported(target) {
-    return target.matches(CLICKABLE_SELECTORS);
-  },
-  handle(target, options) {
-    simulateClick(target, options);
-  },
-});
 
 handlers.push({
   getDescriptions() {
@@ -88,6 +62,76 @@ handlers.push({
   },
 });
 
+// input elements for clickable types.
+handlers.push({
+  getDescriptions() {
+    return {
+      short: "Click",
+      long: "Click the <input> element",
+    };
+  },
+  isSupported(target) {
+    return (
+      target instanceof HTMLInputElement &&
+      !target.readOnly &&
+      !target.disabled &&
+      ["checkbox", "radio", "button", "image", "submit", "reset"].includes(
+        target.type,
+      )
+    );
+  },
+  async handle(target: HTMLInputElement, options) {
+    target.focus();
+    await nextAnimationFrame();
+    await simulateClick(target, options);
+  },
+});
+
+// input elements exclude clickable types.
+handlers.push({
+  getDescriptions() {
+    return {
+      short: "Focus",
+      long: "Focus the <input> element with picker",
+    };
+  },
+  isSupported(target) {
+    return (
+      target instanceof HTMLInputElement && !target.readOnly && !target.disabled
+    );
+  },
+  async handle(target: HTMLInputElement) {
+    target.focus();
+    await nextAnimationFrame();
+    target.showPicker();
+  },
+});
+
+const CLICKABLE_SELECTORS = [
+  "a[href]",
+  "area[href]",
+  "button:not([disabled])",
+  "[onclick]",
+  "[onmousedown]",
+  "[onmouseup]",
+  "[role=link]",
+  "[role=button]",
+].join(",");
+handlers.push({
+  getDescriptions() {
+    return {
+      short: "Click",
+      long: "Click anchor, button or other clickable elements",
+    };
+  },
+  isSupported(target) {
+    return target.matches(CLICKABLE_SELECTORS);
+  },
+  async handle(target, options) {
+    await simulateClick(target, options);
+  },
+});
+
 handlers.push({
   getDescriptions() {
     return {
@@ -104,42 +148,6 @@ handlers.push({
     } else {
       console.warn("Cannot focus", target);
     }
-  },
-});
-
-handlers.push({
-  getDescriptions() {
-    return {
-      short: "Click",
-      long: "Click the <input> element",
-    };
-  },
-  isSupported(target) {
-    return (
-      target instanceof HTMLInputElement &&
-      ["checkbox", "radio", "button", "image", "submit", "reset"].includes(
-        target.type,
-      )
-    );
-  },
-  handle(target: HTMLInputElement, options) {
-    target.focus();
-    simulateClick(target, options);
-  },
-});
-
-handlers.push({
-  getDescriptions() {
-    return {
-      short: "Focus",
-      long: "Focus the <input> element",
-    };
-  },
-  isSupported(target) {
-    return target instanceof HTMLInputElement;
-  },
-  handle(target: HTMLInputElement) {
-    target.focus();
   },
 });
 
@@ -198,9 +206,7 @@ handlers.push({
       element.setAttribute("tabindex", "-1");
       element.addEventListener(
         "blur",
-        () => {
-          element.removeAttribute("tabindex");
-        },
+        () => element.removeAttribute("tabindex"),
         { once: true },
       );
     }
@@ -218,21 +224,19 @@ handlers.push({
   isSupported() {
     return true;
   },
-  handle(target, options) {
-    simulateClick(target, options);
+  async handle(target, options) {
+    await simulateClick(target, options);
   },
 });
 
-function simulateClick(element: Element, options: MouseEventInit) {
+async function simulateClick(element: Element, options: MouseEventInit) {
   dispatchMouseEvent("mouseover", element, options);
 
-  (async () => {
-    for (const type of ["mousedown", "mouseup", "click"]) {
-      await nextAnimationFrame();
-      const b = dispatchMouseEvent(type, element, options);
-      if (!b) console.debug("canceled", type);
-    }
-  })().catch(printError);
+  for (const type of ["mousedown", "mouseup", "click"]) {
+    await nextAnimationFrame();
+    const b = dispatchMouseEvent(type, element, options);
+    if (!b) console.debug("canceled", type);
+  }
 }
 
 // Return false if canceled
