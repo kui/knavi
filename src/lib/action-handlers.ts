@@ -117,6 +117,7 @@ handlers.push({
 const CLICKABLE_SELECTORS = [
   "a[href]",
   "area[href]",
+  "details",
   "button:not([disabled])",
   "[onclick]",
   "[onmousedown]",
