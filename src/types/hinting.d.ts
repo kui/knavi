@@ -21,12 +21,6 @@ interface HintedElement extends ElementRects {
   state: "init" | "candidate" | "hit" | "disabled";
 }
 
-interface HintContext {
-  targets: HintedElement[];
-  inputSequence: string[];
-  hitTarget: HintedElement | null;
-}
-
 interface ActionDescriptions {
   short: string;
   long?: string;

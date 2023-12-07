@@ -4,6 +4,12 @@ import { head, map, zip } from "./iters";
 import type { RectFetcherClient } from "./rect-fetcher-client";
 import { SingleLetter } from "./strings";
 
+interface HintContext {
+  targets: HintedElement[];
+  inputSequence: string[];
+  hitTarget?: HintedElement | undefined;
+}
+
 export class HinterContentRoot {
   private context: HintContext | null = null;
   private hintLetters = "";
@@ -26,7 +32,6 @@ export class HinterContentRoot {
     this.context = {
       inputSequence: [],
       targets: [],
-      hitTarget: null,
     };
 
     await waitUntil(() => Boolean(document.body));
@@ -98,11 +103,7 @@ export class HinterContentRoot {
     if (!context) {
       throw Error("Ilegal state invocation: hinting not started");
     }
-    if (context.hitTarget) {
-      await this.rectFetcher.action(context.hitTarget.id, options);
-    } else {
-      await this.rectFetcher.action(null, options);
-    }
+    await this.rectFetcher.action(context.hitTarget?.id, options);
     this.context = null;
     this.view.remove();
   }
@@ -128,11 +129,12 @@ function* updateContext(
 ): Generator<HintedElement> {
   context.inputSequence.push(inputLetter);
   const input = context.inputSequence.join("");
+  delete context.hitTarget;
   for (const t of context.targets) {
     const change = updateTargetState(t, input);
     if (change) {
-      yield t;
       if (t.state === "hit") context.hitTarget = t;
+      yield t;
     }
   }
 }

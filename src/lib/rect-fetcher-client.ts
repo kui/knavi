@@ -64,7 +64,7 @@ export class RectFetcherClient {
 
   action(
     // Provide null to execute no action.
-    elementId: ElementId | null,
+    elementId: ElementId | undefined,
     options: ActionOptions,
   ) {
     if (!this.callback) throw Error("Illegal state: not fetching");
