@@ -1,0 +1,56 @@
+<form>
+  <ul>
+    <li>
+      type=button
+      <input type="button" value="Button" onclick="alert('clicked')" />
+    </li>
+    <li>type=checkbox <input type="checkbox" checked /></li>
+    <li>type=color <input type="color" value="#ff0000" /></li>
+    <li>type=date <input type="date" value="2017-06-01" /></li>
+    <li>
+      type=datetime-local
+      <input type="datetime-local" value="2017-06-01T08:30" />
+    </li>
+    <li>type=email <input type="email" value="foo@example.com" /></li>
+    <li>type=file <input type="file" /></li>
+    <li>type=hidden <input type="hidden" value="hidden" /></li>
+    <li>
+      type=image
+      <input
+        type="image"
+        src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
+      />
+    </li>
+    <li>type=month <input type="month" value="2017-06" /></li>
+    <li>type=number <input type="number" value="42" /></li>
+    <li>type=password <input type="password" value="password" /></li>
+    <li>
+      type=radio <input type="radio" name="r" checked />
+      <input type="radio" name="r" />
+    </li>
+    <li>type=range <input type="range" value="42" /></li>
+    <li>type=reset <input type="reset" value="Reset" /></li>
+    <li>type=search <input type="search" value="search" /></li>
+    <li>type=submit <input type="submit" value="Submit" /></li>
+    <li>type=tel <input type="tel" value="1234567890" /></li>
+    <li>type=text <input type="text" value="text" /></li>
+    <li>type=time <input type="time" value="08:30" /></li>
+    <li>type=url <input type="url" value="https://example.com" /></li>
+    <li>type=week <input type="week" value="2017-W26" /></li>
+    <li>
+      type=text with datalist
+      <input
+        list="ice-cream-flavors"
+        id="ice-cream-choice"
+        name="ice-cream-choice"
+      />
+      <datalist id="ice-cream-flavors">
+        <option value="Chocolate"></option>
+        <option value="Coconut"></option>
+        <option value="Mint"></option>
+        <option value="Strawberry"></option>
+        <option value="Vanilla"></option>
+      </datalist>
+    </li>
+  </ul>
+</form>

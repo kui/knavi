@@ -2,15 +2,15 @@ SRC = src
 BUILD ?= build
 PROD-BUILD = prod-build
 ZIP = knavi.zip
-JS = $(patsubst $(SRC)/%, $(BUILD)/%, $(filter-out $(SRC)/manifest.js, $(wildcard $(SRC)/*.js)))
+JS = background.js content-root.js content-all.js options.js
 STATICS = $(patsubst $(SRC)/%, $(BUILD)/%, $(wildcard $(SRC)/*.html $(SRC)/*.css))
 ICONS = $(addprefix $(BUILD)/icon, $(addsuffix .png, 16 48 128))
 PNG = $(patsubst $(SRC)/%.svg, $(BUILD)/%.png, $(wildcard $(SRC)/*.svg))
 
-FILES = $(BUILD) $(BUILD)/manifest.json $(BUILD)/codemirror.css $(STATICS) $(ICONS) $(PNG)
+FILES = $(BUILD) $(BUILD)/manifest.json $(STATICS) $(ICONS) $(PNG) $(addprefix $(BUILD)/, $(JS))
 
 .PHONY: all
-all: $(FILES) $(JS)
+all: $(FILES)
 
 $(BUILD):
 	mkdir -v $(BUILD)
@@ -18,7 +18,7 @@ $(BUILD):
 $(BUILD)/manifest.json: $(SRC)/manifest.js package.json node_modules
 	node scripts/jsonize-manifest.js > $@
 
-$(BUILD)/%.js: $(SRC)/%.js $(SRC)/lib/*.js node_modules
+$(BUILD)/%.js: $(SRC)/* $(SRC)/lib/* node_modules
 	@echo execute webpack for $@
 	DEST=$(BUILD) npx webpack
 
@@ -33,9 +33,6 @@ $(BUILD)/%.png: $(SRC)/%.svg
 		--width 40 \
 		--keep-aspect-ratio \
 		--output $@
-
-$(BUILD)/codemirror.css: node_modules
-	cp -v node_modules/codemirror/lib/codemirror.css $@
 
 $(BUILD)/%: $(SRC)/%
 	cp -v $< $@
@@ -59,6 +56,7 @@ check: lint test
 lint: node_modules
 	npx eslint .
 	npx prettier . --check
+	npx tsc --project src --noEmit
 	hadolint Dockerfile
 
 .PHONY: fix
@@ -69,13 +67,14 @@ fix: node_modules
 .PHONY: watch
 watch: node_modules
 	rm -fr $(BUILD)/**/*.js
-	npx chokidar 'Makefile' 'src' '!src/**/*.js' -c 'make' & \
+	npx --package=chokidar-cli -- chokidar 'Makefile' 'src' '!src/**/*.js' -c 'make' & \
 	npx webpack --watch & \
+	npx http-server docs -d=false -c=-1 & \
 	wait
 
 .PHONY: test
 test: node_modules
-	npx mocha test/**/*_test.js
+	npx jest test
 
 .PHONY: clean
 clean:

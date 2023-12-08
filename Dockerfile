@@ -7,7 +7,7 @@ ENV TZ=Etc/UTC
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates=20230311ubuntu0.20.04.1 \
-    curl=7.68.0-1ubuntu2.20 \
+    curl=7.68.0-1ubuntu2.21 \
     make=4.2.1-1.2 \
     librsvg2-bin=2.48.9-1ubuntu0.20.04.4 \
     zip=3.0-11build1 \

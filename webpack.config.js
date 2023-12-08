@@ -10,9 +10,9 @@ export default {
   devtool: DEBUG ? "inline-source-map" : "source-map",
   entry: {
     options: "./src/options.js",
-    background: "./src/background.js",
-    "content-script-root": "./src/content-script-root.js",
-    "content-script-all": "./src/content-script-all.js",
+    background: "./src/background.ts",
+    "content-root": "./src/content-root.ts",
+    "content-all": "./src/content-all.ts",
   },
   output: {
     path: DEST,
@@ -20,7 +20,10 @@ export default {
   },
   module: {
     rules: [
-      { test: /\.m?js$/, exclude: /node_modules/, loader: "babel-loader" },
+      { test: /\.(js|ts)$/, exclude: /node_modules/, loader: "babel-loader" },
     ],
+  },
+  resolve: {
+    extensions: [".ts", ".js"],
   },
 };

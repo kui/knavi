@@ -1,101 +1,50 @@
 import sf from "storage-form";
 import * as ki from "key-input-elements";
-import CodeMirror from "codemirror";
-import "codemirror/mode/css/css.js";
-import "codemirror/mode/javascript/javascript.js";
-import settings from "./lib/settings.js";
-import * as utils from "./lib/utils.js";
+import settings from "./lib/settings.ts";
+import { waitUntil } from "./lib/animations.ts";
 
 async function init() {
-  while (!document.body) await utils.nextAnimationFrame();
+  waitUntil(() => document.body);
   const body = document.body;
+  await settings.init();
 
-  initCodeMirror();
-
-  sf.register();
+  sf.default.register();
   ki.register();
 
   initClearButton(body);
-  initRevertButton(body);
+  initRestoreButton(body);
   initBytesDisplay();
 }
 
-async function initRevertButton(body) {
-  const settingValues = await settings.loadDefaults();
-  for (const e of body.getElementsByClassName("js-revert-button")) {
-    console.log("revert button: ", e);
-    e.addEventListener("click", (e) => {
-      if (!(e.target instanceof HTMLElement)) return false;
-      const targetQuery = e.target.dataset["target"];
-      if (!targetQuery) return false;
-      const targets = document.querySelectorAll(targetQuery);
-      for (const t of targets) {
-        const name = t.name;
-        if (!name) continue;
-        const defaultValue = settingValues[name];
-        if (defaultValue == null) continue;
-        t.value = defaultValue;
+async function initRestoreButton(body) {
+  for (const element of body.querySelectorAll("[data-restore-target]")) {
+    console.log("restore button: ", element);
+    element.addEventListener("click", async () => {
+      const targetQuery = element.dataset.restoreTarget;
+      const settingValues = settings.defaults();
+      if (!targetQuery) throw new Error("data-restore-target is not specified");
+      for (const target of document.querySelectorAll(targetQuery)) {
+        console.log("restore: ", target);
+        if (!target.name) throw new Error("name is not specified");
+        const defaultValue = settingValues[target.name];
+        if (defaultValue == null) throw new Error("default value is not found");
+        target.value = defaultValue;
       }
-      return false;
     });
   }
 }
 
 function initClearButton(body) {
-  for (const e of body.getElementsByClassName("js-clear-button")) {
-    console.log("clear button: ", e);
-    e.addEventListener("click", (e) => {
-      if (!(e.target instanceof HTMLElement)) return false;
-      const targetQuery = e.target.dataset["target"];
-      if (!targetQuery) return false;
-      const targets = document.querySelectorAll(targetQuery);
-      for (const t of targets) {
-        if ("value" in t) t.value = "";
+  for (const element of body.querySelectorAll("[data-clear-target]")) {
+    console.log("clear button: ", element);
+    element.addEventListener("click", () => {
+      const targetQuery = element.dataset.clearTarget;
+      if (!targetQuery) throw new Error("data-clear-target is not specified");
+      for (const target of document.querySelectorAll(targetQuery)) {
+        console.log("clear: ", target);
+        if ("value" in target) target.value = "";
       }
-      return false;
     });
-  }
-}
-
-async function initCodeMirror() {
-  const form = document.querySelector("form[is=storage-form]");
-  if (form == null) throw Error("form element not found");
-  await new Promise((resolve) => {
-    const waitingInitSync = () => {
-      console.log("storage-form init sync");
-      form.removeEventListener("storage-from-sync", waitingInitSync, false);
-      resolve();
-    };
-    form.addEventListener("storage-form-sync", waitingInitSync, false);
-  });
-
-  for (const cmWrapper of document.querySelectorAll(".js-cm-wrapper")) {
-    const textarea = document.querySelector(cmWrapper.dataset.target);
-    if (!textarea) continue;
-    if (!(textarea instanceof HTMLTextAreaElement)) continue;
-    textarea.style.display = "none";
-    let mode = cmWrapper.dataset.mode;
-    if (mode === "json") {
-      mode = { name: "javascript", json: true };
-    }
-    const cm = CodeMirror(cmWrapper, { value: textarea.value, mode });
-
-    // for styling
-    cm.on("focus", () => cmWrapper.classList.add("focused"));
-    cm.on("blur", () => cmWrapper.classList.remove("focused"));
-
-    // two way data binding with textarea and codemirror
-    let value = textarea.value;
-    cm.on("change", () => {
-      const v = cm.getValue();
-      if (v !== value) textarea.value = value = v;
-    });
-    (async () => {
-      for (;;) {
-        await utils.nextAnimationFrame();
-        if (value !== textarea.value) cm.setValue((value = textarea.value));
-      }
-    })();
   }
 }
 
