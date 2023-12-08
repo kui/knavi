@@ -1,19 +1,19 @@
 SRC = src
-BUILD ?= build
-PROD-BUILD = prod-build
+BUILD_PROD = build/prod
+BUILD_DEV = build/dev
+BUILD ?= $(BUILD_DEV)
 ZIP = knavi.zip
 JS = background.js content-root.js content-all.js options.js
-STATICS = $(patsubst $(SRC)/%, $(BUILD)/%, $(wildcard $(SRC)/*.html $(SRC)/*.css))
-ICONS = $(addprefix $(BUILD)/icon, $(addsuffix .png, 16 48 128))
-PNG = $(patsubst $(SRC)/%.svg, $(BUILD)/%.png, $(wildcard $(SRC)/*.svg))
-
-FILES = $(BUILD) $(BUILD)/manifest.json $(STATICS) $(ICONS) $(PNG) $(addprefix $(BUILD)/, $(JS))
+STATICS = $(patsubst $(SRC)/%, %, $(wildcard $(SRC)/*.html $(SRC)/*.css))
+ICONS = $(addprefix icon, $(addsuffix .png, 16 48 128))
+PNG = $(patsubst $(SRC)/%.svg, %.png, $(wildcard $(SRC)/*.svg))
+FILES = manifest.json $(STATICS) $(ICONS) $(PNG) $(JS)
 
 .PHONY: all
-all: $(FILES)
+all: $(BUILD) $(addprefix $(BUILD)/, $(FILES))
 
 $(BUILD):
-	mkdir -v $(BUILD)
+	mkdir -vp $(BUILD)
 
 $(BUILD)/manifest.json: $(SRC)/manifest.js package.json node_modules
 	node scripts/jsonize-manifest.js > $@
@@ -22,7 +22,7 @@ $(BUILD)/%.js: $(SRC)/* $(SRC)/lib/* node_modules
 	@echo execute webpack for $@
 	DEST=$(BUILD) npx webpack
 
-$(ICONS): $(SRC)/icon.svg
+$(BUILD)/icon%.png: $(SRC)/icon.svg
 	rsvg-convert $< \
 		--width `echo $@ | sed -nre 's/.*icon([0-9]+)\.png/\1/p'` \
 		--keep-aspect-ratio \
@@ -46,8 +46,8 @@ zip: $(ZIP)
 
 $(ZIP):
 	npm install
-	NODE_ENV=production make BUILD=$(PROD-BUILD) all
-	cd $(PROD-BUILD) && zip -vr ../$(ZIP) .
+	NODE_ENV=production make BUILD=$(BUILD_PROD) all
+	cd $(BUILD_PROD) && zip -vr ../../$(ZIP) .
 
 .PHONY: check
 check: lint test
@@ -79,4 +79,4 @@ test: node_modules
 
 .PHONY: clean
 clean:
-	rm -fr $(BUILD) $(PROD-BUILD) *.zip
+	rm -fr $(BUILD_DEV) $(BUILD_PROD) *.zip
