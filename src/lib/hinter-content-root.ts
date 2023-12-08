@@ -1,6 +1,6 @@
 import { waitUntil } from "./animations";
 import { HintView } from "./hinter-view";
-import { head, map, zip } from "./iters";
+import { map, zip } from "./iters";
 import type { RectFetcherClient } from "./rect-fetcher-client";
 import { SingleLetter } from "./strings";
 
@@ -40,7 +40,7 @@ export class HinterContentRoot {
     for await (const elementRects of this.rectFetcher.fetch()) {
       if (!this.view.isStarted()) this.view.start();
       if (elementRects.length === 0) continue;
-      const hintTexts = [...head(hintTextGenerator, elementRects.length)];
+      const hintTexts = take(hintTextGenerator, elementRects.length);
       const targets: HintedElement[] = [
         ...map(
           zip(elementRects, hintTexts),
@@ -137,4 +137,14 @@ function* updateContext(
       yield t;
     }
   }
+}
+
+function take<T>(iter: Generator<T>, length: number): T[] {
+  const result: T[] = [];
+  while (result.length < length) {
+    const r = iter.next();
+    if (r.done) break;
+    result.push(r.value);
+  }
+  return result;
 }
