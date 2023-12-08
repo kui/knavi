@@ -2,15 +2,15 @@ SRC = src
 BUILD ?= build
 PROD-BUILD = prod-build
 ZIP = knavi.zip
-JS = build/background.js build/content-root.js build/content-all.js build/options.js
+JS = background.js content-root.js content-all.js options.js
 STATICS = $(patsubst $(SRC)/%, $(BUILD)/%, $(wildcard $(SRC)/*.html $(SRC)/*.css))
 ICONS = $(addprefix $(BUILD)/icon, $(addsuffix .png, 16 48 128))
 PNG = $(patsubst $(SRC)/%.svg, $(BUILD)/%.png, $(wildcard $(SRC)/*.svg))
 
-FILES = $(BUILD) $(BUILD)/manifest.json $(STATICS) $(ICONS) $(PNG)
+FILES = $(BUILD) $(BUILD)/manifest.json $(STATICS) $(ICONS) $(PNG) $(addprefix $(BUILD)/, $(JS))
 
 .PHONY: all
-all: $(FILES) $(JS)
+all: $(FILES)
 
 $(BUILD):
 	mkdir -v $(BUILD)
