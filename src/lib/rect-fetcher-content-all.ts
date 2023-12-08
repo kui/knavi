@@ -85,10 +85,10 @@ export class RectFetcherContentAll {
       location.href,
     );
     const rectFetcher = new RectFetcher(
+      actualViewport,
       additionalSelectors,
       clientRectsFetcher,
       styleFetcher,
-      actualViewport,
     );
     const frameId = await this.frameIdPromise;
     return rectFetcher.get().map(({ element, rects }, index) => ({

@@ -36,6 +36,7 @@ export default class RectFetcher {
   private readonly selector: string;
 
   constructor(
+    viewport: Rect<"actual-viewport", "layout-viewport">,
     additionalSelectors: string[],
     clientRectsFetcher: CachedFetcher<
       Element,
@@ -45,9 +46,12 @@ export default class RectFetcher {
       Element,
       StylePropertyMapReadOnly
     >,
-    private readonly viewport: Rect<"actual-viewport", "layout-viewport">,
   ) {
-    this.detector = new VisibleRectDetector(clientRectsFetcher, styleFetcher);
+    this.detector = new VisibleRectDetector(
+      viewport,
+      clientRectsFetcher,
+      styleFetcher,
+    );
     this.selector = [...HINTABLE_QUERY, ...additionalSelectors].join(",");
   }
 
@@ -73,7 +77,7 @@ export default class RectFetcher {
       const clickable = this.isClickable(element);
       if (!clickable) continue;
 
-      const rects = this.detector.get(element, this.viewport);
+      const rects = this.detector.get(element);
       if (rects.length === 0) continue;
 
       yield { element, rects, clickable };
@@ -99,14 +103,13 @@ export default class RectFetcher {
   private distinctSimilarTarget(targets: ElementRects[]) {
     const targetMap = new Map(map(targets, (t) => [t.element, t]));
     const detector = this.detector;
-    const viewport = this.viewport;
 
     function isVisibleNode(node: Node) {
       // filter out blank text nodes
       if (node instanceof Text) return !/^\s*$/.test(node.data);
       // filter out invisible element.
       if (node instanceof Element) {
-        if (detector.get(node, viewport).length >= 1) return true;
+        if (detector.get(node).length >= 1) return true;
         return false;
       }
       return true;

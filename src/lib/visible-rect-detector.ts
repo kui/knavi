@@ -11,6 +11,7 @@ export default class VisibleRectDetector {
   >;
 
   constructor(
+    private readonly viewport: Rect<"actual-viewport", "layout-viewport">,
     private readonly clientRectsFetcher: CachedFetcher<
       Element,
       Rect<"element-border", "layout-viewport">[]
@@ -24,18 +25,14 @@ export default class VisibleRectDetector {
   }
 
   // Return visible rects of the element.
-  get(
-    element: Element,
-    viewport: Rect<"actual-viewport", "layout-viewport">,
-  ): Rect<"element-border", "actual-viewport">[] {
+  get(element: Element): Rect<"element-border", "actual-viewport">[] {
     return this.cache.getOr(element, (e) => {
-      return this.getVisibleRects(e, viewport).map((r) => r.offsets(viewport));
+      return this.getVisibleRects(e).map((r) => r.offsets(this.viewport));
     });
   }
 
   private getVisibleRects(
     element: Element,
-    viewport: Rect<"actual-viewport", "layout-viewport">,
   ): Rect<"element-border", "layout-viewport">[] {
     const clientRects = this.getClientRects(element);
     return Array.from(
@@ -47,15 +44,16 @@ export default class VisibleRectDetector {
 
           // out of display
           let croppedRect: Rect<"element-border", "layout-viewport"> | null =
-            Rect.intersection("element-border", rect, viewport);
+            Rect.intersection("element-border", rect, this.viewport);
           if (!croppedRect || isSmallRect(croppedRect)) return [];
 
+          console.log("cropByParent", element, croppedRect, this.viewport);
           // scroll out from parent element that has non-visible "overflow"
-          croppedRect = this.cropByParent(element, croppedRect, viewport);
+          croppedRect = this.cropByParent(element, croppedRect);
           if (!croppedRect || isSmallRect(croppedRect)) return [];
 
           // hidden by other element
-          if (!this.isPointable(element, croppedRect, viewport)) return [];
+          if (!this.isPointable(element, croppedRect)) return [];
 
           return [croppedRect];
         },
@@ -118,7 +116,6 @@ export default class VisibleRectDetector {
   private cropByParent(
     element: Element,
     rect: Rect<"element-border", "layout-viewport">,
-    viewport: Rect<"actual-viewport", "layout-viewport">,
   ): Rect<"element-border", "layout-viewport"> | null {
     if (element === document.body) return rect;
 
@@ -129,8 +126,7 @@ export default class VisibleRectDetector {
       .get(parent)
       .get("overflow")!
       .toString();
-    if (parentOverflow === "visible")
-      return this.cropByParent(parent, rect, viewport);
+    if (parentOverflow === "visible") return this.cropByParent(parent, rect);
 
     const elementPosition = this.styleFetcher
       .get(element)
@@ -140,25 +136,24 @@ export default class VisibleRectDetector {
     // See https://developer.mozilla.org/en-US/docs/Web/CSS/position#fixed_positioning
     if (elementPosition === "fixed") return rect;
     if (elementPosition === "absolute" || elementPosition === "sticky")
-      return this.cropByParent(parent, rect, viewport);
+      return this.cropByParent(parent, rect);
 
-    const parentRects = this.get(parent, viewport);
+    const parentRects = this.get(parent);
     if (parentRects.length === 0) return null;
 
     const cropped = Rect.intersectionWithSameType(
       rect,
-      parentRects[0].offsets(viewport.reverse()),
+      parentRects[0].offsets(this.viewport.reverse()),
     );
     if (!cropped || isSmallRect(cropped)) return null;
 
-    return this.cropByParent(parent, cropped, viewport);
+    return this.cropByParent(parent, cropped);
   }
 
   // Return true if the target element is pointable from the visual viewport.
   private isPointable(
     target: Element,
     rect: Rect<"element-border", "layout-viewport">,
-    viewport: Rect<"actual-viewport", "layout-viewport">,
   ) {
     const centerPoint = getPointByRectRatio(rect, 0.5, 0.5);
     const centerPointedElement = elementFromPoint(centerPoint);
@@ -170,7 +165,7 @@ export default class VisibleRectDetector {
         return true;
 
       // Return false if the pointed elements hide the target element.
-      const pointedRects = this.get(centerPointedElement, viewport);
+      const pointedRects = this.get(centerPointedElement);
       for (const pointedRect of pointedRects) {
         if (isOverwrappedRect(rect, pointedRect)) return false;
       }
@@ -183,7 +178,7 @@ export default class VisibleRectDetector {
       [0.9, 0.9],
     ]) {
       const point = getPointByRectRatio(rect, xr, yr);
-      if (!containPoint(point, viewport)) continue;
+      if (!containPoint(point, this.viewport)) continue;
       const pointedElement = elementFromPoint(point);
       if (!pointedElement) continue;
       if (target === pointedElement || target.contains(pointedElement))
