@@ -43,3 +43,15 @@ docker compose run make
 docker compose run make watch
 docker compose run make zip
 ```
+
+## Development note
+
+Edit changelog in `changelog/<CurrentVersion>.md`. It will be used for release note.
+
+## Release
+
+1. Check the version in [package.json](package.json)
+2. Confirm `changelog/<Version>.md`
+3. Commit and push them
+4. Execute `scripts/tag_for_release.sh`
+5. Bump minor version in [package.json](package.json) for next release
