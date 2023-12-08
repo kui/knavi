@@ -1,11 +1,10 @@
 type CoordinateType =
-  | "visual-viewport"
   | "layout-viewport"
   // Layout Viewport of current frame cropped by ancestor frames.
   | "actual-viewport"
-  // Layout Viewport of the root frame that is browser's frame and content area of <html>.
-  // TODO exact term from spec like https://drafts.csswg.org/cssom-view/.
+  // Layout Viewport of the root frame that is browser's frame.
   | "root-viewport"
+  // content area of <html>.
   // https://developer.mozilla.org/en-US/docs/Web/CSS/Containing_block#:~:text=rectangle%20called%20the-,initial%20containing%20block,-.%20It%20has%20the
   | "initial-containing-block"
   // Border area of element css box.
