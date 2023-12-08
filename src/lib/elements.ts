@@ -178,11 +178,18 @@ export function getContentRects(
   // TODO We can compute the px of paddings with "em" unit.
   // But it seems that there are few cases where the padding of an iframe is specified in "em" units.
   if (everyZeroOrPxUnit(paddingCss)) {
-    const paddingPx = toPxEdges(paddingCss);
+    const resizePx = toResizePx(paddingCss);
     return getPaddingRects(element, rects).map(
-      (r) => new Rect({ ...r.resize(paddingPx), type: "element-content" }),
+      (r) => new Rect({ ...r.resize(resizePx), type: "element-content" }),
     );
   }
+
+  console.warn(
+    "Cannot get content area with padding in this unit: element=",
+    element,
+    "paddingCss=",
+    paddingCss,
+  );
 
   switch (style.get("box-sizing")?.toString()) {
     case "content-box":
@@ -234,15 +241,15 @@ function getCSSValuesForEachEdges(
   );
 }
 
-function toPxEdges(c: { [side in (typeof EDGES)[number]]: CSSUnitValue }): {
-  [side in (typeof EDGES)[number]]: number;
+function toResizePx(c: { [edge in (typeof EDGES)[number]]: CSSUnitValue }): {
+  [edge in (typeof EDGES)[number]]: number;
 } {
   return EDGES.reduce(
     (acc, edge) => {
-      acc[edge] = c[edge].value;
+      acc[edge] = -c[edge].value;
       return acc;
     },
-    {} as { [side in (typeof EDGES)[number]]: number },
+    {} as { [edge in (typeof EDGES)[number]]: number },
   );
 }
 
