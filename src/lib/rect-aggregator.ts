@@ -31,7 +31,7 @@ interface ElementRects {
   filteredOutBy?: ElementRects;
 }
 
-export default class RectFetcher {
+export class RectAggregator {
   private readonly detector: VisibleRectDetector;
   private readonly selector: string;
 

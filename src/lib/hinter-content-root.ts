@@ -1,7 +1,7 @@
 import { waitUntil } from "./animations";
 import { HintView } from "./hinter-view";
 import { map, zip } from "./iters";
-import type { RectFetcherClient } from "./rect-fetcher-client";
+import type { RectAggregatorClient } from "./rect-aggregator-client";
 import { SingleLetter } from "./strings";
 
 interface HintContext {
@@ -15,7 +15,7 @@ export class HinterContentRoot {
   private hintLetters = "";
 
   constructor(
-    private rectFetcher: RectFetcherClient,
+    private rectAggregator: RectAggregatorClient,
     private view: HintView,
   ) {}
 
@@ -37,7 +37,7 @@ export class HinterContentRoot {
     await waitUntil(() => Boolean(document.body));
 
     const hintTextGenerator = this.generateHintTexts();
-    for await (const elementRects of this.rectFetcher.fetch()) {
+    for await (const elementRects of this.rectAggregator.aggregate()) {
       if (!this.view.isStarted()) this.view.start();
       if (elementRects.length === 0) continue;
       const hintTexts = take(hintTextGenerator, elementRects.length);
@@ -91,7 +91,7 @@ export class HinterContentRoot {
 
     let actionDescriptions = null;
     if (context.hitTarget) {
-      actionDescriptions = await this.rectFetcher.getDescriptions(
+      actionDescriptions = await this.rectAggregator.getDescriptions(
         context.hitTarget.id,
       );
     }
@@ -103,7 +103,7 @@ export class HinterContentRoot {
     if (!context) {
       throw Error("Ilegal state invocation: hinting not started");
     }
-    await this.rectFetcher.action(context.hitTarget?.id, options);
+    await this.rectAggregator.action(context.hitTarget?.id, options);
     this.context = null;
     this.view.remove();
   }

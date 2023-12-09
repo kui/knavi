@@ -3,7 +3,7 @@ import { sendToRuntime } from "./chrome-messages";
 import { postMessageTo } from "./dom-messages";
 import { createQueue } from "./generators";
 
-export class RectFetcherClient {
+export class RectAggregatorClient {
   private requestIndex = 0;
   private callback:
     | ((elementRects: ElementRects[] | "Complete") => void)
@@ -11,13 +11,13 @@ export class RectFetcherClient {
 
   constructor() {
     if (window !== window.parent) {
-      throw Error("RectFetcherClient should be created in top frame");
+      throw Error("RectAggregatorClient should be created in top frame");
     }
   }
 
-  // Fetch all rects include elements inside iframe.
+  // Aggregate all rects include elements inside iframe.
   // Requests are thrown by `postMessage` (frame message passing),
-  async *fetch(): AsyncGenerator<ElementRects[]> {
+  async *aggregate(): AsyncGenerator<ElementRects[]> {
     if (this.callback) throw Error("Illegal state: already fetching");
 
     postMessageTo(window, "com.github.kui.knavi.AllRectsRequest", {
@@ -51,14 +51,14 @@ export class RectFetcherClient {
       return;
     }
     if (!this.callback) {
-      console.warn("Not fetching phase: ", rects);
+      console.warn("Not aggregating phase: ", rects);
       return;
     }
     this.callback(rects);
   }
 
   getDescriptions(elementId: ElementId) {
-    if (!this.callback) throw Error("Illegal state: not fetching");
+    if (!this.callback) throw Error("Illegal state: not aggregating");
     return sendToRuntime("GetDescriptions", { id: elementId });
   }
 
@@ -67,7 +67,7 @@ export class RectFetcherClient {
     elementId: ElementId | undefined,
     options: ActionOptions,
   ) {
-    if (!this.callback) throw Error("Illegal state: not fetching");
+    if (!this.callback) throw Error("Illegal state: not aggregating");
     this.callback("Complete");
     if (elementId)
       return sendToRuntime("ExecuteAction", { id: elementId, options });

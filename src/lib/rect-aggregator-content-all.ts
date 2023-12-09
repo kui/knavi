@@ -3,7 +3,7 @@ import CachedFetcher from "./cached-fetcher";
 import { sendToRuntime } from "./chrome-messages";
 import { postMessageTo } from "./dom-messages";
 import { getClientRects, getContentRects } from "./elements";
-import RectFetcher from "./rect-fetcher";
+import { RectAggregator } from "./rect-aggregator";
 import { Coordinates, Rect } from "./rects";
 import settingsClient from "./settings-client";
 
@@ -13,7 +13,7 @@ interface ElementProfile {
   rects: Rect<"element-border", "root-viewport">[];
 }
 
-interface FetchContext {
+interface AggregationContext {
   requestId: number;
   currentViewport: Rect<"actual-viewport", "root-viewport">;
   frameOffsets: Coordinates<"layout-viewport", "root-viewport">;
@@ -24,13 +24,13 @@ interface FetchContext {
   styleFetcher: CachedFetcher<Element, StylePropertyMapReadOnly>;
 }
 
-export class RectFetcherContentAll {
-  private rectElements: ElementProfile[];
+export class RectAggregatorContentAll {
+  private elements: ElementProfile[];
   private readonly actionHandler: ActionHandler;
   private readonly frameIdPromise: Promise<number>;
 
   constructor() {
-    this.rectElements = [];
+    this.elements = [];
     this.actionHandler = new ActionHandler();
     this.frameIdPromise = sendToRuntime("GetFrameId");
   }
@@ -53,37 +53,37 @@ export class RectFetcherContentAll {
       location.href,
     );
 
-    const context: FetchContext = {
+    const context: AggregationContext = {
       requestId,
       currentViewport,
       frameOffsets,
       clientRectsFetcher: new CachedFetcher((e: Element) => getClientRects(e)),
       styleFetcher: new CachedFetcher((e: Element) => e.computedStyleMap()),
     };
-    this.rectElements = await this.fetchRects(context);
+    this.elements = await this.aggregateRects(context);
     await sendToRuntime("ResponseRectsFragment", {
       requestId,
-      rects: this.rectElements,
+      rects: this.elements,
     });
 
-    for (const { element, rects } of this.rectElements) {
+    for (const { element, rects } of this.elements) {
       if (element instanceof HTMLIFrameElement)
         this.propergateMessage(element, rects[0], context);
     }
   }
 
-  private async fetchRects({
+  private async aggregateRects({
     currentViewport,
     frameOffsets,
     clientRectsFetcher,
     styleFetcher,
-  }: FetchContext): Promise<ElementProfile[]> {
+  }: AggregationContext): Promise<ElementProfile[]> {
     const actualViewport: Rect<"actual-viewport", "layout-viewport"> =
       currentViewport.offsets(frameOffsets);
     const additionalSelectors = await settingsClient.matchAdditionalSelectors(
       location.href,
     );
-    const rectFetcher = new RectFetcher(
+    const rectFetcher = new RectAggregator(
       actualViewport,
       additionalSelectors,
       clientRectsFetcher,
@@ -100,7 +100,12 @@ export class RectFetcherContentAll {
   private propergateMessage(
     frame: HTMLIFrameElement,
     rect: Rect<"element-border", "root-viewport"> | null,
-    { requestId, frameOffsets, clientRectsFetcher, styleFetcher }: FetchContext,
+    {
+      requestId,
+      frameOffsets,
+      clientRectsFetcher,
+      styleFetcher,
+    }: AggregationContext,
   ) {
     if (!frame.contentWindow) {
       console.debug("No contentWindow to post message", frame);
@@ -135,12 +140,12 @@ export class RectFetcherContentAll {
   }
 
   handleGetDescription(index: number) {
-    const { element } = this.rectElements[index];
+    const { element } = this.elements[index];
     return this.actionHandler.getDescriptions(element);
   }
 
   async handleExecuteAction(index: number, options: ActionOptions) {
-    const { element } = this.rectElements[index];
+    const { element } = this.elements[index];
     await this.actionHandler.handle(element, options);
   }
 }
