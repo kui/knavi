@@ -66,8 +66,9 @@ export class RectFetcherContentAll {
       rects: this.rectElements,
     });
 
-    for (const frame of this.rectElements) {
-      this.propergateMessage(frame, context);
+    for (const { element, rects } of this.rectElements) {
+      if (element instanceof HTMLIFrameElement)
+        this.propergateMessage(element, rects[0], context);
     }
   }
 
@@ -97,46 +98,40 @@ export class RectFetcherContentAll {
   }
 
   private propergateMessage(
-    elementProfile: ElementProfile,
+    frame: HTMLIFrameElement,
+    rect: Rect<"element-border", "root-viewport"> | null,
     { requestId, frameOffsets, clientRectsFetcher, styleFetcher }: FetchContext,
   ) {
-    const element = elementProfile.element;
-    if (!(element instanceof HTMLIFrameElement)) return;
-    if (!element.contentWindow) {
-      console.debug("No contentWindow to post message", element);
+    if (!frame.contentWindow) {
+      console.debug("No contentWindow to post message", frame);
       return;
     }
-    const croppedRect = elementProfile.rects[0];
-    if (!croppedRect) return;
+    if (!rect) return;
 
     const contentRects = getContentRects(
-      element,
-      clientRectsFetcher.get(element),
-      styleFetcher.get(element),
+      frame,
+      clientRectsFetcher.get(frame),
+      styleFetcher.get(frame),
     ).map((r) => r.offsets(frameOffsets.reverse()));
     if (contentRects.length === 0) {
-      console.warn("No conent rects", element);
+      console.warn("No conent rects", frame);
       return;
     }
     const iframeViewport = Rect.intersection(
       "actual-viewport",
-      croppedRect,
+      rect,
       contentRects[0],
     );
     if (!iframeViewport) {
-      console.debug("No viewport", croppedRect, contentRects);
+      console.debug("No viewport", rect, contentRects);
       return;
     }
 
-    postMessageTo(
-      element.contentWindow,
-      "com.github.kui.knavi.AllRectsRequest",
-      {
-        id: requestId,
-        viewport: iframeViewport,
-        offsets: { ...contentRects[0], type: "layout-viewport" },
-      },
-    );
+    postMessageTo(frame.contentWindow, "com.github.kui.knavi.AllRectsRequest", {
+      id: requestId,
+      viewport: iframeViewport,
+      offsets: { ...contentRects[0], type: "layout-viewport" },
+    });
   }
 
   handleGetDescription(index: number) {
