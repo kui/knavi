@@ -108,29 +108,29 @@ export class RectFetcherContentAll {
     }
     if (!rect) return;
 
-    const contentRects = getContentRects(
+    const [contentRect] = getContentRects(
       frame,
       clientRectsFetcher.get(frame),
       styleFetcher.get(frame),
     ).map((r) => r.offsets(frameOffsets.reverse()));
-    if (contentRects.length === 0) {
+    if (!contentRect) {
       console.warn("No conent rects", frame);
       return;
     }
     const iframeViewport = Rect.intersection(
       "actual-viewport",
       rect,
-      contentRects[0],
+      contentRect,
     );
     if (!iframeViewport) {
-      console.debug("No viewport", rect, contentRects);
+      console.debug("No viewport", rect, contentRect);
       return;
     }
 
     postMessageTo(frame.contentWindow, "com.github.kui.knavi.AllRectsRequest", {
       id: requestId,
       viewport: iframeViewport,
-      offsets: { ...contentRects[0], type: "layout-viewport" },
+      offsets: { ...contentRect, type: "layout-viewport" },
     });
   }
 
