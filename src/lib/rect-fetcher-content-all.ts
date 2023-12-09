@@ -8,11 +8,9 @@ import { Coordinates, Rect } from "./rects";
 import settingsClient from "./settings-client";
 
 interface ElementProfile {
+  id: ElementId;
   element: Element;
-  holder: {
-    id: ElementId;
-    rects: Rect<"element-border", "root-viewport">[];
-  };
+  rects: Rect<"element-border", "root-viewport">[];
 }
 
 interface FetchContext {
@@ -65,7 +63,7 @@ export class RectFetcherContentAll {
     this.rectElements = await this.fetchRects(context);
     await sendToRuntime("ResponseRectsFragment", {
       requestId,
-      rects: this.rectElements.map((e) => e.holder),
+      rects: this.rectElements,
     });
 
     for (const frame of this.rectElements) {
@@ -92,11 +90,9 @@ export class RectFetcherContentAll {
     );
     const frameId = await this.frameIdPromise;
     return rectFetcher.get().map(({ element, rects }, index) => ({
+      id: { index, frameId },
       element,
-      holder: {
-        id: { index, frameId },
-        rects: rects.map((r) => r.offsets(currentViewport.reverse())),
-      },
+      rects: rects.map((r) => r.offsets(currentViewport.reverse())),
     }));
   }
 
@@ -110,7 +106,7 @@ export class RectFetcherContentAll {
       console.debug("No contentWindow to post message", element);
       return;
     }
-    const croppedRect = elementProfile.holder.rects[0];
+    const croppedRect = elementProfile.rects[0];
     if (!croppedRect) return;
 
     const contentRects = getContentRects(
