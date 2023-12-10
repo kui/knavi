@@ -63,6 +63,10 @@ HANDLERS.push({
   },
 });
 
+// -----------------------------------------
+// Element Class Specific Handlers
+// -----------------------------------------
+
 HANDLERS.push({
   getDescriptions() {
     return {
@@ -126,10 +130,62 @@ HANDLERS.push({
   },
 });
 
+HANDLERS.push({
+  getDescriptions() {
+    return {
+      short: "Open",
+      long: "Open the <details> element",
+    };
+  },
+  isSupported(target) {
+    return target instanceof HTMLDetailsElement && !target.open;
+  },
+  handle(target: HTMLDetailsElement) {
+    target.open = true;
+  },
+});
+
+HANDLERS.push({
+  getDescriptions() {
+    return {
+      short: "Close",
+      long: "Close the <details> element",
+    };
+  },
+  isSupported(target) {
+    return target instanceof HTMLDetailsElement && target.open;
+  },
+  handle(target: HTMLDetailsElement) {
+    target.open = false;
+  },
+});
+
+HANDLERS.push({
+  getDescriptions() {
+    return {
+      short: "Focus",
+      long: "Focus the <select> element",
+    };
+  },
+  isSupported(target) {
+    return target instanceof HTMLSelectElement && !target.disabled;
+  },
+  async handle(target: HTMLSelectElement) {
+    target.focus();
+    await nextAnimationFrame();
+    if ("showPicker" in target && typeof target.showPicker === "function") {
+      target.showPicker();
+    }
+  },
+});
+
+// -----------------------------------------
+// /Element Class Specific Handlers
+// -----------------------------------------
+
 const CLICKABLE_SELECTORS = [
   "a[href]",
   "area[href]",
-  "details",
   "button:not([disabled])",
   "[onclick]",
   "[onmousedown]",
@@ -167,25 +223,6 @@ HANDLERS.push({
       target.focus();
     } else {
       console.warn("Cannot focus", target);
-    }
-  },
-});
-
-HANDLERS.push({
-  getDescriptions() {
-    return {
-      short: "Focus",
-      long: "Focus the <select> element",
-    };
-  },
-  isSupported(target) {
-    return target instanceof HTMLSelectElement && !target.disabled;
-  },
-  async handle(target: HTMLSelectElement) {
-    target.focus();
-    await nextAnimationFrame();
-    if ("showPicker" in target && typeof target.showPicker === "function") {
-      target.showPicker();
     }
   },
 });
