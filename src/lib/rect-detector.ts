@@ -1,6 +1,7 @@
 import { Cache, CachedFetcher } from "./cache";
 import { getBoundingClientRect, traverseParent } from "./elements";
 import { filter, first, flatMap } from "./iters";
+import { Timers } from "./metrics";
 import { PointerCrawler } from "./rect-detector-pointer-crawler";
 import { Rect } from "./rects";
 
@@ -21,6 +22,8 @@ export class RectDetector {
   >();
   private readonly pointerCrawler = new PointerCrawler(SCAN_STEP_PX);
 
+  private readonly timers = new Timers("RectDetector");
+
   constructor(
     private readonly viewport: Rect<"actual-viewport", "layout-viewport">,
     private readonly clientRectsFetcher: CachedFetcher<
@@ -40,13 +43,13 @@ export class RectDetector {
   private detectVisibles(
     element: Element,
   ): Rect<"element-border", "actual-viewport">[] {
-    if (
-      !element.checkVisibility({
-        checkOpacity: true,
-        checkVisibilityCSS: true,
-      })
-    )
-      return [];
+    let timerEnd = this.timers.start("checkVisibility");
+    const isVisible = element.checkVisibility({
+      checkOpacity: true,
+      checkVisibilityCSS: true,
+    });
+    timerEnd();
+    if (isVisible) return [];
 
     return [
       ...flatMap(
@@ -55,18 +58,26 @@ export class RectDetector {
           // Too small
           if (isSmallRect(rect)) return [];
 
+          timerEnd = this.timers.start("viewport intersection");
           // out of viewport
           let croppedRect: Rect<"element-border", "layout-viewport"> | null =
             Rect.intersection("element-border", rect, this.viewport);
+          timerEnd();
           if (!croppedRect || isSmallRect(croppedRect)) return [];
 
+          timerEnd = this.timers.start("cropByParent");
           // hidden by parent element overflow
           croppedRect = this.cropByParent(element, croppedRect);
+          timerEnd();
           if (!croppedRect || isSmallRect(croppedRect)) return [];
 
+          timerEnd = this.timers.start("isPointable");
           // pointer can't reach to the element
-          if (!isPhantom && !this.isPointable(element, croppedRect)) return [];
-
+          // Phantom rect should be skipped that is pointable by pointer.
+          const isPointable =
+            Boolean(isPhantom) || this.isPointable(element, croppedRect);
+          timerEnd();
+          if (!isPointable) return [];
           return [croppedRect.offsets(this.viewport)];
         },
       ),
@@ -123,9 +134,15 @@ export class RectDetector {
     element: Element,
     rect: Rect<"element-border", "layout-viewport">,
   ) {
-    for (const e of this.pointerCrawler.crawl(rect))
-      if (e && element.contains(e)) return true;
+    for (const e of this.pointerCrawler.crawl(rect)) {
+      if (Boolean(e) && element.contains(e)) return true;
+    }
     return false;
+  }
+
+  printMetrics() {
+    this.timers.print();
+    this.pointerCrawler.printMetrics();
   }
 }
 

@@ -4,6 +4,7 @@ import { sendToRuntime } from "./chrome-messages";
 import { postMessageTo } from "./dom-messages";
 import { getClientRects, getContentRects, listAll } from "./elements";
 import { flatMap } from "./iters";
+import { Timers } from "./metrics";
 import { RectDetector } from "./rect-detector";
 import { Coordinates, Rect } from "./rects";
 import settingsClient from "./settings-client";
@@ -91,13 +92,20 @@ export class RectAggregatorContentAll {
       styleFetcher,
     );
     const frameId = await this.frameIdPromise;
+    const timers = new Timers("aggregateRects");
     let index = 0;
-    return [
+    const elements = [
       ...flatMap(listAll(), (element): ElementProfile[] => {
+        let timerEnd = timers.start("detect");
         const rects = detector.detect(element);
+        timerEnd();
+
         if (rects.length === 0) return [];
 
+        timerEnd = timers.start("findAction");
         const action = actionFinder.find(element);
+        timerEnd();
+
         if (!action) return [];
 
         return [
@@ -110,6 +118,9 @@ export class RectAggregatorContentAll {
         ];
       }),
     ];
+    timers.print();
+    detector.printMetrics();
+    return elements;
   }
 
   private propergateMessage(

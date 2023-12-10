@@ -1,29 +1,75 @@
-import { Cache } from "./cache";
+import { Timers } from "./metrics";
 import { Rect } from "./rects";
 
+interface Area {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
 export class PointerCrawler {
-  private readonly cache = new CoordinatesCache<Element | null>();
-  constructor(private readonly intervalPx: number) {}
+  private timers = new Timers("PointerCrawler");
+
+  constructor(private readonly stepPx: number) {}
 
   *crawl(
-    area: Rect<CoordinateType, "layout-viewport">,
+    crawlArea: Rect<CoordinateType, "layout-viewport">,
   ): Generator<Element | null> {
-    const minX = Math.ceil(area.x / this.intervalPx) * this.intervalPx;
-    const maxX =
-      Math.floor((area.x + area.width) / this.intervalPx) * this.intervalPx;
-    const minY = Math.ceil(area.y / this.intervalPx) * this.intervalPx;
-    const maxY =
-      Math.floor((area.y + area.height) / this.intervalPx) * this.intervalPx;
+    const alreadyCrawled = new Set<Element | null>();
+    const actualArea = {
+      minX: Math.ceil(crawlArea.x / this.stepPx) * this.stepPx,
+      maxX:
+        Math.floor((crawlArea.x + crawlArea.width) / this.stepPx) * this.stepPx,
+      minY: Math.ceil(crawlArea.y / this.stepPx) * this.stepPx,
+      maxY:
+        Math.floor((crawlArea.y + crawlArea.height) / this.stepPx) *
+        this.stepPx,
+    };
+    for (const [x, y] of this.generateDiagonalPoints(actualArea)) {
+      const stop = this.timers.start("elementFromPoint");
+      const e = this.elementFromPoint(x, y);
+      stop();
+      if (alreadyCrawled.has(e)) continue;
+      alreadyCrawled.add(e);
+      yield e;
+    }
+  }
 
-    // TODO Randomize the order of crawling
-    for (let x = minX; x < maxX; x += this.intervalPx) {
-      for (let y = minY; y < maxY; y += this.intervalPx) {
-        yield this.cache.getOr(x, y, () => this.point(x, y));
+  private *generatePoints(a: Area): Generator<[number, number]> {
+    // Naive implementation
+    for (let x = a.minX; x < a.maxX; x += this.stepPx) {
+      for (let y = a.minY; y < a.maxY; y += this.stepPx) {
+        yield [x, y];
       }
     }
   }
 
-  point(x: number, y: number): Element | null {
+  private *generateEdgesPoints(a: Area): Generator<[number, number]> {
+    const step = this.stepPx;
+    for (let x = a.minX; x < a.maxX; x += step) {
+      yield [x, a.minY];
+      yield [x, a.maxY];
+    }
+    for (let y = a.minY; y < a.maxY; y += step) {
+      yield [a.minX, y];
+      yield [a.maxX, y];
+    }
+  }
+
+  private *generateDiagonalPoints(a: Area): Generator<[number, number]> {
+    const step = this.stepPx;
+    const shortEdge = Math.min(a.maxX - a.minX, a.maxY - a.minY);
+    const maxDelta = shortEdge / 2;
+    for (let delta = 0; delta < maxDelta; delta += step) {
+      yield [a.minX + delta, a.minY + delta];
+      yield [a.maxX - delta, a.minY + delta];
+      yield [a.minX + delta, a.maxY - delta];
+      yield [a.maxX - delta, a.maxY - delta];
+    }
+  }
+
+  private elementFromPoint(x: number, y: number): Element | null {
     let pointedElement = document.elementFromPoint(x, y);
     if (pointedElement == null) return null;
 
@@ -42,12 +88,8 @@ export class PointerCrawler {
 
     return pointedElement;
   }
-}
 
-class CoordinatesCache<E> {
-  private readonly cache = new Cache<number, Cache<number, E>>();
-
-  getOr(x: number, y: number, f: () => E): E {
-    return this.cache.getOr(x, () => new Cache()).getOr(y, () => f());
+  printMetrics() {
+    this.timers.print();
   }
 }
