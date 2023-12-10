@@ -1,0 +1,26 @@
+<style>
+  h2 {
+    background-color: lightgray;
+  }
+</style>
+
+<h2>&lt;a&gt; element only contains &lt;img&gt; element</h2>
+<a href="https://www.google.com/">
+  <img
+    src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
+  />
+</a>
+
+<h2>&lt;span&gt; element contains &lt;img&gt; element</h2>
+<span onclick="alert('clicked')">
+  <img
+    src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
+  />
+</span>
+
+<h2>Clickable element which contains only detouch childrens</h2>
+<div onclick="alert('clicked')">
+  <div style="position: absolute; padding: 16px; background-color: blueviolet">
+    "position: absolute" rect
+  </div>
+</div>

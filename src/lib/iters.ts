@@ -45,9 +45,10 @@ export function flat<E>(i: Iterable<Iterable<E>>): Generator<E> {
 
 export function* flatMap<E, R>(
   i: Iterable<E>,
-  f: (e: E) => Iterable<R>,
+  f: (e: E, index: number) => Iterable<R>,
 ): Generator<R> {
-  for (const e of i) for (const u of f(e)) yield u;
+  let n = 0;
+  for (const e of i) for (const u of f(e, n++)) yield u;
 }
 
 export async function* asyncFlatMap<E, R>(

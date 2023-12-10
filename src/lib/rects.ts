@@ -161,4 +161,21 @@ export class Rect<Type extends CoordinateType, Origin extends CoordinateType>
       height: this.height + edges.top + edges.bottom,
     });
   }
+
+  // Returns rects that is bonded if the reciever rect intersects with a given first rect.
+  // The reciever rect is just added to the given rects if it doesn't intersect with any rects.
+  bondIfIntersect(rects: Rect<Type, Origin>[]): Rect<Type, Origin>[] {
+    const newRects: Rect<Type, Origin>[] = [...rects];
+    let isIntersected = false;
+    for (const rect of rects) {
+      const intersection = Rect.intersectionWithSameType(this, rect);
+      if (intersection) {
+        isIntersected = true;
+        newRects.splice(newRects.indexOf(rect), 1, Rect.boundRects(this, rect));
+        break;
+      }
+    }
+    if (!isIntersected) newRects.push(this);
+    return newRects;
+  }
 }

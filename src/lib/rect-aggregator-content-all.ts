@@ -15,6 +15,7 @@ interface ElementProfile {
   rects: Rect<"element-border", "root-viewport">[];
   descriptions: ActionDescriptions;
   handle: (options: ActionOptions) => Promise<void> | void;
+  actualTarget?: HTMLElement;
 }
 
 interface AggregationContext {
@@ -93,24 +94,21 @@ export class RectAggregatorContentAll {
     );
     const frameId = await this.frameIdPromise;
     const timers = new Timers("aggregateRects");
-    let index = 0;
-    const elements = [
-      ...flatMap(listAll(), (element): ElementProfile[] => {
+    const elementProfiles = [
+      ...flatMap(listAll(), (element, index): ElementProfile[] => {
         let timerEnd = timers.start("detect");
         const rects = detector.detect(element);
         timerEnd();
-
         if (rects.length === 0) return [];
 
         timerEnd = timers.start("findAction");
         const action = actionFinder.find(element);
         timerEnd();
-
         if (!action) return [];
 
         return [
           {
-            id: { index: index++, frameId },
+            id: { index, frameId },
             element,
             rects: rects.map((r) => r.offsets(currentViewport.reverse())),
             ...action,
@@ -120,7 +118,7 @@ export class RectAggregatorContentAll {
     ];
     timers.print();
     detector.printMetrics();
-    return elements;
+    return bondByActualTarget(elementProfiles);
   }
 
   private propergateMessage(
@@ -166,9 +164,32 @@ export class RectAggregatorContentAll {
   }
 
   async handleExecuteAction(index: number, options: ActionOptions) {
-    const e = this.elements[index];
+    const e = this.elements.find((e) => e.id.index === index);
     console.debug("handleExecuteAction", index, e);
     if (!e) throw new Error(`No element with index ${index}`);
     await e.handle(options);
   }
+}
+
+// Bond rects if they have same actual target.
+function bondByActualTarget(
+  elementProfiles: ElementProfile[],
+): ElementProfile[] {
+  const elementProfileMap = new Map(elementProfiles.map((e) => [e.element, e]));
+  for (const profile of elementProfiles) {
+    if (!profile.actualTarget) continue;
+    if (profile.element === profile.actualTarget) continue;
+
+    const actualTargetProfile = elementProfileMap.get(profile.actualTarget);
+    if (actualTargetProfile) {
+      actualTargetProfile.rects = profile.rects.reduce(
+        (acc, r) => r.bondIfIntersect(acc),
+        actualTargetProfile.rects,
+      );
+      elementProfileMap.delete(profile.element);
+    } else {
+      elementProfileMap.set(profile.actualTarget, profile);
+    }
+  }
+  return [...elementProfileMap.values()];
 }

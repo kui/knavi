@@ -1,15 +1,21 @@
 import { nextAnimationFrame } from "./animations";
-import { isEditable, isScrollable } from "./elements";
+import { isEditable, isScrollable, traverseParent } from "./elements";
+import { first, flatMap } from "./iters";
+
+export interface ActionProfile {
+  actualTarget: HTMLElement;
+}
 
 interface ActionHandler {
   getDescriptions(): ActionDescriptions;
-  isSupported(target: Element): boolean;
+  isSupported(target: Element): boolean | ActionProfile;
   handle(target: Element, options: MouseEventInit): Promise<void> | void;
 }
 
 interface Action {
   descriptions: ActionDescriptions;
   handle(options: MouseEventInit): Promise<void> | void;
+  actualTarget?: HTMLElement;
 }
 
 export class ActionFinder {
@@ -33,11 +39,28 @@ export class ActionFinder {
   }
 
   find(target: Element): Action | undefined {
-    const h = this.handlers.find((h) => h.isSupported(target));
-    if (!h) return undefined;
+    const profiles = first(
+      flatMap(this.handlers, (handler) => {
+        const profile = handler.isSupported(target);
+        if (profile) return [{ profile, handler }];
+        return [];
+      }),
+    );
+    if (!profiles) return undefined;
+
+    const { profile, handler } = profiles;
+    if (profile === true) {
+      return {
+        descriptions: handler.getDescriptions(),
+        handle: (options) => handler.handle(target, options),
+      };
+    }
+
+    const { actualTarget } = profile;
     return {
-      descriptions: h.getDescriptions(),
-      handle: (options) => h.handle(target, options),
+      descriptions: handler.getDescriptions(),
+      handle: (options) => handler.handle(actualTarget, options),
+      actualTarget,
     };
   }
 }
@@ -193,6 +216,7 @@ const CLICKABLE_SELECTORS = [
   "[role=link]",
   "[role=button]",
 ].join(",");
+
 HANDLERS.push({
   getDescriptions() {
     return {
@@ -201,7 +225,13 @@ HANDLERS.push({
     };
   },
   isSupported(target) {
-    return target.matches(CLICKABLE_SELECTORS);
+    for (const element of traverseParent(target, true))
+      if (
+        element instanceof HTMLElement &&
+        element.matches(CLICKABLE_SELECTORS)
+      )
+        return { actualTarget: element };
+    return false;
   },
   async handle(target, options) {
     await simulateClick(target, options);
