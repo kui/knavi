@@ -1,6 +1,6 @@
-import { CachedFetcher, AsyncCache } from "./cache";
+import { Cache, CachedFetcher } from "./cache";
 import { getBoundingClientRect, traverseParent } from "./elements";
-import { asyncFlatMap, filter, first, toAsyncArray } from "./iters";
+import { filter, first, flatMap } from "./iters";
 import { PointerCrawler } from "./rect-detector-pointer-crawler";
 import { Rect } from "./rects";
 
@@ -15,10 +15,10 @@ interface ElementRect {
 const SCAN_STEP_PX = 4;
 
 export class RectDetector {
-  private readonly cache = new AsyncCache<
+  private readonly cache = new Cache<
     Element,
     Rect<"element-border", "actual-viewport">[]
-  >(3000);
+  >();
   private readonly pointerCrawler = new PointerCrawler(SCAN_STEP_PX);
 
   constructor(
@@ -33,13 +33,13 @@ export class RectDetector {
     >,
   ) {}
 
-  async detect(e: Element) {
+  detect(e: Element) {
     return this.cache.getOr(e, (e) => this.detectVisibles(e));
   }
 
-  private async detectVisibles(
+  private detectVisibles(
     element: Element,
-  ): Promise<Rect<"element-border", "actual-viewport">[]> {
+  ): Rect<"element-border", "actual-viewport">[] {
     if (
       !element.checkVisibility({
         checkOpacity: true,
@@ -48,13 +48,10 @@ export class RectDetector {
     )
       return [];
 
-    return toAsyncArray(
-      asyncFlatMap(
+    return [
+      ...flatMap(
         this.getClientRects(element),
-        async ({
-          rect,
-          isPhantom,
-        }): Promise<Rect<"element-border", "actual-viewport">[]> => {
+        ({ rect, isPhantom }): Rect<"element-border", "actual-viewport">[] => {
           // Too small
           if (isSmallRect(rect)) return [];
 
@@ -64,7 +61,7 @@ export class RectDetector {
           if (!croppedRect || isSmallRect(croppedRect)) return [];
 
           // hidden by parent element overflow
-          croppedRect = await this.cropByParent(element, croppedRect);
+          croppedRect = this.cropByParent(element, croppedRect);
           if (!croppedRect || isSmallRect(croppedRect)) return [];
 
           // pointer can't reach to the element
@@ -73,7 +70,7 @@ export class RectDetector {
           return [croppedRect.offsets(this.viewport)];
         },
       ),
-    );
+    ];
   }
 
   private getClientRects(element: Element): ElementRect[] {
@@ -83,10 +80,10 @@ export class RectDetector {
     return this.clientRectsFetcher.get(element).map((rect) => ({ rect }));
   }
 
-  private async cropByParent(
+  private cropByParent(
     element: Element,
     rect: Rect<"element-border", "layout-viewport">,
-  ): Promise<Rect<"element-border", "layout-viewport"> | null> {
+  ): Rect<"element-border", "layout-viewport"> | null {
     if (element === document.body || element === document.documentElement)
       return rect;
 
@@ -110,7 +107,7 @@ export class RectDetector {
       .toString();
     if (parentOverflow === "visible") return this.cropByParent(parent, rect);
 
-    const [parentRect] = await this.detect(parent);
+    const [parentRect] = this.detect(parent);
     if (!parentRect) return null;
 
     const cropped = Rect.intersectionWithSameType(

@@ -3,7 +3,7 @@ import { CachedFetcher } from "./cache";
 import { sendToRuntime } from "./chrome-messages";
 import { postMessageTo } from "./dom-messages";
 import { getClientRects, getContentRects, listAll } from "./elements";
-import { asyncFlatMap, toAsyncArray } from "./iters";
+import { flatMap } from "./iters";
 import { RectDetector } from "./rect-detector";
 import { Coordinates, Rect } from "./rects";
 import settingsClient from "./settings-client";
@@ -57,7 +57,11 @@ export class RectAggregatorContentAll {
       clientRectsFetcher: new CachedFetcher((e: Element) => getClientRects(e)),
       styleFetcher: new CachedFetcher((e: Element) => e.computedStyleMap()),
     };
+
+    console.time("aggregateRects");
     this.elements = await this.aggregateRects(context);
+    console.timeEnd("aggregateRects");
+
     await sendToRuntime("ResponseRectsFragment", {
       requestId,
       rects: this.elements,
@@ -88,9 +92,9 @@ export class RectAggregatorContentAll {
     );
     const frameId = await this.frameIdPromise;
     let index = 0;
-    return toAsyncArray(
-      asyncFlatMap(listAll(), async (element): Promise<ElementProfile[]> => {
-        const rects = await detector.detect(element);
+    return [
+      ...flatMap(listAll(), (element): ElementProfile[] => {
+        const rects = detector.detect(element);
         if (rects.length === 0) return [];
 
         const action = actionFinder.find(element);
@@ -105,7 +109,7 @@ export class RectAggregatorContentAll {
           },
         ];
       }),
-    );
+    ];
   }
 
   private propergateMessage(
