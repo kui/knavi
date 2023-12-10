@@ -100,9 +100,9 @@ export class HinterContentRoot {
     if (!context) {
       throw Error("Ilegal state invocation: hinting not started");
     }
+    this.view.remove();
     await this.rectAggregator.action(context.hitTarget?.id, options);
     this.context = null;
-    this.view.remove();
   }
 }
 
