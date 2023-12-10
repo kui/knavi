@@ -52,7 +52,7 @@ HANDLERS.push({
     };
   },
   isSupported(target) {
-    return target === document.activeElement;
+    return target !== document.body && target === document.activeElement;
   },
   handle(target) {
     if (target instanceof HTMLElement) {
