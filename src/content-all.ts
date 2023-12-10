@@ -29,10 +29,8 @@ chrome.runtime.onMessage.addListener(
         await keyboardHandler.setup(settings);
       }),
     )
-    .add(
-      "ExecuteAction",
-      async ({ id, options }) =>
-        await rectAggregator.handleExecuteAction(id.index, options),
+    .add("ExecuteAction", ({ id, options }) =>
+      rectAggregator.handleExecuteAction(id.index, options),
     )
     .buildListener(),
 );

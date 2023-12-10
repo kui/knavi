@@ -152,6 +152,7 @@ export class RectAggregatorContentAll {
 
   async handleExecuteAction(index: number, options: ActionOptions) {
     const e = this.elements[index];
+    console.debug("handleExecuteAction", index, e);
     if (!e) throw new Error(`No element with index ${index}`);
     await e.handle(options);
   }

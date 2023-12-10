@@ -1,7 +1,7 @@
-import * as vp from "./viewports";
 import { sendToRuntime } from "./chrome-messages";
 import { postMessageTo } from "./dom-messages";
 import { createQueue } from "./generators";
+import * as vp from "./viewports";
 
 export class RectAggregatorClient {
   private requestIndex = 0;

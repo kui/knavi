@@ -102,8 +102,6 @@ HANDLERS.push({
     );
   },
   async handle(target: HTMLInputElement, options) {
-    target.focus();
-    await nextAnimationFrame();
     await simulateClick(target, options);
   },
 });
@@ -241,16 +239,23 @@ HANDLERS.push({
 });
 
 async function simulateClick(element: Element, options: MouseEventInit) {
-  dispatchMouseEvent("mouseover", element, options);
+  const sequence = [
+    () => dispatchMouseEvent("mouseover", element, options),
+    () => dispatchMouseEvent("mousedown", element, options),
+    () => {
+      if ("focus" in element && typeof element.focus === "function")
+        element.focus();
+    },
+    () => dispatchMouseEvent("mouseup", element, options),
+    () => dispatchMouseEvent("click", element, options),
+  ];
 
-  for (const type of ["mousedown", "mouseup", "click"]) {
+  for (const task of sequence) {
+    task();
     await nextAnimationFrame();
-    const b = dispatchMouseEvent(type, element, options);
-    if (!b) console.debug("canceled", type);
   }
 }
 
-// Return false if canceled
 function dispatchMouseEvent(
   type: string,
   element: Element,
@@ -266,5 +271,5 @@ function dispatchMouseEvent(
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     metaKey: options.metaKey || options.ctrlKey,
   });
-  return element.dispatchEvent(event);
+  if (!element.dispatchEvent(event)) console.debug("canceled", type);
 }
