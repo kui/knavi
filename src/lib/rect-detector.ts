@@ -49,7 +49,7 @@ export class RectDetector {
       checkVisibilityCSS: true,
     });
     timerEnd();
-    if (isVisible) return [];
+    if (!isVisible) return [];
 
     return [
       ...flatMap(
