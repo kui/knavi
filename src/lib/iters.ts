@@ -27,6 +27,12 @@ export function first<E>(i: Iterable<E>): E | null {
   return null;
 }
 
+export function last<E>(i: Iterable<E>): E | null {
+  let e: E | null = null;
+  for (e of i);
+  return e;
+}
+
 export function head<E>(i: Iterable<E>, n: number): Generator<E> {
   return takeWhile(i, () => n-- > 0);
 }

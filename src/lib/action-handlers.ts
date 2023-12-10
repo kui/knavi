@@ -1,6 +1,6 @@
 import { nextAnimationFrame } from "./animations";
 import { isEditable, isScrollable, traverseParent } from "./elements";
-import { first, flatMap } from "./iters";
+import { first, flatMap, last, takeWhile } from "./iters";
 
 export interface ActionProfile {
   actualTarget: HTMLElement;
@@ -231,6 +231,35 @@ HANDLERS.push({
         element.matches(CLICKABLE_SELECTORS)
       )
         return { actualTarget: element };
+    return false;
+  },
+  async handle(target, options) {
+    await simulateClick(target, options);
+  },
+});
+
+const CLICKABLE_CURSOR_TYPES = new Set([
+  "pointer",
+  "cell",
+  "zoom-in",
+  "zoom-out",
+]);
+HANDLERS.push({
+  getDescriptions() {
+    return {
+      short: "Click?",
+      long: "Click some elements which are not clickable but looks clickable (e.g. it is styled with 'cursor: pointer')",
+    };
+  },
+  isSupported(target) {
+    const parents = takeWhile(traverseParent(target, true), (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const cursorStyle = element.computedStyleMap().get("cursor")?.toString();
+      if (!cursorStyle) return false;
+      return CLICKABLE_CURSOR_TYPES.has(cursorStyle);
+    });
+    const actualTarget = last(parents);
+    if (actualTarget instanceof HTMLElement) return { actualTarget };
     return false;
   },
   async handle(target, options) {
