@@ -7,29 +7,44 @@ interface ActionHandler {
   handle(target: Element, options: MouseEventInit): Promise<void> | void;
 }
 
-export default class ActionHandlerDelegater {
-  async handle(target: Element, options: MouseEventInit) {
-    const h = getHandler(target);
-    const d = h.getDescriptions();
-    console.debug("element=", target, "desc=", d.long ?? d.short);
-    await h.handle(target, options);
+interface Action {
+  descriptions: ActionDescriptions;
+  handle(options: MouseEventInit): Promise<void> | void;
+}
+
+export class ActionFinder {
+  private readonly handlers: ActionHandler[];
+
+  constructor(additionalSelectors: string[]) {
+    this.handlers = [...HANDLERS];
+    if (additionalSelectors.length > 0) {
+      this.handlers.unshift({
+        getDescriptions() {
+          return { short: "Click" };
+        },
+        isSupported(target: Element) {
+          return target.matches(additionalSelectors.join(","));
+        },
+        async handle(target: Element, options: MouseEventInit) {
+          await simulateClick(target, options);
+        },
+      });
+    }
   }
 
-  getDescriptions(target: Element): ActionDescriptions {
-    const h = getHandler(target);
-    return h.getDescriptions();
+  find(target: Element): Action | undefined {
+    const h = this.handlers.find((h) => h.isSupported(target));
+    if (!h) return undefined;
+    return {
+      descriptions: h.getDescriptions(),
+      handle: (options) => h.handle(target, options),
+    };
   }
 }
 
-const handlers: ActionHandler[] = [];
+const HANDLERS: ActionHandler[] = [];
 
-function getHandler(target: Element) {
-  const h = handlers.find((h) => h.isSupported(target));
-  if (h == null) throw Error("Unreachable code");
-  return h;
-}
-
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Blur",
@@ -48,7 +63,7 @@ handlers.push({
   },
 });
 
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Focus iframe",
@@ -72,7 +87,7 @@ const CLICKABLE_INPUT_TYPES = new Set([
 ]);
 
 // input elements for clickable types.
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Click",
@@ -94,7 +109,7 @@ handlers.push({
 });
 
 // input elements exclude clickable types.
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Focus",
@@ -124,7 +139,7 @@ const CLICKABLE_SELECTORS = [
   "[role=link]",
   "[role=button]",
 ].join(",");
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Click",
@@ -139,7 +154,7 @@ handlers.push({
   },
 });
 
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Edit",
@@ -158,7 +173,7 @@ handlers.push({
   },
 });
 
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Focus",
@@ -177,7 +192,7 @@ handlers.push({
   },
 });
 
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Focus",
@@ -196,7 +211,7 @@ handlers.push({
   },
 });
 
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Scroll",
@@ -222,21 +237,6 @@ handlers.push({
       );
     }
     element.focus();
-  },
-});
-
-// Fallback handler
-handlers.push({
-  getDescriptions() {
-    return {
-      short: "Click",
-    };
-  },
-  isSupported() {
-    return true;
-  },
-  async handle(target, options) {
-    await simulateClick(target, options);
   },
 });
 

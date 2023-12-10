@@ -29,9 +29,6 @@ chrome.runtime.onMessage.addListener(
         await keyboardHandler.setup(settings);
       }),
     )
-    .add("GetDescriptions", ({ id }) =>
-      rectAggregator.handleGetDescription(id.index),
-    )
     .add(
       "ExecuteAction",
       async ({ id, options }) =>

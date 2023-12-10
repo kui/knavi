@@ -81,7 +81,7 @@ export class HinterContentRoot {
     }
   }
 
-  async hitHint(inputLetter: SingleLetter) {
+  hitHint(inputLetter: SingleLetter) {
     const context = this.context;
     if (!context) throw Error("Ilegal state invocation: hinting not started");
 
@@ -89,12 +89,9 @@ export class HinterContentRoot {
 
     const changes = [...updateContext(context, inputLetter)];
 
-    let actionDescriptions = null;
-    if (context.hitTarget) {
-      actionDescriptions = await this.rectAggregator.getDescriptions(
-        context.hitTarget.id,
-      );
-    }
+    const actionDescriptions = context.hitTarget
+      ? context.hitTarget.descriptions
+      : null;
     this.view.hit(changes, actionDescriptions);
   }
 

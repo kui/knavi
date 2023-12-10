@@ -57,11 +57,6 @@ export class RectAggregatorClient {
     this.callback(rects);
   }
 
-  getDescriptions(elementId: ElementId) {
-    if (!this.callback) throw Error("Illegal state: not aggregating");
-    return sendToRuntime("GetDescriptions", { id: elementId });
-  }
-
   action(
     // Provide null to execute no action.
     elementId: ElementId | undefined,

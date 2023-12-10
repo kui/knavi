@@ -50,6 +50,27 @@ export function* flatMap<E, R>(
   for (const e of i) for (const u of f(e)) yield u;
 }
 
+export async function* asyncFlatMap<E, R>(
+  i: Iterable<E> | AsyncIterable<E>,
+  f: (
+    e: E,
+    index: number,
+  ) => Iterable<R> | AsyncIterable<R> | Promise<Iterable<R>>,
+): AsyncGenerator<R> {
+  let n = 0;
+  for await (const e of i) {
+    const ii = f(e, n++);
+    if (ii instanceof Promise) for (const u of await ii) yield u;
+    else for await (const u of ii) yield u;
+  }
+}
+
+export async function toAsyncArray<E>(i: AsyncIterable<E>): Promise<E[]> {
+  const a: E[] = [];
+  for await (const e of i) a.push(e);
+  return a;
+}
+
 export function groupIntoObjectBy<E>(
   i: Iterable<E>,
   getKey: (e: E) => string,

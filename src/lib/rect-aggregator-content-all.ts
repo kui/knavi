@@ -1,9 +1,10 @@
-import ActionHandler from "./action-handlers";
-import CachedFetcher from "./cached-fetcher";
+import { ActionFinder } from "./action-handlers";
+import { CachedFetcher } from "./cache";
 import { sendToRuntime } from "./chrome-messages";
 import { postMessageTo } from "./dom-messages";
-import { getClientRects, getContentRects } from "./elements";
-import { RectAggregator } from "./rect-aggregator";
+import { getClientRects, getContentRects, listAll } from "./elements";
+import { asyncFlatMap, toAsyncArray } from "./iters";
+import { RectDetector } from "./rect-detector";
 import { Coordinates, Rect } from "./rects";
 import settingsClient from "./settings-client";
 
@@ -11,6 +12,8 @@ interface ElementProfile {
   id: ElementId;
   element: Element;
   rects: Rect<"element-border", "root-viewport">[];
+  descriptions: ActionDescriptions;
+  handle: (options: ActionOptions) => Promise<void> | void;
 }
 
 interface AggregationContext {
@@ -25,15 +28,9 @@ interface AggregationContext {
 }
 
 export class RectAggregatorContentAll {
-  private elements: ElementProfile[];
-  private readonly actionHandler: ActionHandler;
-  private readonly frameIdPromise: Promise<number>;
-
-  constructor() {
-    this.elements = [];
-    this.actionHandler = new ActionHandler();
-    this.frameIdPromise = sendToRuntime("GetFrameId");
-  }
+  private elements: ElementProfile[] = [];
+  private readonly actionFinder: ActionFinder | null = null;
+  private readonly frameIdPromise = sendToRuntime("GetFrameId");
 
   async handleAllRectsRequest(
     requestId: number,
@@ -83,18 +80,32 @@ export class RectAggregatorContentAll {
     const additionalSelectors = await settingsClient.matchAdditionalSelectors(
       location.href,
     );
-    const rectFetcher = new RectAggregator(
+    const actionFinder = new ActionFinder(additionalSelectors);
+    const detector = new RectDetector(
       actualViewport,
-      additionalSelectors,
       clientRectsFetcher,
       styleFetcher,
     );
     const frameId = await this.frameIdPromise;
-    return rectFetcher.get().map(({ element, rects }, index) => ({
-      id: { index, frameId },
-      element,
-      rects: rects.map((r) => r.offsets(currentViewport.reverse())),
-    }));
+    let index = 0;
+    return toAsyncArray(
+      asyncFlatMap(listAll(), async (element): Promise<ElementProfile[]> => {
+        const rects = await detector.detect(element);
+        if (rects.length === 0) return [];
+
+        const action = actionFinder.find(element);
+        if (!action) return [];
+
+        return [
+          {
+            id: { index: index++, frameId },
+            element,
+            rects: rects.map((r) => r.offsets(currentViewport.reverse())),
+            ...action,
+          },
+        ];
+      }),
+    );
   }
 
   private propergateMessage(
@@ -139,13 +150,9 @@ export class RectAggregatorContentAll {
     });
   }
 
-  handleGetDescription(index: number) {
-    const { element } = this.elements[index];
-    return this.actionHandler.getDescriptions(element);
-  }
-
   async handleExecuteAction(index: number, options: ActionOptions) {
-    const { element } = this.elements[index];
-    await this.actionHandler.handle(element, options);
+    const e = this.elements[index];
+    if (!e) throw new Error(`No element with index ${index}`);
+    await e.handle(options);
   }
 }
