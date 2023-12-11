@@ -36,7 +36,7 @@ export class RectDetector {
     >,
   ) {}
 
-  detect(e: Element) {
+  detect(e: Element): Rect<"element-border", "actual-viewport">[] {
     return this.cache.getOr(e, (e) => this.detectVisibles(e));
   }
 
