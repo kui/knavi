@@ -27,7 +27,7 @@ export default class BlurView {
   private remove() {
     const body = document.body;
     if (!body) return;
-    body.removeChild(this.overlay);
+    if (body.contains(this.overlay)) body.removeChild(this.overlay);
   }
 
   blur(rect: Rect<"element-border", "root-viewport">) {
