@@ -15,7 +15,7 @@ interface ElementProfile {
   rects: Rect<"element-border", "root-viewport">[];
   descriptions: ActionDescriptions;
   handle: (options: ActionOptions) => Promise<void> | void;
-  actualTarget?: HTMLElement;
+  actualTarget?: HTMLElement | SVGElement;
 }
 
 interface AggregationContext {

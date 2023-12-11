@@ -3,7 +3,7 @@ import { isEditable, isScrollable, traverseParent } from "./elements";
 import { first, flatMap, last, takeWhile } from "./iters";
 
 export interface ActionProfile {
-  actualTarget: HTMLElement;
+  actualTarget: HTMLElement | SVGElement;
 }
 
 interface ActionHandler {
@@ -15,7 +15,7 @@ interface ActionHandler {
 interface Action {
   descriptions: ActionDescriptions;
   handle(options: MouseEventInit): Promise<void> | void;
-  actualTarget?: HTMLElement;
+  actualTarget?: HTMLElement | SVGElement;
 }
 
 export class ActionFinder {
@@ -78,7 +78,7 @@ HANDLERS.push({
     return target !== document.body && target === document.activeElement;
   },
   handle(target) {
-    if (target instanceof HTMLElement) {
+    if ("blur" in target && typeof target.blur === "function") {
       target.blur();
     } else {
       console.warn("Cannot blur", target);
@@ -207,7 +207,7 @@ HANDLERS.push({
 // -----------------------------------------
 
 const CLICKABLE_SELECTORS = [
-  "a[href]",
+  "a[*|href]",
   "area[href]",
   "button:not([disabled])",
   "[onclick]",
@@ -227,7 +227,7 @@ HANDLERS.push({
   isSupported(target) {
     for (const element of traverseParent(target, true))
       if (
-        element instanceof HTMLElement &&
+        (element instanceof HTMLElement || element instanceof SVGElement) &&
         element.matches(CLICKABLE_SELECTORS)
       )
         return { actualTarget: element };
@@ -253,13 +253,18 @@ HANDLERS.push({
   },
   isSupported(target) {
     const parents = takeWhile(traverseParent(target, true), (element) => {
-      if (!(element instanceof HTMLElement)) return false;
+      if (!(element instanceof HTMLElement || element instanceof SVGElement))
+        return false;
       const cursorStyle = element.computedStyleMap().get("cursor")?.toString();
       if (!cursorStyle) return false;
       return CLICKABLE_CURSOR_TYPES.has(cursorStyle);
     });
     const actualTarget = last(parents);
-    if (actualTarget instanceof HTMLElement) return { actualTarget };
+    if (
+      actualTarget instanceof HTMLElement ||
+      actualTarget instanceof SVGElement
+    )
+      return { actualTarget };
     return false;
   },
   async handle(target, options) {
@@ -278,7 +283,7 @@ HANDLERS.push({
     return isEditable(target);
   },
   handle(target) {
-    if (target instanceof HTMLElement) {
+    if ("focus" in target && typeof target.focus === "function") {
       target.focus();
     } else {
       console.warn("Cannot focus", target);
