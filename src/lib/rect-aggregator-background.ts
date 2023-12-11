@@ -10,7 +10,7 @@ export const router = Router.newInstance()
   })
 
   .add("ExecuteAction", async (message, sender) => {
-    return await sendToTab(sender.tab!.id!, "ExecuteAction", message, {
+    await sendToTab(sender.tab!.id!, "ExecuteAction", message, {
       frameId: message.id.frameId,
     });
   });
