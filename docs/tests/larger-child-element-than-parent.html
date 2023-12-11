@@ -18,9 +18,38 @@
   />
 </span>
 
-<h2>Clickable element which contains only detouch childrens</h2>
-<div onclick="alert('clicked')">
+<h2>Clickable element which contains only detouch children</h2>
+<div onclick="alert('clicked')" style="overflow: auto">
   <div style="position: absolute; padding: 16px; background-color: blueviolet">
     "position: absolute" rect
+  </div>
+</div>
+<div style="height: 100px">Filler to privent overwrap</div>
+
+<h2>Clickable element which has a offsetParent</h2>
+<div style="position: relative">
+  <div onclick="alert('clicked')" style="overflow: auto">
+    <div
+      style="position: absolute; padding: 16px; background-color: blueviolet"
+    >
+      "position: absolute" rect
+    </div>
+  </div>
+</div>
+<div style="height: 100px">Filler to privent overwrap</div>
+
+<h2>Clickable element which is the position: relative</h2>
+<div style="overflow: auto; width: 200px; background-color: yellow">
+  <div
+    onclick="alert('clicked')"
+    style="
+      padding: 16px;
+      position: relative;
+      background-color: blueviolet;
+      width: 500px;
+      left: 50px;
+    "
+  >
+    Clickable
   </div>
 </div>

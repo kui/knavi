@@ -104,9 +104,15 @@ export class RectDetector {
       .toString();
     // TODO We need to support some case like "transform" property in ancestor.
     // See https://developer.mozilla.org/en-US/docs/Web/CSS/position#fixed_positioning
-    if (elementPosition === "fixed") return rect;
+    if (elementPosition === "fixed" || elementPosition === "sticky")
+      return rect;
 
-    const parent = element.parentElement;
+    let parent: Element | null;
+    if (elementPosition === "absolute" && element instanceof HTMLElement) {
+      parent = element.offsetParent;
+    } else {
+      parent = element.parentElement;
+    }
     if (!parent) {
       console.warn("No parent element", element);
       return null;
