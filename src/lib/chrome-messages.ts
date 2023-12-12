@@ -11,7 +11,7 @@ declare global {
 interface Messages {
   // Settings
   GetSettings: {
-    payload: { names?: (keyof Settings)[] };
+    payload: { names: (keyof Settings)[] };
     response: Pick<Settings, keyof Settings>;
   };
   MatchBlacklist: {
@@ -21,10 +21,6 @@ interface Messages {
   MatchAdditionalSelectors: {
     payload: { url: string };
     response: string[];
-  };
-  BroadcastNewSettings: {
-    payload: Settings;
-    response: void;
   };
 
   // Hint
@@ -43,10 +39,6 @@ interface Messages {
   GetFrameId: {
     payload: void;
     response: number;
-  };
-  GetDescriptions: {
-    payload: { id: ElementId };
-    response: ActionDescriptions;
   };
   ExecuteAction: {
     payload: { id: ElementId; options: ActionOptions };
@@ -210,7 +202,7 @@ function nextMessageId(): number {
 
 export function sendToRuntime<T extends keyof Messages>(
   type: T,
-  payload: MessagePayload<T> = {},
+  payload: MessagePayload<T>,
 ): Promise<Response<T>> {
   return new Promise((resolve, reject) => {
     const requestId = nextMessageId();

@@ -1,6 +1,6 @@
 export default function (pkg) {
   return {
-    manifest_version: 2,
+    manifest_version: 3,
     name: pkg.name,
     version: pkg.version,
     description: pkg.description,
@@ -11,8 +11,7 @@ export default function (pkg) {
       128: "icon128.png",
     },
     background: {
-      scripts: ["background.js"],
-      persistent: true,
+      service_worker: "background.js",
     },
     content_scripts: [
       {
@@ -27,7 +26,9 @@ export default function (pkg) {
         run_at: "document_start",
       },
     ],
-    content_security_policy: "script-src 'self'; object-src 'self'",
+    content_security_policy: {
+      extension_pages: "default-src 'self'",
+    },
     options_page: "options.html",
     options_ui: {
       page: "options.html",
@@ -38,9 +39,16 @@ export default function (pkg) {
     permissions: [
       // To store configs.
       "storage",
+    ],
+    host_permissions: [
       // To insert hints for all sites.
       "<all_urls>",
     ],
-    web_accessible_resources: ["*.js.map", "*.css"],
+    web_accessible_resources: [
+      {
+        matches: ["<all_urls>"],
+        resources: ["*.js.map"],
+      },
+    ],
   };
 }

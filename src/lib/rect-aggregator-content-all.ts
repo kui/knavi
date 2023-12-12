@@ -32,7 +32,7 @@ interface AggregationContext {
 export class RectAggregatorContentAll {
   private elements: ElementProfile[] = [];
   private readonly actionFinder: ActionFinder | null = null;
-  private readonly frameIdPromise = sendToRuntime("GetFrameId");
+  private readonly frameIdPromise = sendToRuntime("GetFrameId", undefined);
 
   async handleAllRectsRequest(
     requestId: number,

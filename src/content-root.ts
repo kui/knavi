@@ -23,12 +23,17 @@ const blurer = new BlurerContentRoot(blurerView);
   hinter.setup(hints);
 })().catch(printError);
 
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.css) {
+    hinterView.setup(changes.css.newValue as Settings["css"]);
+  }
+  if (changes.hints) {
+    hinter.setup(changes.hints.newValue as Settings["hints"]);
+  }
+});
+
 chrome.runtime.onMessage.addListener(
   ChromeMessageRouter.newInstance()
-    .add("BroadcastNewSettings", ({ hints, css }) => {
-      hinter.setup(hints);
-      hinterView.setup(css);
-    })
     .add("ResponseRectsFragment", (m) =>
       rectAggregator.handleRects(m.requestId, m.rects),
     )
