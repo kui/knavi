@@ -74,12 +74,14 @@ export class PointerCrawler {
     if (pointedElement == null) return null;
 
     // Traverse into shadow DOMs
+    const stack = [pointedElement];
     while (pointedElement.shadowRoot) {
       const elemementInShadow = pointedElement.shadowRoot.elementFromPoint(
         x,
         y,
       );
-      if (elemementInShadow) {
+      if (elemementInShadow && !stack.includes(elemementInShadow)) {
+        stack.push(elemementInShadow);
         pointedElement = elemementInShadow;
       } else {
         return pointedElement;
