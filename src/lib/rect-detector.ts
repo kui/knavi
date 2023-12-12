@@ -164,7 +164,7 @@ function getAreaRects(
   );
   if (!(map instanceof HTMLMapElement)) return [];
 
-  const img = document.querySelector(`body /deep/ img[usemap="#${map.name}"]`);
+  const img = document.querySelector(`img[usemap="#${map.name}"]`);
   if (!img) return [];
 
   const imgRect = getBoundingClientRect(img);
