@@ -9,11 +9,8 @@ export const router = Router.newInstance()
     });
   })
 
-  .addAll(
-    ["GetDescriptions", "ExecuteAction"],
-    (type) => async (message, sender) => {
-      return await sendToTab(sender.tab!.id!, type, message, {
-        frameId: message.id.frameId,
-      });
-    },
-  );
+  .add("ExecuteAction", async (message, sender) => {
+    await sendToTab(sender.tab!.id!, "ExecuteAction", message, {
+      frameId: message.id.frameId,
+    });
+  });

@@ -14,6 +14,7 @@ interface ElementId {
 interface ElementRects {
   id: ElementId;
   rects: RectJSON<"element-border", "root-viewport">[];
+  descriptions: ActionDescriptions;
 }
 
 interface HintedElement extends ElementRects {

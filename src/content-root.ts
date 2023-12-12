@@ -3,16 +3,16 @@ import { HinterContentRoot } from "./lib/hinter-content-root";
 import { BlurerContentRoot } from "./lib/blurer-content-root";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
 import { Router as DomMessageRouter } from "./lib/dom-messages";
-import { RectFetcherClient } from "./lib/rect-fetcher-client";
+import { RectAggregatorClient } from "./lib/rect-aggregator-client";
 import { HintView } from "./lib/hinter-view";
 import BlurView from "./lib/blurer-view";
 import { printError } from "./lib/errors";
 
 globalThis.KNAVI_FILE = "content-root";
 
-const fetcher = new RectFetcherClient();
+const rectAggregator = new RectAggregatorClient();
 const hinterView = new HintView();
-const hinter = new HinterContentRoot(fetcher, hinterView);
+const hinter = new HinterContentRoot(rectAggregator, hinterView);
 
 const blurerView = new BlurView();
 const blurer = new BlurerContentRoot(blurerView);
@@ -30,7 +30,7 @@ chrome.runtime.onMessage.addListener(
       hinterView.setup(css);
     })
     .add("ResponseRectsFragment", (m) =>
-      fetcher.handleRects(m.requestId, m.rects),
+      rectAggregator.handleRects(m.requestId, m.rects),
     )
     .add("AttachHints", () => hinter.attachHints())
     .add("HitHint", ({ key }) => hinter.hitHint(key))

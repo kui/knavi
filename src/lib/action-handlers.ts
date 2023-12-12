@@ -1,35 +1,73 @@
 import { nextAnimationFrame } from "./animations";
-import { isEditable, isScrollable } from "./elements";
+import { isEditable, isScrollable, traverseParent } from "./elements";
+import { first, flatMap, last, takeWhile } from "./iters";
+
+export interface ActionProfile {
+  actualTarget: HTMLElement | SVGElement;
+}
 
 interface ActionHandler {
   getDescriptions(): ActionDescriptions;
-  isSupported(target: Element): boolean;
+  isSupported(target: Element): boolean | ActionProfile;
   handle(target: Element, options: MouseEventInit): Promise<void> | void;
 }
 
-export default class ActionHandlerDelegater {
-  async handle(target: Element, options: MouseEventInit) {
-    const h = getHandler(target);
-    const d = h.getDescriptions();
-    console.debug("element=", target, "desc=", d.long ?? d.short);
-    await h.handle(target, options);
+interface Action {
+  descriptions: ActionDescriptions;
+  handle(options: MouseEventInit): Promise<void> | void;
+  actualTarget?: HTMLElement | SVGElement;
+}
+
+export class ActionFinder {
+  private readonly handlers: ActionHandler[];
+
+  constructor(additionalSelectors: string[]) {
+    this.handlers = [...HANDLERS];
+    if (additionalSelectors.length > 0) {
+      this.handlers.unshift({
+        getDescriptions() {
+          return { short: "Click" };
+        },
+        isSupported(target: Element) {
+          return target.matches(additionalSelectors.join(","));
+        },
+        async handle(target: Element, options: MouseEventInit) {
+          await simulateClick(target, options);
+        },
+      });
+    }
   }
 
-  getDescriptions(target: Element): ActionDescriptions {
-    const h = getHandler(target);
-    return h.getDescriptions();
+  find(target: Element): Action | undefined {
+    const profiles = first(
+      flatMap(this.handlers, (handler) => {
+        const profile = handler.isSupported(target);
+        if (profile) return [{ profile, handler }];
+        return [];
+      }),
+    );
+    if (!profiles) return undefined;
+
+    const { profile, handler } = profiles;
+    if (profile === true) {
+      return {
+        descriptions: handler.getDescriptions(),
+        handle: (options) => handler.handle(target, options),
+      };
+    }
+
+    const { actualTarget } = profile;
+    return {
+      descriptions: handler.getDescriptions(),
+      handle: (options) => handler.handle(actualTarget, options),
+      actualTarget,
+    };
   }
 }
 
-const handlers: ActionHandler[] = [];
+const HANDLERS: ActionHandler[] = [];
 
-function getHandler(target: Element) {
-  const h = handlers.find((h) => h.isSupported(target));
-  if (h == null) throw Error("Unreachable code");
-  return h;
-}
-
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Blur",
@@ -37,10 +75,10 @@ handlers.push({
     };
   },
   isSupported(target) {
-    return target === document.activeElement;
+    return target !== document.body && target === document.activeElement;
   },
   handle(target) {
-    if (target instanceof HTMLElement) {
+    if ("blur" in target && typeof target.blur === "function") {
       target.blur();
     } else {
       console.warn("Cannot blur", target);
@@ -48,7 +86,11 @@ handlers.push({
   },
 });
 
-handlers.push({
+// -----------------------------------------
+// Element Class Specific Handlers
+// -----------------------------------------
+
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Focus iframe",
@@ -72,7 +114,7 @@ const CLICKABLE_INPUT_TYPES = new Set([
 ]);
 
 // input elements for clickable types.
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Click",
@@ -87,14 +129,12 @@ handlers.push({
     );
   },
   async handle(target: HTMLInputElement, options) {
-    target.focus();
-    await nextAnimationFrame();
     await simulateClick(target, options);
   },
 });
 
 // input elements exclude clickable types.
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Focus",
@@ -113,52 +153,37 @@ handlers.push({
   },
 });
 
-const CLICKABLE_SELECTORS = [
-  "a[href]",
-  "area[href]",
-  "details",
-  "button:not([disabled])",
-  "[onclick]",
-  "[onmousedown]",
-  "[onmouseup]",
-  "[role=link]",
-  "[role=button]",
-].join(",");
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
-      short: "Click",
-      long: "Click anchor, button or other clickable elements",
+      short: "Open",
+      long: "Open the <details> element",
     };
   },
   isSupported(target) {
-    return target.matches(CLICKABLE_SELECTORS);
+    return target instanceof HTMLDetailsElement && !target.open;
   },
-  async handle(target, options) {
-    await simulateClick(target, options);
+  handle(target: HTMLDetailsElement) {
+    target.open = true;
   },
 });
 
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
-      short: "Edit",
-      long: "Focus the editable element",
+      short: "Close",
+      long: "Close the <details> element",
     };
   },
   isSupported(target) {
-    return isEditable(target);
+    return target instanceof HTMLDetailsElement && target.open;
   },
-  handle(target) {
-    if (target instanceof HTMLElement) {
-      target.focus();
-    } else {
-      console.warn("Cannot focus", target);
-    }
+  handle(target: HTMLDetailsElement) {
+    target.open = false;
   },
 });
 
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Focus",
@@ -177,7 +202,96 @@ handlers.push({
   },
 });
 
-handlers.push({
+// -----------------------------------------
+// /Element Class Specific Handlers
+// -----------------------------------------
+
+const CLICKABLE_SELECTORS = [
+  "a[*|href]",
+  "area[href]",
+  "button:not([disabled])",
+  "[onclick]",
+  "[onmousedown]",
+  "[onmouseup]",
+  "[role=link]",
+  "[role=button]",
+].join(",");
+
+HANDLERS.push({
+  getDescriptions() {
+    return {
+      short: "Click",
+      long: "Click anchor, button or other clickable elements",
+    };
+  },
+  isSupported(target) {
+    for (const element of traverseParent(target, true))
+      if (
+        (element instanceof HTMLElement || element instanceof SVGElement) &&
+        element.matches(CLICKABLE_SELECTORS)
+      )
+        return { actualTarget: element };
+    return false;
+  },
+  async handle(target, options) {
+    await simulateClick(target, options);
+  },
+});
+
+const CLICKABLE_CURSOR_TYPES = new Set([
+  "pointer",
+  "cell",
+  "zoom-in",
+  "zoom-out",
+]);
+HANDLERS.push({
+  getDescriptions() {
+    return {
+      short: "Click?",
+      long: "Click some elements which are not clickable but looks clickable (e.g. it is styled with 'cursor: pointer')",
+    };
+  },
+  isSupported(target) {
+    const parents = takeWhile(traverseParent(target, true), (element) => {
+      if (!(element instanceof HTMLElement || element instanceof SVGElement))
+        return false;
+      const cursorStyle = element.computedStyleMap().get("cursor")?.toString();
+      if (!cursorStyle) return false;
+      return CLICKABLE_CURSOR_TYPES.has(cursorStyle);
+    });
+    const actualTarget = last(parents);
+    if (
+      actualTarget instanceof HTMLElement ||
+      actualTarget instanceof SVGElement
+    )
+      return { actualTarget };
+    return false;
+  },
+  async handle(target, options) {
+    await simulateClick(target, options);
+  },
+});
+
+HANDLERS.push({
+  getDescriptions() {
+    return {
+      short: "Edit",
+      long: "Focus the editable element",
+    };
+  },
+  isSupported(target) {
+    return isEditable(target);
+  },
+  handle(target) {
+    if ("focus" in target && typeof target.focus === "function") {
+      target.focus();
+    } else {
+      console.warn("Cannot focus", target);
+    }
+  },
+});
+
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Focus",
@@ -196,7 +310,7 @@ handlers.push({
   },
 });
 
-handlers.push({
+HANDLERS.push({
   getDescriptions() {
     return {
       short: "Scroll",
@@ -225,32 +339,24 @@ handlers.push({
   },
 });
 
-// Fallback handler
-handlers.push({
-  getDescriptions() {
-    return {
-      short: "Click",
-    };
-  },
-  isSupported() {
-    return true;
-  },
-  async handle(target, options) {
-    await simulateClick(target, options);
-  },
-});
-
 async function simulateClick(element: Element, options: MouseEventInit) {
-  dispatchMouseEvent("mouseover", element, options);
+  const sequence = [
+    () => dispatchMouseEvent("mouseover", element, options),
+    () => dispatchMouseEvent("mousedown", element, options),
+    () => {
+      if ("focus" in element && typeof element.focus === "function")
+        element.focus();
+    },
+    () => dispatchMouseEvent("mouseup", element, options),
+    () => dispatchMouseEvent("click", element, options),
+  ];
 
-  for (const type of ["mousedown", "mouseup", "click"]) {
+  for (const task of sequence) {
+    task();
     await nextAnimationFrame();
-    const b = dispatchMouseEvent(type, element, options);
-    if (!b) console.debug("canceled", type);
   }
 }
 
-// Return false if canceled
 function dispatchMouseEvent(
   type: string,
   element: Element,
@@ -266,5 +372,5 @@ function dispatchMouseEvent(
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     metaKey: options.metaKey || options.ctrlKey,
   });
-  return element.dispatchEvent(event);
+  if (!element.dispatchEvent(event)) console.debug("canceled", type);
 }

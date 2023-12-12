@@ -31,7 +31,8 @@ export class KeyboardHandlerContentAll {
       return false;
     }
     if (this.hitMatcher == null || this.blurMatcher == null) {
-      throw Error("Not initialized");
+      console.debug("Not initialized");
+      return false;
     }
     if (this.hinter.isHinting) {
       if (isSigleLetter(event.key) && this.hintLetters.includes(event.key)) {
@@ -59,7 +60,8 @@ export class KeyboardHandlerContentAll {
       return false;
     }
     if (this.hitMatcher == null) {
-      throw Error("Not initialized");
+      console.debug("Not initialized");
+      return false;
     }
     if (this.hinter.isHinting && this.hitMatcher.testModInsensitive(event)) {
       const { shiftKey, altKey, ctrlKey, metaKey } = event;

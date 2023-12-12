@@ -1,4 +1,4 @@
-import { RectFetcherContentAll as RectFetcher } from "./lib/rect-fetcher-content-all";
+import { RectAggregatorContentAll as RectAggregator } from "./lib/rect-aggregator-content-all";
 import { KeyboardHandlerContentAll as KeyboardHandler } from "./lib/keyboard-handler-content-all";
 import { BlurerContentAll as Blurer } from "./lib/blurer-content-all";
 import settingsClient from "./lib/settings-client";
@@ -14,7 +14,7 @@ globalThis.KNAVI_FILE = "content-all";
 const blurerClient = new BlurerClient();
 const hinterClient = new HinterClient();
 const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
-const rectFetcher = new RectFetcher();
+const rectAggregator = new RectAggregator();
 const blurer = new Blurer();
 (async () => {
   const setting = await settingsClient.get(["magicKey", "blurKey", "hints"]);
@@ -29,13 +29,8 @@ chrome.runtime.onMessage.addListener(
         await keyboardHandler.setup(settings);
       }),
     )
-    .add("GetDescriptions", ({ id }) =>
-      rectFetcher.handleGetDescription(id.index),
-    )
-    .add(
-      "ExecuteAction",
-      async ({ id, options }) =>
-        await rectFetcher.handleExecuteAction(id.index, options),
+    .add("ExecuteAction", ({ id, options }) =>
+      rectAggregator.handleExecuteAction(id.index, options),
     )
     .buildListener(),
 );
@@ -79,7 +74,7 @@ window.addEventListener(
     )
     .add("com.github.kui.knavi.AllRectsRequest", async (e) => {
       const { id, viewport, offsets } = e.data;
-      await rectFetcher.handleAllRectsRequest(
+      await rectAggregator.handleAllRectsRequest(
         id,
         new Rect(viewport),
         new Coordinates(offsets),

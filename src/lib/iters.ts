@@ -27,6 +27,12 @@ export function first<E>(i: Iterable<E>): E | null {
   return null;
 }
 
+export function last<E>(i: Iterable<E>): E | null {
+  let e: E | null = null;
+  for (e of i);
+  return e;
+}
+
 export function head<E>(i: Iterable<E>, n: number): Generator<E> {
   return takeWhile(i, () => n-- > 0);
 }
@@ -45,9 +51,31 @@ export function flat<E>(i: Iterable<Iterable<E>>): Generator<E> {
 
 export function* flatMap<E, R>(
   i: Iterable<E>,
-  f: (e: E) => Iterable<R>,
+  f: (e: E, index: number) => Iterable<R>,
 ): Generator<R> {
-  for (const e of i) for (const u of f(e)) yield u;
+  let n = 0;
+  for (const e of i) for (const u of f(e, n++)) yield u;
+}
+
+export async function* asyncFlatMap<E, R>(
+  i: Iterable<E> | AsyncIterable<E>,
+  f: (
+    e: E,
+    index: number,
+  ) => Iterable<R> | AsyncIterable<R> | Promise<Iterable<R>>,
+): AsyncGenerator<R> {
+  let n = 0;
+  for await (const e of i) {
+    const ii = f(e, n++);
+    if (ii instanceof Promise) for (const u of await ii) yield u;
+    else for await (const u of ii) yield u;
+  }
+}
+
+export async function toAsyncArray<E>(i: AsyncIterable<E>): Promise<E[]> {
+  const a: E[] = [];
+  for await (const e of i) a.push(e);
+  return a;
 }
 
 export function groupIntoObjectBy<E>(
