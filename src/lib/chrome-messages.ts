@@ -1,12 +1,5 @@
 import { SingleLetter } from "./strings";
 
-declare global {
-  // eslint-disable-next-line no-var
-  var knaviChromeMessageId: number;
-  // eslint-disable-next-line no-var
-  var knaviChromeMessageErrorId: number;
-}
-
 // TODO separate by the handler (background, content, popup, etc)
 interface Messages {
   // Settings
@@ -69,9 +62,10 @@ type SendResponseArg<T extends keyof Messages> =
     }
   | {
       error: {
-        id: number;
-        message?: string;
+        name?: string;
+        message: string;
         stack?: string;
+        cause?: unknown;
       };
     };
 
@@ -84,13 +78,6 @@ function message<T extends keyof Messages>(
   payload: MessagePayload<T>,
 ): Message<T> {
   return { "@type": type, ...payload };
-}
-
-if (!globalThis.knaviChromeMessageErrorId)
-  globalThis.knaviChromeMessageErrorId = 0;
-
-function nextMessageErrorId(): number {
-  return globalThis.knaviChromeMessageErrorId++;
 }
 
 export class Router<
@@ -164,9 +151,7 @@ export class Router<
         .then((r) => sendResponse({ response: r }))
         .catch((e) => sendResponse(buildErrorArg(e)));
       return true;
-    }
-
-    if (error) {
+    } else if (error) {
       sendResponse(buildErrorArg(error));
     } else {
       sendResponse({ response });
@@ -181,90 +166,54 @@ export class Router<
 function buildErrorArg<T extends keyof Messages>(
   error: unknown,
 ): SendResponseArg<T> {
-  const id = nextMessageErrorId();
-  console.error("id=%s", id, error);
+  console.warn(error);
 
-  const arg: SendResponseArg<T> = { error: { id } };
   if (error instanceof Error) {
-    arg.error.message = error.message;
-    arg.error.stack = error.stack;
+    return {
+      error: {
+        name: error.name,
+        message: error.message,
+        cause: error.cause,
+        stack: error.stack,
+      },
+    };
+  } else if (typeof error === "string") {
+    return {
+      error: {
+        message: error,
+      },
+    };
   } else {
-    arg.error.message = String(error);
+    return {
+      error: {
+        message: JSON.stringify(error),
+      },
+    };
   }
-  return arg;
 }
 
-if (!globalThis.knaviChromeMessageId) globalThis.knaviChromeMessageId = 0;
-
-function nextMessageId(): number {
-  return globalThis.knaviChromeMessageId++;
-}
-
-export function sendToRuntime<T extends keyof Messages>(
+export async function sendToRuntime<T extends keyof Messages>(
   type: T,
   payload: MessagePayload<T>,
 ): Promise<Response<T>> {
-  return new Promise((resolve, reject) => {
-    const requestId = nextMessageId();
-    console.debug("sendToRuntime(id=%s): ", requestId, type, payload);
-    console.time(`sendToRuntime(id=${requestId})`);
-    let done = false;
-    chrome.runtime.sendMessage(
-      message(type, payload),
-      (arg: SendResponseArg<T> | undefined) => {
-        if (done) {
-          console.warn("sendToRuntime(id=%s) already done: ", requestId, arg);
-          return;
-        }
-        done = true;
-        console.debug("sendToRuntime(id=%s) response: ", requestId, arg);
-        console.timeEnd(`sendToRuntime(id=${requestId})`);
-        if (!arg || "error" in arg) {
-          const cause = arg ? arg.error : chrome.runtime.lastError;
-          reject(Error(`Failed to sendToRuntime: type=${type}`, { cause }));
-        } else {
-          resolve(arg.response);
-        }
-      },
-    );
-  });
+  const r = await chrome.runtime.sendMessage<Message<T>, SendResponseArg<T>>(
+    message(type, payload),
+  );
+  if ("error" in r) throw Error(r.error.message, r.error);
+  return r.response;
 }
 
-export function sendToTab<T extends keyof Messages>(
+export async function sendToTab<T extends keyof Messages>(
   tabId: number,
   type: T,
   payload: MessagePayload<T>,
   options: chrome.tabs.MessageSendOptions = {},
 ): Promise<Response<T>> {
-  return new Promise((resolve, reject) => {
-    const requestId = nextMessageId();
-    console.debug("sendToTab(id=%s): ", requestId, type, payload);
-    console.time(`sendToTab(id=${requestId})`);
-    let done = false;
-    chrome.tabs.sendMessage(
-      tabId,
-      message(type, payload),
-      options,
-      (arg: SendResponseArg<T> | undefined) => {
-        if (done) {
-          console.warn("sendToTab(id=%d) already done: ", requestId, arg);
-          return;
-        }
-        done = true;
-        console.debug("sendToTab(id=%d) response: ", requestId, arg);
-        console.timeEnd(`sendToTab(id=${requestId})`);
-        if (!arg || "error" in arg) {
-          const cause = arg ? arg.error : chrome.runtime.lastError;
-          const values = [
-            `tabId=${tabId}`,
-            `type=${type}`,
-            `options=${JSON.stringify(options)}`,
-          ].join(", ");
-          reject(Error(`Failed to sendToTab: ${values}`, { cause }));
-        } else {
-          resolve(arg.response);
-        }
-      },
-    );
-  });
+  const r = await chrome.tabs.sendMessage<Message<T>, SendResponseArg<T>>(
+    tabId,
+    message(type, payload),
+    options,
+  );
+  if ("error" in r) throw Error(r.error.message, r.error);
+  return r.response;
 }
