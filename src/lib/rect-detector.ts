@@ -122,6 +122,13 @@ export class RectDetector {
       console.warn("No parent element", element);
       return null;
     }
+    if (parent === document.body) {
+      const bodyPosition = this.styleFetcher
+        .get(parent)
+        .get("position")!
+        .toString();
+      if (["static", "relative"].includes(bodyPosition)) return rect;
+    }
 
     const parentOverflow = this.styleFetcher
       .get(parent)
