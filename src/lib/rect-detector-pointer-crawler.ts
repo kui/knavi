@@ -8,6 +8,8 @@ interface Area {
   maxY: number;
 }
 
+const GRID_POINTS = 4;
+
 export class PointerCrawler {
   private timers = new Timers("PointerCrawler");
 
@@ -17,16 +19,14 @@ export class PointerCrawler {
     crawlArea: Rect<CoordinateType, "layout-viewport">,
   ): Generator<Element | null> {
     const alreadyCrawled = new Set<Element | null>();
+    const step = this.stepPx;
     const actualArea = {
-      minX: Math.ceil(crawlArea.x / this.stepPx) * this.stepPx,
-      maxX:
-        Math.floor((crawlArea.x + crawlArea.width) / this.stepPx) * this.stepPx,
-      minY: Math.ceil(crawlArea.y / this.stepPx) * this.stepPx,
-      maxY:
-        Math.floor((crawlArea.y + crawlArea.height) / this.stepPx) *
-        this.stepPx,
+      minX: Math.ceil(crawlArea.x / step) * step,
+      maxX: Math.floor((crawlArea.x + crawlArea.width) / step) * step,
+      minY: Math.ceil(crawlArea.y / step) * step,
+      maxY: Math.floor((crawlArea.y + crawlArea.height) / step) * step,
     };
-    for (const [x, y] of this.generateDiagonalPoints(actualArea)) {
+    for (const [x, y] of this.generateGridPoints(actualArea)) {
       const stop = this.timers.start("elementFromPoint");
       const e = this.elementFromPoint(x, y);
       stop();
@@ -67,6 +67,16 @@ export class PointerCrawler {
       yield [a.minX + delta, a.maxY - delta];
       yield [a.maxX - delta, a.maxY - delta];
     }
+  }
+
+  private *generateGridPoints(a: Area): Generator<[number, number]> {
+    const step = this.stepPx;
+    const xStep =
+      Math.max(Math.floor((a.maxX - a.minX) / GRID_POINTS / step), 1) * step;
+    const yStep =
+      Math.max(Math.floor((a.maxY - a.minY) / GRID_POINTS / step), 1) * step;
+    for (let x = a.minX; x < a.maxX; x += xStep)
+      for (let y = a.minY; y < a.maxY; y += yStep) yield [x, y];
   }
 
   private elementFromPoint(x: number, y: number): Element | null {
