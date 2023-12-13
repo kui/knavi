@@ -20,15 +20,18 @@ async function initRestoreButton(body) {
   for (const element of body.querySelectorAll("[data-restore-target]")) {
     console.log("restore button: ", element);
     element.addEventListener("click", async () => {
-      const targetQuery = element.dataset.restoreTarget;
       const settingValues = await settings.defaults();
-      if (!targetQuery) throw new Error("data-restore-target is not specified");
-      for (const target of document.querySelectorAll(targetQuery)) {
+      for (const target of document.querySelectorAll(
+        element.dataset.restoreTarget,
+      )) {
         console.log("restore: ", target);
-        if (!target.name) throw new Error("name is not specified");
-        const defaultValue = settingValues[target.name];
-        if (defaultValue == null) throw new Error("default value is not found");
-        target.value = defaultValue;
+        if (!target.name) {
+          throw new Error("name is not specified");
+        } else if (target.name in settingValues) {
+          target.value = settingValues[target.name];
+        } else {
+          throw new Error(`unknown setting name: ${target.name}`);
+        }
       }
     });
   }
@@ -38,9 +41,9 @@ function initClearButton(body) {
   for (const element of body.querySelectorAll("[data-clear-target]")) {
     console.log("clear button: ", element);
     element.addEventListener("click", () => {
-      const targetQuery = element.dataset.clearTarget;
-      if (!targetQuery) throw new Error("data-clear-target is not specified");
-      for (const target of document.querySelectorAll(targetQuery)) {
+      for (const target of document.querySelectorAll(
+        element.dataset.clearTarget,
+      )) {
         console.log("clear: ", target);
         if ("value" in target) target.value = "";
       }
