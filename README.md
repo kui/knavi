@@ -1,6 +1,6 @@
 # knavi
 
-a chrome extension which Hit-a-Hint with magic key.
+A chrome extension which Hit-a-Hint with magic key.
 
 <a target="_blank" href="https://chrome.google.com/webstore/detail/knavi/pfcgnkljgjobpkbgcifmpnhglafhkifg">![Try it now in Chrome Web Store](imgs/tryitnowbutton.png)</a>
 
@@ -13,6 +13,14 @@ Hinting:
 Hiting:
 
 ![Hiting screen short](imgs/screenshot2-hiting.png)
+
+## Description
+
+This is for clicking links and buttons with keyboard only. Pressing space key and hint key simulates clicking links and buttons.
+
+By releasing space key with modifier keys such as `Ctrl` or `Alt`, you can open links in new tab or new window.
+
+The default magic key is space key, but you can change it in options.
 
 ## Build
 
