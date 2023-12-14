@@ -3,5 +3,5 @@ set -euxo pipefail
 
 cd "$(dirname "$0")/.."
 
-v="$(node -e 'console.log(require("./package.json").version)')"
+v="$(scripts/version.js)"
 git tag -a "$v" -F "./changelog/$v.md"

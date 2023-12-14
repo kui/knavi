@@ -12,7 +12,7 @@ main() {
 }
 
 has_current_version_chengelog() {
-  local v="$(node -e 'console.log(require("./package.json").version)')"
+  local v="$(scripts/version.js)"
   if ! [[ -f "changelog/$v.md" ]]; then
     echo "changelog/$v.md does not exist"
     exit 1

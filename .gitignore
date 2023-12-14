@@ -2,7 +2,7 @@
 /prod-build/
 /node_modules/
 
-knavi.zip
+*.zip
 
 .lock-wscript
 .wafpickle-N
