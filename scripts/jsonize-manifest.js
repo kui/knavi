@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import manifest from "../src/manifest.js";
 import { readFileSync } from "node:fs";
 import path from "node:path";
