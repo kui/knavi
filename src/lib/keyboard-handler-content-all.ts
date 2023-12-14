@@ -3,7 +3,7 @@ import settingsClient from "./settings-client";
 import Hinter from "./hinter-client";
 import Blurer from "./blurer-client";
 import { isEditable } from "./elements";
-import { isSigleLetter } from "./strings";
+import { isSingleLetter } from "./strings";
 import { printError } from "./errors";
 
 // TODO: Factor out the blurer and then rename this class.
@@ -35,7 +35,7 @@ export class KeyboardHandlerContentAll {
       return false;
     }
     if (this.hinter.isHinting) {
-      if (isSigleLetter(event.key) && this.hintLetters.includes(event.key)) {
+      if (isSingleLetter(event.key) && this.hintLetters.includes(event.key)) {
         this.hinter.hitHint(event.key).catch(printError);
         return true;
       }
@@ -43,7 +43,7 @@ export class KeyboardHandlerContentAll {
         return true;
       }
     } else {
-      if (isNonEditable(event.target) && this.hitMatcher.test(event)) {
+      if (!isEditable(activeElement()) && this.hitMatcher.test(event)) {
         this.hinter.attachHints().catch(printError);
         return true;
       }
@@ -84,6 +84,12 @@ export class KeyboardHandlerContentAll {
   }
 }
 
-function isNonEditable(target: EventTarget | null): boolean {
-  return target != null && !isEditable(target);
+function activeElement() {
+  let e: Element | null = document.activeElement;
+  const stack: Element[] = [];
+  while (e && !stack.includes(e)) {
+    stack.unshift(e);
+    e = e.shadowRoot?.activeElement ?? null;
+  }
+  return stack[0];
 }
