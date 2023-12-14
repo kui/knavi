@@ -108,7 +108,12 @@ export class RectDetector {
       return rect;
 
     let parent: Element | null;
-    if (elementPosition === "absolute" && element instanceof HTMLElement) {
+    if (element.parentNode instanceof ShadowRoot) {
+      parent = element.parentNode.host;
+    } else if (
+      elementPosition === "absolute" &&
+      element instanceof HTMLElement
+    ) {
       parent = element.offsetParent;
     } else {
       parent = element.parentElement;
@@ -116,6 +121,13 @@ export class RectDetector {
     if (!parent) {
       console.warn("No parent element", element);
       return null;
+    }
+    if (parent === document.body) {
+      const bodyPosition = this.styleFetcher
+        .get(parent)
+        .get("position")!
+        .toString();
+      if (["static", "relative"].includes(bodyPosition)) return rect;
     }
 
     const parentOverflow = this.styleFetcher

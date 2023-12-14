@@ -32,7 +32,7 @@ interface AggregationContext {
 export class RectAggregatorContentAll {
   private elements: ElementProfile[] = [];
   private readonly actionFinder: ActionFinder | null = null;
-  private readonly frameIdPromise = sendToRuntime("GetFrameId");
+  private readonly frameIdPromise = sendToRuntime("GetFrameId", undefined);
 
   async handleAllRectsRequest(
     requestId: number,
@@ -63,6 +63,7 @@ export class RectAggregatorContentAll {
     console.time("aggregateRects");
     this.elements = await this.aggregateRects(context);
     console.timeEnd("aggregateRects");
+    console.debug("Aggrigate rects", this.elements);
 
     await sendToRuntime("ResponseRectsFragment", {
       requestId,
@@ -186,10 +187,10 @@ function bondByActualTarget(
         (acc, r) => r.bondIfIntersect(acc),
         actualTargetProfile.rects,
       );
-      elementProfileMap.delete(profile.element);
     } else {
       elementProfileMap.set(profile.actualTarget, profile);
     }
+    elementProfileMap.delete(profile.element);
   }
   return [...elementProfileMap.values()];
 }

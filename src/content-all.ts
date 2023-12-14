@@ -16,19 +16,20 @@ const hinterClient = new HinterClient();
 const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
 const rectAggregator = new RectAggregator();
 const blurer = new Blurer();
-(async () => {
+
+async function setup() {
   const setting = await settingsClient.get(["magicKey", "blurKey", "hints"]);
   await keyboardHandler.setup(setting);
   console.debug("settings loaded");
-})().catch(printError);
+}
+setup().catch(printError);
+
+chrome.storage.onChanged.addListener(() => {
+  setup().catch(printError);
+});
 
 chrome.runtime.onMessage.addListener(
   ChromeMessageRouter.newInstance()
-    .merge(
-      settingsClient.subscribeRouter(async (settings) => {
-        await keyboardHandler.setup(settings);
-      }),
-    )
     .add("ExecuteAction", ({ id, options }) =>
       rectAggregator.handleExecuteAction(id.index, options),
     )

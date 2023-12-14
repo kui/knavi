@@ -41,6 +41,7 @@ export class HinterContentRoot {
       if (!this.view.isStarted()) this.view.start();
       if (elementRects.length === 0) continue;
       const hintTexts = take(hintTextGenerator, elementRects.length);
+      hintTexts.sort(this.compareByHintLettersOrder());
       const targets: HintedElement[] = [
         ...map(
           zip(elementRects, hintTexts),
@@ -79,6 +80,20 @@ export class HinterContentRoot {
       }
       index++;
     }
+  }
+
+  compareByHintLettersOrder() {
+    const letters = this.hintLetters;
+    return (a: string, b: string) => {
+      const m = Math.min(a.length, b.length);
+      for (let i = 0; i < m; i++) {
+        const aIndex = letters.indexOf(a[i]);
+        const bIndex = letters.indexOf(b[i]);
+        if (aIndex < bIndex) return -1;
+        if (aIndex > bIndex) return 1;
+      }
+      return a.length - b.length;
+    };
   }
 
   hitHint(inputLetter: SingleLetter) {

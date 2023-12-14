@@ -20,15 +20,18 @@ async function initRestoreButton(body) {
   for (const element of body.querySelectorAll("[data-restore-target]")) {
     console.log("restore button: ", element);
     element.addEventListener("click", async () => {
-      const targetQuery = element.dataset.restoreTarget;
-      const settingValues = settings.defaults();
-      if (!targetQuery) throw new Error("data-restore-target is not specified");
-      for (const target of document.querySelectorAll(targetQuery)) {
+      const settingValues = await settings.defaults();
+      for (const target of document.querySelectorAll(
+        element.dataset.restoreTarget,
+      )) {
         console.log("restore: ", target);
-        if (!target.name) throw new Error("name is not specified");
-        const defaultValue = settingValues[target.name];
-        if (defaultValue == null) throw new Error("default value is not found");
-        target.value = defaultValue;
+        if (!target.name) {
+          throw new Error("name is not specified");
+        } else if (target.name in settingValues) {
+          target.value = settingValues[target.name];
+        } else {
+          throw new Error(`unknown setting name: ${target.name}`);
+        }
       }
     });
   }
@@ -38,9 +41,9 @@ function initClearButton(body) {
   for (const element of body.querySelectorAll("[data-clear-target]")) {
     console.log("clear button: ", element);
     element.addEventListener("click", () => {
-      const targetQuery = element.dataset.clearTarget;
-      if (!targetQuery) throw new Error("data-clear-target is not specified");
-      for (const target of document.querySelectorAll(targetQuery)) {
+      for (const target of document.querySelectorAll(
+        element.dataset.clearTarget,
+      )) {
         console.log("clear: ", target);
         if ("value" in target) target.value = "";
       }
@@ -54,8 +57,9 @@ async function initBytesDisplay() {
     if (!itemName) continue;
 
     const update = async () => {
+      const storage = await settings.init();
       bytesDisplay.textContent = new Intl.NumberFormat("en").format(
-        await getBytesInUse(itemName),
+        await storage.getBytes(itemName),
       );
     };
     update();
@@ -67,7 +71,7 @@ async function initBytesDisplay() {
   )) {
     const update = async () => {
       bytesMaxDisplay.textContent = new Intl.NumberFormat("en").format(
-        await getMaxBytesPerItem(),
+        await settings.quotaBytesPerItem(),
       );
     };
     update();
@@ -81,8 +85,9 @@ async function initBytesDisplay() {
     if (!itemName) continue;
 
     const update = async () => {
-      const bytes = await getBytesInUse(itemName);
-      const max = await getMaxBytesPerItem();
+      const storage = await settings.init();
+      const bytes = await storage.getBytes(itemName);
+      const max = await settings.quotaBytesPerItem();
       const ratio = bytes / max;
       const formater = new Intl.NumberFormat("en", { style: "percent" });
       bytesPercentDisplay.textContent = formater.format(ratio);
@@ -96,8 +101,9 @@ async function initBytesDisplay() {
     ".js-total-bytes-display",
   )) {
     const update = async () => {
+      const storage = await settings.init();
       bytesDisplay.textContent = new Intl.NumberFormat("en").format(
-        await settings.getTotalBytesInUse(),
+        await storage.getTotalBytes(),
       );
     };
     update();
@@ -109,7 +115,7 @@ async function initBytesDisplay() {
   )) {
     const update = async () => {
       bytesMaxDisplay.textContent = new Intl.NumberFormat("en").format(
-        await getMaxBytes(),
+        await settings.quotaTotalBytes(),
       );
     };
     update();
@@ -120,8 +126,9 @@ async function initBytesDisplay() {
     ".js-total-bytes-percent-display",
   )) {
     const update = async () => {
-      const bytes = await settings.getTotalBytesInUse();
-      const max = await getMaxBytesPerItem();
+      const storage = await settings.init();
+      const bytes = await storage.getTotalBytes();
+      const max = await settings.quotaTotalBytes();
       const ratio = bytes / max;
       const formater = new Intl.NumberFormat("en", { style: "percent" });
       bytesPercentDisplay.textContent = formater.format(ratio);
@@ -130,24 +137,6 @@ async function initBytesDisplay() {
     update();
     chrome.storage.onChanged.addListener(() => update());
   }
-}
-
-async function getMaxBytesPerItem() {
-  return (await settings.isLocal())
-    ? chrome.storage.local.QUOTA_BYTES
-    : chrome.storage.sync.QUOTA_BYTES_PER_ITEM;
-}
-
-async function getMaxBytes() {
-  return (await settings.isLocal())
-    ? chrome.storage.local.QUOTA_BYTES
-    : chrome.storage.sync.QUOTA_BYTES;
-}
-
-async function getBytesInUse(name) {
-  return (await settings.isLocal())
-    ? settings.getTotalBytesInUse()
-    : settings.getBytesInUse(name);
 }
 
 function styleStorageLimit(element, ratio) {

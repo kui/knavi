@@ -74,6 +74,7 @@
   word-break: normal;
   white-space: nowrap;
   line-height: 1em;
+  text-transform: uppercase;
   font-size: 16px;
   font-family:
     Consolas,
@@ -86,7 +87,6 @@
     Courier New,
     monospace,
     sans-serif;
-  text-transform: uppercase;
 }
 .hint[data-state="disabled"] {
   opacity: 0.6;
@@ -94,14 +94,14 @@
 }
 .hint[data-state="candidate"] {
   background-color: yellow;
-  color: black;
-  border: black solid 1px;
+  color: #333;
+  border: #333 solid 1px;
   z-index: 1;
 }
 .hint[data-state="hit"] {
   background-color: #c00;
   color: white;
-  border: black solid 1px;
+  border: #333 solid 1px;
   font-weight: bold;
   z-index: 2;
 }

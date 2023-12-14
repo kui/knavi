@@ -256,7 +256,7 @@ function toResizePx(c: { [edge in (typeof EDGES)[number]]: CSSUnitValue }): {
 export function* listAll(
   d: Document | ShadowRoot = document,
 ): Generator<Element> {
-  for (const e of d.querySelectorAll("*")) {
+  for (const e of d.querySelectorAll("body *")) {
     yield e;
     if (e.shadowRoot) yield* listAll(e.shadowRoot);
   }
