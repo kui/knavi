@@ -7,7 +7,7 @@ const DEST = path.resolve(DIRNAME, process.env.DEST || "build/dev");
 
 export default {
   mode: DEBUG ? "development" : "production",
-  devtool: DEBUG ? "inline-source-map" : "source-map",
+  devtool: "source-map",
   entry: {
     options: "./src/options.js",
     background: "./src/background.ts",
