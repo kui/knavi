@@ -43,7 +43,7 @@ export class KeyboardHandlerContentAll {
         return true;
       }
     } else {
-      if (!isEditable(activeElement()) && this.hitMatcher.test(event)) {
+      if (!isEditing() && this.hitMatcher.test(event)) {
         this.hinter.attachHints().catch(printError);
         return true;
       }
@@ -84,7 +84,12 @@ export class KeyboardHandlerContentAll {
   }
 }
 
-function activeElement() {
+function isEditing() {
+  const e = activeElement();
+  return e && isEditable(e);
+}
+
+function activeElement(): Element | undefined {
   let e: Element | null = document.activeElement;
   const stack: Element[] = [];
   while (e && !stack.includes(e)) {
