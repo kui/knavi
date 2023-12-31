@@ -3,24 +3,33 @@
     <meta charset="utf-8" />
     <title>KNavi Settings</title>
     <link rel="stylesheet" type="text/css" href="options.css" />
+    <template id="knavi-storage-usage-template">
+      <span>
+        <storage-usage></storage-usage> /
+        <storage-quota></storage-quota>
+      </span>
+      <span>
+        <meter is="storage-usage-meter"></meter>
+        <storage-usage format="percent"></storage-usage>
+      </span>
+    </template>
     <script src="options.js" async></script>
   </head>
   <body>
     <h1><img src="icon48.png" title="Icon" /> KNavi Settings</h1>
 
-    <form is="storage-form" autosync area="chrome-sync">
+    <storage-form storage-area="chrome-sync">
       <h2>Basic Settings</h2>
       <table class="config-table">
         <tr>
           <th><label for="magic-key">Magic Key</label></th>
           <td>
             <input
-              is="keydown-input"
+              is="key-input"
               id="magic-key"
               name="magicKey"
               value="Space"
               autocomplete="off"
-              noMod
             />
           </td>
         </tr>
@@ -40,7 +49,7 @@
           <th><label for="blur-key">Key</label></th>
           <td>
             <input
-              is="keydown-input"
+              is="key-input"
               id="blur-key"
               name="blurKey"
               value=""
@@ -59,21 +68,19 @@
       </table>
 
       <h2>Style</h2>
+
       <p>Styles for Hint elements and overlays.</p>
+
       <textarea id="css" name="css" data-lang="css"></textarea>
+      <div><knavi-storage-usage name="css"></knavi-storage-usage></div>
       <p>
         <button type="button" data-restore-target="#css">
           Restore Default Style
         </button>
-        <span class="js-bytes-display" data-name="css"></span> bytes /
-        <span class="js-bytes-max-display"></span> bytes (<span
-          class="js-bytes-percent-display"
-          data-name="css"
-        ></span
-        >)
       </p>
 
       <h2>Black List</h2>
+
       <p>
         Stop knavi on listed pages. You can use some wildcard pattern matching.
         See
@@ -81,17 +88,11 @@
           >glob-trie.js docs</a
         >.
       </p>
-      <textarea name="blackList"></textarea>
-      <p>
-        <span class="js-bytes-display" data-name="blackList"></span> bytes /
-        <span class="js-bytes-max-display"></span> bytes (<span
-          class="js-bytes-percent-display"
-          data-name="blackList"
-        ></span
-        >)
-      </p>
 
+      <textarea name="blackList"></textarea>
+      <div><knavi-storage-usage name="blackList"></knavi-storage-usage></div>
       <h2>Additional Selectors</h2>
+
       <p>
         Additional hintable element selectors in the specific pages. A JSON key
         is an URL pattern used in wildcard matching (<a
@@ -105,14 +106,9 @@
         name="additionalSelectors"
         data-lang="json5"
       ></textarea>
-      <p>
-        <span class="js-bytes-display" data-name="additionalSelectors"></span>
-        bytes / <span class="js-bytes-max-display"></span> bytes (<span
-          class="js-bytes-percent-display"
-          data-name="additionalSelectors"
-        ></span
-        >)
-      </p>
+      <div>
+        <knavi-storage-usage name="additionalSelectors"></knavi-storage-usage>
+      </div>
 
       <details name="advanced-configs">
         <summary>Advanced settings</summary>
@@ -130,7 +126,7 @@
                 is="area-select"
                 id="_area"
                 name="_area"
-                area="chrome-local"
+                storage-area="chrome-local"
               >
                 <option value="chrome-sync" selected>sync</option>
                 <option value="chrome-local">local</option>
@@ -139,16 +135,10 @@
           </tr>
         </table>
       </details>
-    </form>
-
-    <div id="total-storage-usage">
-      Total storage usage:
-      <span class="js-total-bytes-display"></span> bytes /
-      <span class="js-total-bytes-max-display"></span> bytes (<span
-        class="js-total-bytes-percent-display"
-        data-name="blackList"
-      ></span
-      >)
-    </div>
+      <div id="total-storage-usage">
+        Total storage usage:
+        <knavi-storage-usage></knavi-storage-usage>
+      </div>
+    </storage-form>
   </body>
 </html>

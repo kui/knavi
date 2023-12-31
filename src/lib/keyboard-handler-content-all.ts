@@ -1,4 +1,4 @@
-import KeyboardEventMatcher from "key-input-elements/lib/event-matcher.js";
+import { KeyHoldMatcher } from "key-input-elements/event-matchers/key-hold";
 import settingsClient from "./settings-client";
 import Hinter from "./hinter-client";
 import Blurer from "./blurer-client";
@@ -8,8 +8,8 @@ import { printError } from "./errors";
 
 // TODO: Factor out the blurer and then rename this class.
 export class KeyboardHandlerContentAll {
-  private hitMatcher: KeyboardEventMatcher | null = null;
-  private blurMatcher: KeyboardEventMatcher | null = null;
+  private hitMatcher: KeyHoldMatcher | null = null;
+  private blurMatcher: KeyHoldMatcher | null = null;
   private hintLetters = "";
   private matchedBlacklist: string[] = [];
 
@@ -20,34 +20,36 @@ export class KeyboardHandlerContentAll {
 
   async setup(settings: Pick<Settings, "magicKey" | "blurKey" | "hints">) {
     this.hintLetters = settings.hints;
-    this.hitMatcher = new KeyboardEventMatcher(settings.magicKey);
-    this.blurMatcher = new KeyboardEventMatcher(settings.blurKey);
+    this.hitMatcher =
+      settings.magicKey === "" ? null : KeyHoldMatcher.parse(settings.magicKey);
+    this.blurMatcher =
+      settings.blurKey === "" ? null : KeyHoldMatcher.parse(settings.blurKey);
     this.matchedBlacklist = await settingsClient.matchBlacklist(location.href);
   }
 
   // Return true if the event is handled.
   handleKeydown(event: KeyboardEvent): boolean {
+    const hitMatcher = this.hitMatcher?.keydown(event);
+    const blurMatcher = this.blurMatcher?.keydown(event);
+
     if (this.isBlacklisted()) {
       return false;
     }
-    if (this.hitMatcher == null || this.blurMatcher == null) {
-      console.debug("Not initialized");
-      return false;
-    }
+
     if (this.hinter.isHinting) {
       if (isSingleLetter(event.key) && this.hintLetters.includes(event.key)) {
         this.hinter.hitHint(event.key).catch(printError);
         return true;
       }
-      if (this.hitMatcher.test(event)) {
+      if (hitMatcher?.match()) {
         return true;
       }
     } else {
-      if (!isEditing() && this.hitMatcher.test(event)) {
+      if (!isEditing() && hitMatcher?.match()) {
         this.hinter.attachHints().catch(printError);
         return true;
       }
-      if (this.blurMatcher.test(event)) {
+      if (blurMatcher?.match()) {
         return this.blurer.blur();
       }
     }
@@ -56,14 +58,14 @@ export class KeyboardHandlerContentAll {
 
   // Return true if the event is handled.
   handleKeyup(event: KeyboardEvent): boolean {
+    const hitMatcher = this.hitMatcher?.keyup(event);
+    this.blurMatcher?.keyup(event);
+
     if (this.isBlacklisted()) {
       return false;
     }
-    if (this.hitMatcher == null) {
-      console.debug("Not initialized");
-      return false;
-    }
-    if (this.hinter.isHinting && this.hitMatcher.testModInsensitive(event)) {
+
+    if (this.hinter.isHinting && !hitMatcher?.match()) {
       const { shiftKey, altKey, ctrlKey, metaKey } = event;
       this.hinter
         .removeHints({ shiftKey, altKey, ctrlKey, metaKey })
