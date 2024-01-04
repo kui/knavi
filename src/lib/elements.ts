@@ -1,7 +1,7 @@
 import { map } from "./iters";
 import { Coordinates, Rect } from "./rects";
 
-export const Z_INDEX_OFFSET = 2147483640;
+export const Z_INDEX_OFFSET = 2147483647;
 
 export function isScrollable(
   element: Element,

@@ -28,6 +28,7 @@ export class HintView {
 
   constructor() {
     this.container = document.createElement("div");
+    this.container.popover = "manual";
     this.container.id = CONTAINER_ID;
 
     this.root = this.container.attachShadow({ mode: "open" });
@@ -54,6 +55,7 @@ export class HintView {
     const body = document.body;
     this.initStyles(body);
     body.insertBefore(this.container, body.firstChild);
+    this.container.showPopover();
     this.hints = new Hints();
   }
 
