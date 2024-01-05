@@ -1,3 +1,7 @@
+:host::backdrop {
+  background-color: transparent !important;
+}
+
 /* hit candidates overlay */
 #overlay {
   background-color: #999;
