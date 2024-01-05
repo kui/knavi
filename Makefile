@@ -6,6 +6,11 @@ STATICS = $(patsubst $(SRC)/%, %, $(wildcard $(SRC)/*.html $(SRC)/*.css))
 ICONS = $(addprefix icon, $(addsuffix .png, 16 48 128))
 PNG = $(patsubst $(SRC)/%.svg, %.png, $(wildcard $(SRC)/*.svg))
 FILES = manifest.json $(STATICS) $(ICONS) $(PNG) $(JS)
+ifeq ($(NODE_ENV),production)
+	ESBUILD_OPTS = --minify
+else
+	ESBUILD_OPTS =
+endif
 
 .PHONY: all
 all: $(BUILD) $(addprefix $(BUILD)/, $(FILES))
@@ -16,9 +21,15 @@ $(BUILD):
 $(BUILD)/manifest.json: $(SRC)/manifest.js package.json node_modules
 	node scripts/jsonize-manifest.js > $@
 
-$(BUILD)/%.js: $(SRC)/* $(SRC)/lib/* node_modules
-	@echo execute webpack for $@
-	DEST=$(BUILD) npx webpack
+$(BUILD)/%.js: $(SRC)/%.ts $(SRC)/lib/* node_modules
+	npx esbuild $< $(OPTS) \
+		--pure:console.debug --pure:console.log --pure:console.info \
+		--pure:console.time --pure:console.timeEnd \
+		--tsconfig=./src/tsconfig.esbuild.json \
+		--bundle \
+		--sourcemap \
+		--target=chrome100 \
+		--outfile=$@
 
 $(BUILD)/icon%.png: $(SRC)/icon.svg
 	rsvg-convert $< \
@@ -66,8 +77,7 @@ fix: node_modules
 .PHONY: watch
 watch: node_modules
 	rm -fr $(BUILD)/**/*.js
-	npx --package=chokidar-cli -- chokidar 'Makefile' 'src' '!src/**/*.{js,ts}' -c 'make' & \
-	DEST=$(BUILD) npx webpack watch & \
+	npx --package=chokidar-cli -- chokidar 'Makefile' 'src' -c 'make' & \
 	npx http-server docs -d=false -c=-1 & \
 	wait
 
