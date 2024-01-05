@@ -51,6 +51,7 @@ function initRestoreButton(body: HTMLElement) {
             throw new Error("name is not specified");
           } else if (target.name in defaultSettingValues) {
             target.value = defaultSettingValues[target.name as keyof Settings];
+            dispatchChangeEvent(target);
           } else {
             throw new Error(`unknown setting name: ${target.name}`);
           }
@@ -71,6 +72,7 @@ function initClearButton(body: HTMLElement) {
         console.log("clear: ", target);
         (target as HTMLInputElement).value =
           (target as HTMLInputElement).defaultValue ?? "";
+        dispatchChangeEvent(target as HTMLElement);
       }
     });
   }
@@ -113,6 +115,10 @@ class KnaviStorageUsageElement extends HTMLElement {
 
 function registerKnaviStorageUsage() {
   customElements.define("knavi-storage-usage", KnaviStorageUsageElement);
+}
+
+function dispatchChangeEvent(element: HTMLElement) {
+  element.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
 init().catch(printError);
