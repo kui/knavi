@@ -1,7 +1,5 @@
 SRC = src
-BUILD_PROD = build/prod
-BUILD_DEV = build/dev
-BUILD ?= $(BUILD_DEV)
+BUILD = build
 ZIP = knavi-$(shell scripts/version.js).zip
 JS = background.js content-root.js content-all.js options.js
 STATICS = $(patsubst $(SRC)/%, %, $(wildcard $(SRC)/*.html $(SRC)/*.css))
@@ -46,8 +44,8 @@ zip: $(ZIP)
 
 $(ZIP):
 	npm install
-	NODE_ENV=production make BUILD=$(BUILD_PROD) all
-	cd $(BUILD_PROD) && zip -vr ../../$(ZIP) .
+	NODE_ENV=production make clean all
+	cd $(BUILD) && zip -vr ../$(ZIP) .
 
 .PHONY: check
 check: lint test
@@ -69,7 +67,7 @@ fix: node_modules
 watch: node_modules
 	rm -fr $(BUILD)/**/*.js
 	npx --package=chokidar-cli -- chokidar 'Makefile' 'src' '!src/**/*.{js,ts}' -c 'make' & \
-	npx webpack watch & \
+	DEST=$(BUILD) npx webpack watch & \
 	npx http-server docs -d=false -c=-1 & \
 	wait
 
@@ -79,4 +77,4 @@ test: node_modules
 
 .PHONY: clean
 clean:
-	rm -fr $(BUILD_DEV) $(BUILD_PROD) *.zip
+	rm -fr $(BUILD) *.zip

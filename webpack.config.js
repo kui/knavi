@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 const DIRNAME = path.dirname(fileURLToPath(import.meta.url));
 const DEBUG = process.env.NODE_ENV !== "production";
-const DEST = path.resolve(DIRNAME, process.env.DEST || "build/dev");
+const DEST = path.resolve(DIRNAME, process.env.DEST || "build");
 
 export default {
   mode: DEBUG ? "development" : "production",
