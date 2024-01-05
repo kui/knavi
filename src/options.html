@@ -74,9 +74,7 @@
       <textarea id="css" name="css" data-lang="css"></textarea>
       <div><knavi-storage-usage name="css"></knavi-storage-usage></div>
       <p>
-        <button type="button" data-restore-target="#css">
-          Restore Default Style
-        </button>
+        <button data-restore-target="#css">Restore Default Style</button>
       </p>
 
       <h2>Black List</h2>
@@ -89,8 +87,12 @@
         >.
       </p>
 
-      <textarea name="blackList"></textarea>
+      <textarea id="blackList" name="blackList"></textarea>
       <div><knavi-storage-usage name="blackList"></knavi-storage-usage></div>
+      <p>
+        <button data-restore-target="#blackList">Restore Examples</button>
+      </p>
+
       <h2>Additional Selectors</h2>
 
       <p>
@@ -109,6 +111,11 @@
       <div>
         <knavi-storage-usage name="additionalSelectors"></knavi-storage-usage>
       </div>
+      <p>
+        <button data-restore-target="#additional-selectors">
+          Restore Examples
+        </button>
+      </p>
 
       <details name="advanced-configs">
         <summary>Advanced settings</summary>
