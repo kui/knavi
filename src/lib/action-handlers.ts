@@ -213,8 +213,18 @@ const CLICKABLE_SELECTORS = [
   "[onclick]",
   "[onmousedown]",
   "[onmouseup]",
+
+  // See https://developer.mozilla.org/ja/docs/Web/Accessibility/ARIA/Roles
   "[role=link]",
   "[role=button]",
+  "[role=checkbox]",
+  "[role=menuitem]",
+  "[role=menuitemcheckbox]",
+  "[role=menuitemradio]",
+  "[role=option]",
+  "[role=radio]",
+  "[role=switch]",
+  "[role=tab]",
 ].join(",");
 
 HANDLERS.push({
