@@ -29,6 +29,7 @@ export class HintView {
   constructor() {
     this.container = document.createElement("div");
     this.container.popover = "manual";
+    this.container.translate = false;
     this.container.id = CONTAINER_ID;
 
     this.root = this.container.attachShadow({ mode: "open" });
