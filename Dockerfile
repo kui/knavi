@@ -22,4 +22,4 @@ COPY .nvmrc /
 RUN mkdir -p $NVM_DIR
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
 # hadolint ignore=SC1091
-RUN source $NVM_DIR/nvm.sh --install 
+RUN source $NVM_DIR/nvm.sh && nvm install
