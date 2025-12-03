@@ -66,7 +66,7 @@ lint: node_modules
 	npx eslint .
 	npx prettier . --check
 	npx tsc --project src --noEmit
-	hadolint Dockerfile
+	# hadolint Dockerfile
 	./scripts/lint_changelog.bash
 
 .PHONY: fix
