@@ -1,0 +1,2 @@
+- Run `make lint fix test` before finishing a reply or prompting for input.
+- Write all PR, code, and commit comments in English.
