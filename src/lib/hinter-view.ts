@@ -1,11 +1,6 @@
-import {
-  Z_INDEX_OFFSET,
-  applyStyle,
-  getPaddingRects,
-  styleByRect,
-} from "./elements";
+import { Z_INDEX_OFFSET, applyStyle, styleByRect } from "./elements";
 import { flatMap } from "./iters";
-import { Coordinates, Rect } from "./rects";
+import { Rect } from "./rects";
 import * as vp from "./viewports";
 
 const CONTAINER_ID = "com-github-kui-knavi-container";
@@ -54,7 +49,7 @@ export class HintView {
   start() {
     if (this.hints) throw Error("Illegal state");
     const body = document.body;
-    this.initStyles(body);
+    this.initStyles();
     body.insertBefore(this.container, body.firstChild);
     this.container.showPopover();
     this.hints = new Hints();
@@ -70,38 +65,24 @@ export class HintView {
     this.root.appendChild(df);
   }
 
-  private initStyles(body: HTMLElement) {
+  private initStyles() {
     const vpRect = vp.layout.rect();
 
-    let overlayRect: Rect<"element-border", "element-padding">;
-    // The coordinates of the <body> element may need to be used as the offset of the "container"
-    // depending on the CSS position of the <body> element.
-    // See https://developer.mozilla.org/en-US/docs/Web/CSS/position#absolute_positioning
-    // > The absolutely positioned element is positioned relative to its nearest positioned
-    // > ancestor (i.e., the nearest ancestor that is not static).
-    if (getComputedStyle(body).position === "static") {
-      overlayRect = new Rect({
-        ...vpRect,
+    // The "container" is a popover, so it is promoted to the top layer.
+    // A top-layer element resolves its `position: absolute` against the initial
+    // containing block (the viewport), regardless of the CSS position of the
+    // <body> element. So we always anchor the container to the viewport and do
+    // not need to compensate for the offset of a positioned <body>.
+    const overlayRect = new Rect({
+      ...vpRect,
 
-        // The "overlay" element overlays the viewport,
-        // so "layout-viewport" is treated as an "element-border".
-        type: "element-border",
+      // The "overlay" element overlays the viewport,
+      // so "layout-viewport" is treated as an "element-border".
+      type: "element-border",
 
-        // TODO "initial-containing-block" can be treated as an "element-padding"?
-        origin: "element-padding",
-      });
-    } else {
-      const bodyCoords = new Coordinates({ ...getPaddingRects(body)[0] });
-      overlayRect = new Rect({
-        ...bodyCoords.reverse(),
-        width: vpRect.width,
-        height: vpRect.height,
-
-        // The "overlay" element overlays the viewport,
-        // so "layout-viewport" is treated as an "element-border".
-        type: "element-border",
-      });
-    }
+      // TODO "initial-containing-block" can be treated as an "element-padding"?
+      origin: "element-padding",
+    });
 
     applyStyle(this.container, {
       position: "absolute",
