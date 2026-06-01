@@ -3,8 +3,7 @@ import { map } from "./iters";
 export class Coordinates<
   Type extends CoordinateType,
   Origin extends CoordinateType,
-> implements CoordinatesJSON<Type, Origin>
-{
+> implements CoordinatesJSON<Type, Origin> {
   readonly type: Type;
   readonly origin: Origin;
   readonly x: number;
