@@ -31,17 +31,12 @@ $(BUILD)/%.js: $(SRC)/%.ts $(SRC)/lib/* node_modules
 		--target=chrome100 \
 		--outfile=$@
 
-$(BUILD)/icon%.png: $(SRC)/icon.svg
-	rsvg-convert $< \
-		--width `echo $@ | sed -nre 's/.*icon([0-9]+)\.png/\1/p'` \
-		--keep-aspect-ratio \
-		--output $@
+$(BUILD)/icon%.png: $(SRC)/icon.svg node_modules
+	W=`echo $@ | sed -nre 's/.*icon([0-9]+)\.png/\1/p'`; \
+	node scripts/convert-svg.js $< $@ $$W
 
-$(BUILD)/%.png: $(SRC)/%.svg
-	rsvg-convert $< \
-		--width 40 \
-		--keep-aspect-ratio \
-		--output $@
+$(BUILD)/%.png: $(SRC)/%.svg node_modules
+	node scripts/convert-svg.js $< $@ 40
 
 $(BUILD)/%: $(SRC)/%
 	cp -v $< $@

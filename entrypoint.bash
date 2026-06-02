@@ -1,2 +1,2 @@
-#!/bin/bash -i
+#!/bin/bash -e
 make "$@"
