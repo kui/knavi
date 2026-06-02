@@ -5,7 +5,7 @@ import { Resvg } from "@resvg/resvg-js";
 
 const [input, output, widthStr] = process.argv.slice(2);
 if (!input || !output) {
-  console.error("Usage: convert-svg.js <input.svg> <output.png> [width]");
+  console.error("Usage: convert-svg.ts <input.svg> <output.png> [width]");
   process.exit(1);
 }
 

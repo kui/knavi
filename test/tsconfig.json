@@ -4,5 +4,5 @@
     "lib": ["ESNext"],
     "types": ["jest", "node", "chrome"]
   },
-  "include": [".", "../src/types"]
+  "include": [".", "../src/types", "../types"]
 }

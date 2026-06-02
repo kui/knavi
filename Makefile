@@ -1,6 +1,6 @@
 SRC = src
 BUILD = build
-ZIP = knavi-$(shell scripts/version.js).zip
+ZIP = knavi-$(shell scripts/version.ts).zip
 JS = background.js content-root.js content-all.js options.js
 STATICS = $(patsubst $(SRC)/%, %, $(wildcard $(SRC)/*.html $(SRC)/*.css))
 ICONS = $(addprefix icon, $(addsuffix .png, 16 48 128))
@@ -18,8 +18,8 @@ all: $(BUILD) $(addprefix $(BUILD)/, $(FILES))
 $(BUILD):
 	mkdir -vp $(BUILD)
 
-$(BUILD)/manifest.json: $(SRC)/manifest.js package.json node_modules
-	node scripts/jsonize-manifest.js > $@
+$(BUILD)/manifest.json: $(SRC)/manifest.ts package.json node_modules
+	scripts/jsonize-manifest.ts > $@
 
 $(BUILD)/%.js: $(SRC)/%.ts $(SRC)/lib/* node_modules
 	npx esbuild $< $(OPTS) \
@@ -33,10 +33,10 @@ $(BUILD)/%.js: $(SRC)/%.ts $(SRC)/lib/* node_modules
 
 $(BUILD)/icon%.png: $(SRC)/icon.svg node_modules
 	W=`echo $@ | sed -nre 's/.*icon([0-9]+)\.png/\1/p'`; \
-	node scripts/convert-svg.js $< $@ $$W
+	scripts/convert-svg.ts $< $@ $$W
 
 $(BUILD)/%.png: $(SRC)/%.svg node_modules
-	node scripts/convert-svg.js $< $@ 40
+	scripts/convert-svg.ts $< $@ 40
 
 $(BUILD)/%: $(SRC)/%
 	cp -v $< $@

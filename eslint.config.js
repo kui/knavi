@@ -7,7 +7,7 @@ export default defineConfig([
   { ignores: ["build/", "prod-build/"] },
   js.configs.recommended,
   {
-    files: ["src/**/*.ts", "*.ts", "test/**/*.ts"],
+    files: ["src/**/*.ts", "*.ts", "test/**/*.ts", "scripts/**/*.ts"],
     extends: [
       tseslint.configs.recommendedTypeChecked,
       tseslint.configs.stylisticTypeChecked,

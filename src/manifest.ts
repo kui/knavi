@@ -1,10 +1,12 @@
-export default function (pkg) {
+import type { Pkg } from "../types/npm.d.ts";
+
+export default function manifest(pkg: Pkg): chrome.runtime.ManifestV3 {
   return {
     manifest_version: 3,
     name: pkg.name,
     version: pkg.version,
     description: pkg.description,
-    author: pkg.author,
+    author: { email: pkg.author },
     icons: {
       16: "icon16.png",
       48: "icon48.png",
@@ -32,18 +34,10 @@ export default function (pkg) {
     options_page: "options.html",
     options_ui: {
       page: "options.html",
-      // The option page requires to be open in a tab,
-      // because new option UI style grubs escape key events to close the modal.
       open_in_tab: true,
     },
-    permissions: [
-      // To store configs.
-      "storage",
-    ],
-    host_permissions: [
-      // To insert hints for all sites.
-      "<all_urls>",
-    ],
+    permissions: ["storage"],
+    host_permissions: ["<all_urls>"],
     web_accessible_resources: [
       {
         matches: ["<all_urls>"],
