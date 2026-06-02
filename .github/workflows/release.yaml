@@ -12,7 +12,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build Docker image
-        run: docker compose build --cache-from type=gha --cache-to type=gha,mode=max
+        run: |
+          docker buildx build \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --load \
+            -t knavi:latest \
+            .
       - name: Build
         run: docker compose run make zip
       - name: Release

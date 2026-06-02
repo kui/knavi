@@ -2,6 +2,7 @@ version: "3.9"
 services:
   make:
     build: .
+    image: knavi:latest
     volumes:
       - type: bind
         source: ./
