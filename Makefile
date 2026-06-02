@@ -61,6 +61,8 @@ lint: node_modules
 	npx eslint .
 	npx prettier . --check
 	npx tsc --project src --noEmit
+	npx tsc --project test --noEmit
+	npx tsc --project scripts --noEmit
 	hadolint Dockerfile
 	./scripts/lint_changelog.bash
 

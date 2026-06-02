@@ -1,13 +1,8 @@
 {
+  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "skipLibCheck": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
-    "types": ["chrome"],
-    "strict": true,
-    "isolatedModules": true,
-    "esModuleInterop": true,
-    "moduleResolution": "Bundler",
-    "target": "ESNext",
-    "noEmit": true
-  }
+    "types": ["chrome"]
+  },
+  "include": ["."]
 }
