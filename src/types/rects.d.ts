@@ -35,5 +35,4 @@ interface Sizes {
 }
 
 interface RectJSON<Type extends CoordinateType, Origin extends CoordinateType>
-  extends CoordinatesJSON<Type, Origin>,
-    Sizes {}
+  extends CoordinatesJSON<Type, Origin>, Sizes {}

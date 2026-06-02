@@ -9,12 +9,12 @@ export function isScrollable(
 ) {
   if (
     element.scrollHeight - element.clientHeight > 10 &&
-    ["auto", "scroll"].includes(style.get("overflow-y")!.toString()!)
+    ["auto", "scroll"].includes(style.get("overflow-y")!.toString())
   )
     return true;
   if (
     element.scrollWidth - element.clientWidth > 10 &&
-    ["auto", "scroll"].includes(style.get("overflow-x")!.toString()!)
+    ["auto", "scroll"].includes(style.get("overflow-x")!.toString())
   )
     return true;
   return false;
@@ -219,9 +219,9 @@ export function getContentRects(
 
 const EDGES = ["top", "left", "bottom", "right"] as const;
 
-function everyZeroOrPxUnit(edges: {
-  [side in (typeof EDGES)[number]]: CSSStyleValue;
-}): edges is { [side in (typeof EDGES)[number]]: CSSUnitValue } {
+function everyZeroOrPxUnit(
+  edges: Record<(typeof EDGES)[number], CSSStyleValue>,
+): edges is Record<(typeof EDGES)[number], CSSUnitValue> {
   return Object.values(edges).every(
     (v) => v instanceof CSSUnitValue && (v.value === 0 || v.unit === "px"),
   );
@@ -230,26 +230,26 @@ function everyZeroOrPxUnit(edges: {
 function getCSSValuesForEachEdges(
   style: StylePropertyMapReadOnly,
   propertyName: (side: (typeof EDGES)[number]) => string,
-): { [side in (typeof EDGES)[number]]: CSSStyleValue } {
+): Record<(typeof EDGES)[number], CSSStyleValue> {
   return EDGES.reduce(
     (acc, edge) => {
       const value = style.get(propertyName(edge));
       acc[edge] = value ?? new CSSUnitValue(0, "px");
       return acc;
     },
-    {} as { [side in (typeof EDGES)[number]]: CSSStyleValue },
+    {} as Record<(typeof EDGES)[number], CSSStyleValue>,
   );
 }
 
-function toResizePx(c: { [edge in (typeof EDGES)[number]]: CSSUnitValue }): {
-  [edge in (typeof EDGES)[number]]: number;
-} {
+function toResizePx(
+  c: Record<(typeof EDGES)[number], CSSUnitValue>,
+): Record<(typeof EDGES)[number], number> {
   return EDGES.reduce(
     (acc, edge) => {
       acc[edge] = -c[edge].value;
       return acc;
     },
-    {} as { [edge in (typeof EDGES)[number]]: number },
+    {} as Record<(typeof EDGES)[number], number>,
   );
 }
 

@@ -26,9 +26,9 @@ interface ValueContaienrElement extends HTMLElement {
 function isValueContainer(element: unknown): element is ValueContaienrElement {
   return Boolean(
     element &&
-      typeof element === "object" &&
-      "name" in element &&
-      "value" in element,
+    typeof element === "object" &&
+    "name" in element &&
+    "value" in element,
   );
 }
 

@@ -19,7 +19,7 @@ export function reduce<E, R>(
 }
 
 export function length(i: Iterable<unknown>): number {
-  return reduce(i, (n) => ++n, 0);
+  return reduce(i, (n) => n + 1, 0);
 }
 
 export function first<E>(i: Iterable<E>): E | null {

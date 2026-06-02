@@ -45,7 +45,7 @@ export class HinterContentRoot {
       const targets: HintedElement[] = [
         ...map(
           zip(elementRects, hintTexts),
-          ([er, hint]) => ({ state: "init", hint, ...er }) as HintedElement,
+          ([er, hint]): HintedElement => ({ state: "init", hint, ...er }),
         ),
       ];
       this.context.targets.push(...targets);

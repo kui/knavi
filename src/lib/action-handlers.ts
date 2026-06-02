@@ -2,6 +2,14 @@ import { nextAnimationFrame } from "./animations";
 import { isEditable, isScrollable, traverseParent } from "./elements";
 import { first, flatMap, last, takeWhile } from "./iters";
 
+/** Type guard that narrows `o` to having a callable method `name`. */
+function hasMethod<K extends string>(
+  o: object,
+  name: K,
+): o is Record<K, (...args: never[]) => unknown> {
+  return name in o && typeof (o as Record<K, unknown>)[name] === "function";
+}
+
 export interface ActionProfile {
   actualTarget: HTMLElement | SVGElement;
 }
@@ -78,7 +86,7 @@ HANDLERS.push({
     return target !== document.body && target === document.activeElement;
   },
   handle(target) {
-    if ("blur" in target && typeof target.blur === "function") {
+    if (hasMethod(target, "blur")) {
       target.blur();
     } else {
       console.warn("Cannot blur", target);
@@ -293,7 +301,7 @@ HANDLERS.push({
     return isEditable(target);
   },
   handle(target) {
-    if ("focus" in target && typeof target.focus === "function") {
+    if (hasMethod(target, "focus")) {
       target.focus();
     } else {
       console.warn("Cannot focus", target);
@@ -312,7 +320,7 @@ HANDLERS.push({
     return target.hasAttribute("tabindex");
   },
   handle(target) {
-    if ("focus" in target && typeof target.focus === "function") {
+    if (hasMethod(target, "focus")) {
       target.focus();
     } else {
       console.warn("Cannot focus", target);
@@ -331,7 +339,7 @@ HANDLERS.push({
     return isScrollable(target, target.computedStyleMap());
   },
   handle(element) {
-    if (!("focus" in element && typeof element.focus === "function")) {
+    if (!hasMethod(element, "focus")) {
       console.warn("Cannot focus", element);
       return;
     }
@@ -354,8 +362,7 @@ async function simulateClick(element: Element, options: MouseEventInit) {
     () => dispatchMouseEvent("mouseover", element, options),
     () => dispatchMouseEvent("mousedown", element, options),
     () => {
-      if ("focus" in element && typeof element.focus === "function")
-        element.focus();
+      if (hasMethod(element, "focus")) element.focus();
     },
     () => dispatchMouseEvent("mouseup", element, options),
     () => dispatchMouseEvent("click", element, options),
