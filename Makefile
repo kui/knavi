@@ -60,6 +60,7 @@ check: lint test
 lint: node_modules
 	npx eslint --flag unstable_native_nodejs_ts_config .
 	npx prettier . --check
+	npx tsc --project . --noEmit
 	npx tsc --project src --noEmit
 	npx tsc --project test --noEmit
 	npx tsc --project scripts --noEmit

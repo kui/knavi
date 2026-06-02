@@ -1,14 +1,8 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "skipLibCheck": true,
-    "strict": true,
-    "isolatedModules": true,
-    "esModuleInterop": true,
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "forceConsistentCasingInFileNames": true
-  }
+    "lib": ["ESNext", "DOM"],
+    "types": ["jest", "node", "chrome"]
+  },
+  "include": ["*.ts", "types"]
 }
