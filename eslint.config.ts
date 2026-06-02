@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import { defineConfig } from "eslint/config";
+import type { ConfigWithExtends } from "@eslint/config-helpers";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
@@ -56,4 +57,4 @@ export default defineConfig([
       },
     },
   },
-]);
+] satisfies ConfigWithExtends[]);

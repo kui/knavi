@@ -58,7 +58,7 @@ check: lint test
 
 .PHONY: lint
 lint: node_modules
-	npx eslint .
+	npx eslint --flag unstable_native_nodejs_ts_config .
 	npx prettier . --check
 	npx tsc --project src --noEmit
 	npx tsc --project test --noEmit
@@ -68,7 +68,7 @@ lint: node_modules
 
 .PHONY: fix
 fix: node_modules
-	npx eslint . --fix
+	npx eslint --flag unstable_native_nodejs_ts_config . --fix
 	npx prettier . --write
 
 .PHONY: watch
