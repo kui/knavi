@@ -1,2 +1,3 @@
 - Run `make lint fix test` before finishing a reply or prompting for input.
 - Write all PR, code, and commit comments in English.
+- Use mise to manage tool versions. Ensure `mise install` is run before building.
