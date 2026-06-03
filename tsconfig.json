@@ -1,8 +1,8 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ESNext", "DOM"],
-    "types": ["node", "chrome"]
+    "lib": ["ESNext"],
+    "types": ["node"]
   },
   "include": ["*.ts", "types"]
 }

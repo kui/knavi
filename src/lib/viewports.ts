@@ -1,4 +1,4 @@
-import { Coordinates, Rect } from "./rects";
+import { Coordinates, Rect } from "./rects.ts";
 
 export const layout = {
   offsets(): Coordinates<"layout-viewport", "initial-containing-block"> {

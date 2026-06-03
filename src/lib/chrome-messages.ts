@@ -1,4 +1,4 @@
-import { SingleLetter } from "./strings";
+import { SingleLetter } from "./strings.ts";
 
 // TODO separate by the handler (background, content, popup, etc)
 interface Messages {

@@ -1,5 +1,5 @@
-import { Timers } from "./metrics";
-import { Rect } from "./rects";
+import { Timers } from "./metrics.ts";
+import { Rect } from "./rects.ts";
 
 interface Area {
   minX: number;

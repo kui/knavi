@@ -1,13 +1,13 @@
-import { ActionFinder } from "./action-handlers";
-import { CachedFetcher } from "./cache";
-import { sendToRuntime } from "./chrome-messages";
-import { postMessageTo } from "./dom-messages";
-import { getClientRects, getContentRects, listAll } from "./elements";
-import { flatMap } from "./iters";
-import { Timers } from "./metrics";
-import { RectDetector } from "./rect-detector";
-import { Coordinates, Rect } from "./rects";
-import settingsClient from "./settings-client";
+import { ActionFinder } from "./action-handlers.ts";
+import { CachedFetcher } from "./cache.ts";
+import { sendToRuntime } from "./chrome-messages.ts";
+import { postMessageTo } from "./dom-messages.ts";
+import { getClientRects, getContentRects, listAll } from "./elements.ts";
+import { flatMap } from "./iters.ts";
+import { Timers } from "./metrics.ts";
+import { RectDetector } from "./rect-detector.ts";
+import { Coordinates, Rect } from "./rects.ts";
+import settingsClient from "./settings-client.ts";
 
 interface ElementProfile {
   id: ElementId;

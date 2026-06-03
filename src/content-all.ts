@@ -1,13 +1,13 @@
-import { RectAggregatorContentAll as RectAggregator } from "./lib/rect-aggregator-content-all";
-import { KeyboardHandlerContentAll as KeyboardHandler } from "./lib/keyboard-handler-content-all";
-import { BlurerContentAll as Blurer } from "./lib/blurer-content-all";
-import settingsClient from "./lib/settings-client";
-import { printError } from "./lib/errors";
-import BlurerClient from "./lib/blurer-client";
-import HinterClient from "./lib/hinter-client";
-import { Router as DOMMessageRouter } from "./lib/dom-messages";
-import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
-import { Coordinates, Rect } from "./lib/rects";
+import { RectAggregatorContentAll as RectAggregator } from "./lib/rect-aggregator-content-all.ts";
+import { KeyboardHandlerContentAll as KeyboardHandler } from "./lib/keyboard-handler-content-all.ts";
+import { BlurerContentAll as Blurer } from "./lib/blurer-content-all.ts";
+import settingsClient from "./lib/settings-client.ts";
+import { printError } from "./lib/errors.ts";
+import BlurerClient from "./lib/blurer-client.ts";
+import HinterClient from "./lib/hinter-client.ts";
+import { Router as DOMMessageRouter } from "./lib/dom-messages.ts";
+import { Router as ChromeMessageRouter } from "./lib/chrome-messages.ts";
+import { Coordinates, Rect } from "./lib/rects.ts";
 
 globalThis.KNAVI_FILE = "content-all";
 

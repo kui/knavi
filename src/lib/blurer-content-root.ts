@@ -1,5 +1,5 @@
-import BlurView from "./blurer-view";
-import { Rect } from "./rects";
+import BlurView from "./blurer-view.ts";
+import { Rect } from "./rects.ts";
 
 if (parent !== window)
   throw Error("This script must be loaded in the root frame.");

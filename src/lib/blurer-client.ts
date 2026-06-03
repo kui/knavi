@@ -1,5 +1,5 @@
-import { postMessageTo } from "./dom-messages";
-import { getBoundingClientRect } from "./elements";
+import { postMessageTo } from "./dom-messages.ts";
+import { getBoundingClientRect } from "./elements.ts";
 
 // Just send a message to the parent frame to blur the active element on root frame.
 // This doesn't call `blur` method of the active element directly.

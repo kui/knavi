@@ -1,12 +1,12 @@
-import settingsClient from "./lib/settings-client";
-import { HinterContentRoot } from "./lib/hinter-content-root";
-import { BlurerContentRoot } from "./lib/blurer-content-root";
-import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
-import { Router as DomMessageRouter } from "./lib/dom-messages";
-import { RectAggregatorClient } from "./lib/rect-aggregator-client";
-import { HintView } from "./lib/hinter-view";
-import BlurView from "./lib/blurer-view";
-import { printError } from "./lib/errors";
+import settingsClient from "./lib/settings-client.ts";
+import { HinterContentRoot } from "./lib/hinter-content-root.ts";
+import { BlurerContentRoot } from "./lib/blurer-content-root.ts";
+import { Router as ChromeMessageRouter } from "./lib/chrome-messages.ts";
+import { Router as DomMessageRouter } from "./lib/dom-messages.ts";
+import { RectAggregatorClient } from "./lib/rect-aggregator-client.ts";
+import { HintView } from "./lib/hinter-view.ts";
+import BlurView from "./lib/blurer-view.ts";
+import { printError } from "./lib/errors.ts";
 
 globalThis.KNAVI_FILE = "content-root";
 

@@ -1,4 +1,4 @@
-import { wait } from "./promises";
+import { wait } from "./promises.ts";
 
 export class Cache<Key, Value> {
   private readonly c = new Map<Key, Value>();

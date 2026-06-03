@@ -1,4 +1,4 @@
-import { printError } from "./errors";
+import { printError } from "./errors.ts";
 
 interface MessageDefinition {
   "com.github.kui.knavi.AllRectsRequest": {

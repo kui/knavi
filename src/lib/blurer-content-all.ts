@@ -1,7 +1,7 @@
-import { postMessageTo } from "./dom-messages";
-import { getContentRects } from "./elements";
-import { filter, first } from "./iters";
-import { Rect } from "./rects";
+import { postMessageTo } from "./dom-messages.ts";
+import { getContentRects } from "./elements.ts";
+import { filter, first } from "./iters.ts";
+import { Rect } from "./rects.ts";
 
 export class BlurerContentAll {
   // Just propergate the message to the parent frame until root frame.
