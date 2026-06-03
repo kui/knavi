@@ -1,14 +1,10 @@
 {
   "compilerOptions": {
     "skipLibCheck": true,
-    "strict": true,
     "isolatedModules": true,
-    "esModuleInterop": true,
     "target": "ESNext",
     "module": "NodeNext",
-    "moduleResolution": "NodeNext",
     "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "forceConsistentCasingInFileNames": true
+    "noEmit": true
   }
 }
