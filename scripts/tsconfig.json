@@ -1,6 +1,7 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
+    "erasableSyntaxOnly": true,
     "lib": ["ESNext"],
     "types": ["node", "chrome"]
   },

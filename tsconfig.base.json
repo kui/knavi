@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "skipLibCheck": true,
-    "isolatedModules": true,
     "target": "ESNext",
     "module": "NodeNext",
     "allowImportingTsExtensions": true,
