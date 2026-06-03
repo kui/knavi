@@ -1,14 +1,16 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
 import { AdditionalSelectors } from "../../src/lib/additional-selectors.ts";
 
-describe("AdditionalSelectors", () => {
-  describe("#constructor", () => {
-    it("should throw an Error if invalid syntax", () => {
-      expect(() => {
+void describe("AdditionalSelectors", () => {
+  void describe("#constructor", () => {
+    void it("should throw an Error if invalid syntax", () => {
+      assert.throws(() => {
         new AdditionalSelectors("{");
-      }).toThrow();
+      });
     });
   });
-  describe("#match", () => {
+  void describe("#match", () => {
     const additionalSelectors = new AdditionalSelectors(`{
       "http://tumblr.com/*": [
         "a", "b"
@@ -17,15 +19,17 @@ describe("AdditionalSelectors", () => {
         "c"
       ],
     }`);
-    it("should return empty if no match", () => {
-      expect(additionalSelectors.match("http://google.com/")).toEqual([]);
+    void it("should return empty if no match", () => {
+      assert.deepStrictEqual(
+        additionalSelectors.match("http://google.com/"),
+        [],
+      );
     });
-    it("should return a flatten array if matched", () => {
-      expect(additionalSelectors.match("http://tumblr.com/dashbord")).toEqual([
-        "a",
-        "b",
-        "c",
-      ]);
+    void it("should return a flatten array if matched", () => {
+      assert.deepStrictEqual(
+        additionalSelectors.match("http://tumblr.com/dashbord"),
+        ["a", "b", "c"],
+      );
     });
   });
 });

@@ -1,22 +1,25 @@
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
 import { BlackList } from "../../src/lib/blacklist.ts";
 
 const patterns = `https://www.google.co.jp/search
 https://twitter.com/*/status/*`;
 
-describe("BlackList", () => {
-  describe("#match", () => {
+void describe("BlackList", () => {
+  void describe("#match", () => {
     const bl = new BlackList(patterns);
-    test("should return true if any patterns matched", () => {
-      expect(
+    void test("should return true if any patterns matched", () => {
+      assert.deepStrictEqual(
         bl.match("https://twitter.com/k_ui/status/823418931834548226"),
-      ).toEqual(["https://twitter.com/*/status/*"]);
-      expect(bl.match("https://www.google.co.jp/search")).toEqual([
+        ["https://twitter.com/*/status/*"],
+      );
+      assert.deepStrictEqual(bl.match("https://www.google.co.jp/search"), [
         "https://www.google.co.jp/search",
       ]);
     });
-    test("should return false if no patterns matched", () => {
-      expect(bl.match("https://twitter.com/k_ui")).toEqual([]);
-      expect(bl.match("https://www.google.co.jp")).toEqual([]);
+    void test("should return false if no patterns matched", () => {
+      assert.deepStrictEqual(bl.match("https://twitter.com/k_ui"), []);
+      assert.deepStrictEqual(bl.match("https://www.google.co.jp"), []);
     });
   });
 });

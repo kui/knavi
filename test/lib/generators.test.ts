@@ -1,7 +1,9 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
 import { createQueue } from "../../src/lib/generators.ts";
 
-describe("createQueue", () => {
-  it("should dequeue all values if enqueued before dequeueing", async () => {
+void describe("createQueue", () => {
+  void it("should dequeue all values if enqueued before dequeueing", async () => {
     const { enqueue, dequeue } = createQueue<number>();
 
     enqueue.next(0);
@@ -10,16 +12,16 @@ describe("createQueue", () => {
 
     let count = 0;
     for await (const n of dequeue) {
-      expect(n).toBe(count++);
+      assert.strictEqual(n, count++);
       if (count === 3) break;
     }
   });
-  it("should dequeue values if enqueued after dequeueing", async () => {
+  void it("should dequeue values if enqueued after dequeueing", async () => {
     const { enqueue, dequeue } = createQueue<number>();
     const expectPromise = (async () => {
       let count = 0;
       for await (const n of dequeue) {
-        expect(n).toBe(count++);
+        assert.strictEqual(n, count++);
         if (count === 3) break;
       }
     })();

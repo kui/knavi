@@ -81,7 +81,7 @@ watch: node_modules
 
 .PHONY: test
 test: node_modules
-	npx jest test
+	node --test test/lib/*.test.ts
 
 .PHONY: clean
 clean:

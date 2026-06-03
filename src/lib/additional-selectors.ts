@@ -1,6 +1,6 @@
 import JSON5 from "json5";
 import GlobTrie from "glob-trie.js";
-import { flatMap, reduce } from "./iters";
+import { flatMap, reduce } from "./iters.ts";
 
 export class AdditionalSelectors {
   private patterns: GlobTrie<string[]>;
