@@ -3,6 +3,7 @@
 /node_modules/
 
 *.zip
+*.tsbuildinfo
 
 .lock-wscript
 .wafpickle-N

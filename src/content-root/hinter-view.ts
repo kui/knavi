@@ -1,6 +1,6 @@
-import { Z_INDEX_OFFSET, applyStyle, styleByRect } from "./elements.ts";
-import { flatMap } from "./iters.ts";
-import { Rect } from "./rects.ts";
+import { Z_INDEX_OFFSET, applyStyle, styleByRect } from "../dom/elements.ts";
+import { flatMap } from "../lib/iters.ts";
+import { Rect } from "../dom/rects.ts";
 import * as vp from "./viewports.ts";
 
 const CONTAINER_ID = "com-github-kui-knavi-container";

@@ -1,4 +1,4 @@
-import { map } from "./iters.ts";
+import { map } from "../lib/iters.ts";
 
 export class Coordinates<
   Type extends CoordinateType,

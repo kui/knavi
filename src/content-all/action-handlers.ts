@@ -1,6 +1,6 @@
-import { nextAnimationFrame } from "./animations.ts";
-import { isEditable, isScrollable, traverseParent } from "./elements.ts";
-import { first, flatMap, last, takeWhile } from "./iters.ts";
+import { nextAnimationFrame } from "../dom/animations.ts";
+import { isEditable, isScrollable, traverseParent } from "../dom/elements.ts";
+import { first, flatMap, last, takeWhile } from "../lib/iters.ts";
 
 /** Type guard that narrows `o` to having a callable method `name`. */
 function hasMethod<K extends string>(

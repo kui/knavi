@@ -1,7 +1,7 @@
 import * as storageForm from "storage-form";
 import * as keyInput from "key-input-elements";
 import settings from "./lib/settings.ts";
-import { waitUntil } from "./lib/animations.ts";
+import { waitUntil } from "./dom/animations.ts";
 import { printError } from "./lib/errors.ts";
 
 async function init() {

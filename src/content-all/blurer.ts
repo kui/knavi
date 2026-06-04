@@ -1,10 +1,11 @@
-import { postMessageTo } from "./dom-messages.ts";
-import { getContentRects } from "./elements.ts";
-import { filter, first } from "./iters.ts";
-import { Rect } from "./rects.ts";
+import { postMessageTo } from "../dom/dom-messages.ts";
+import { getContentRects } from "../dom/elements.ts";
+import { filter, first } from "../lib/iters.ts";
+import { Rect } from "../dom/rects.ts";
 
 export class BlurerContentAll {
   // Just propergate the message to the parent frame until root frame.
+  // See content-root/blurer.ts
   handleBlurMessage(
     source: MessageEventSource | null,
     rectJson: RectJSON<"element-border", "layout-viewport"> | null,
@@ -16,7 +17,7 @@ export class BlurerContentAll {
 
     if (source === window)
       // Do nothing if the message was sent from the root frame.
-      // See blurer-content-root.ts
+      // See content-root/blurer.ts
       return;
 
     const rect = buildBlurRect(source, rectJson);

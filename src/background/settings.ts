@@ -1,8 +1,8 @@
-import settings from "./settings.ts";
-import { BlackList } from "./blacklist.ts";
-import { AdditionalSelectors } from "./additional-selectors.ts";
-import { Router } from "./chrome-messages.ts";
-import { printError } from "./errors.ts";
+import settings from "../lib/settings.ts";
+import { BlackList } from "../lib/blacklist.ts";
+import { AdditionalSelectors } from "../lib/additional-selectors.ts";
+import { Router } from "../lib/chrome-messages.ts";
+import { printError } from "../lib/errors.ts";
 
 chrome.storage.onChanged.addListener(() => {
   settings.init(true).catch(printError);

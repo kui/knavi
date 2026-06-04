@@ -61,7 +61,12 @@ lint: node_modules
 	npx eslint --flag unstable_native_nodejs_ts_config .
 	npx prettier . --check
 	npx tsc --project . --noEmit
-	npx tsc --project src --noEmit
+	npx tsc --project src/tsconfig.lib.json --noEmit
+	npx tsc --project src/tsconfig.background.json --noEmit
+	npx tsc --project src/tsconfig.dom.json --noEmit
+	npx tsc --project src/tsconfig.content-all.json --noEmit
+	npx tsc --project src/tsconfig.content-root.json --noEmit
+	npx tsc --project src/tsconfig.options.json --noEmit
 	npx tsc --project test --noEmit
 	npx tsc --project scripts --noEmit
 	hadolint Dockerfile

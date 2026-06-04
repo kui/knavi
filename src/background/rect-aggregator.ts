@@ -1,4 +1,4 @@
-import { Router, sendToTab } from "./chrome-messages.ts";
+import { Router, sendToTab } from "../lib/chrome-messages.ts";
 
 export const router = Router.newInstance()
   .add("GetFrameId", (_, sender) => sender.frameId!)

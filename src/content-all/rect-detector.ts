@@ -1,9 +1,9 @@
-import { Cache, CachedFetcher } from "./cache.ts";
-import { getBoundingClientRect, traverseParent } from "./elements.ts";
-import { filter, first, flatMap } from "./iters.ts";
-import { Timers } from "./metrics.ts";
+import { Cache, CachedFetcher } from "../lib/cache.ts";
+import { getBoundingClientRect, traverseParent } from "../dom/elements.ts";
+import { filter, first, flatMap } from "../lib/iters.ts";
+import { Timers } from "../lib/metrics.ts";
 import { PointerCrawler } from "./rect-detector-pointer-crawler.ts";
-import { Rect } from "./rects.ts";
+import { Rect } from "../dom/rects.ts";
 
 interface ElementRect {
   rect: Rect<"element-border", "layout-viewport">;

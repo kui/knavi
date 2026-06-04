@@ -1,8 +1,8 @@
 {
+  "extends": "./tsconfig.content-all.json",
   "compilerOptions": {
     // GlobTrie.js throws an error when "use strict"
     // > Uncaught ReferenceError: GlobTrie is not defined
     "strict": false
-  },
-  "extends": "./tsconfig.json"
+  }
 }

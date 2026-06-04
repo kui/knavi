@@ -1,5 +1,5 @@
 import BlurView from "./blurer-view.ts";
-import { Rect } from "./rects.ts";
+import { Rect } from "../dom/rects.ts";
 
 if (parent !== window)
   throw Error("This script must be loaded in the root frame.");
@@ -13,7 +13,7 @@ export class BlurerContentRoot {
   ) {
     if (source !== window) {
       // Do nothing if the message was sent from the child frame.
-      // See also: src/lib/blurer-content-all.ts
+      // See also: src/content-all/blurer.ts
       return;
     }
 
