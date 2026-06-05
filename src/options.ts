@@ -16,6 +16,7 @@ async function init() {
 
   initClearButton(body);
   initRestoreButton(body);
+  initValuesetButton(body);
 }
 
 interface ValueContaienrElement extends HTMLElement {
@@ -72,6 +73,26 @@ function initClearButton(body: HTMLElement) {
         console.log("clear: ", target);
         (target as HTMLInputElement).value =
           (target as HTMLInputElement).defaultValue ?? "";
+        dispatchChangeEvent(target as HTMLElement);
+      }
+    });
+  }
+}
+
+// Sets the target input to a fixed value from `data-valueset`.
+// Unlike the clear button (which resets to the input's defaultValue), this can
+// force an empty value to disable a key such as the Magic Key.
+function initValuesetButton(body: HTMLElement) {
+  for (const element of body.querySelectorAll("[data-valueset-target]")) {
+    if (!(element instanceof HTMLElement)) continue;
+    console.log("valueset button: ", element);
+    element.addEventListener("click", () => {
+      const targetSelector = element.dataset.valuesetTarget;
+      if (!targetSelector) return;
+      const value = element.dataset.valueset ?? "";
+      for (const target of document.querySelectorAll(targetSelector)) {
+        console.log("valueset: ", target, value);
+        (target as HTMLInputElement).value = value;
         dispatchChangeEvent(target as HTMLElement);
       }
     });
