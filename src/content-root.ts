@@ -39,7 +39,9 @@ chrome.runtime.onMessage.addListener(
     )
     .add("AttachHints", () => hinter.attachHints())
     .add("HitHint", ({ key }) => hinter.hitHint(key))
-    .add("RemoveHints", ({ options }) => hinter.removeHints(options))
+    .add("RemoveHints", ({ options, execute }) =>
+      hinter.removeHints(options, execute),
+    )
     .buildListener(),
 );
 

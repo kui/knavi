@@ -110,13 +110,16 @@ export class HinterContentRoot {
     this.view.hit(changes, actionDescriptions);
   }
 
-  async removeHints(options: ActionOptions) {
+  async removeHints(options: ActionOptions, execute = true) {
     const context = this.context;
     if (!context) {
       throw Error("Ilegal state invocation: hinting not started");
     }
     this.view.remove();
-    await this.rectAggregator.action(context.hitTarget?.id, options);
+    await this.rectAggregator.action(
+      execute ? context.hitTarget?.id : undefined,
+      options,
+    );
     this.context = null;
   }
 }

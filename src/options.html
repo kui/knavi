@@ -67,6 +67,76 @@
         </tr>
       </table>
 
+      <h2>Sticky Mode</h2>
+      <p>
+        An alternative to the Magic Key hold: press Sticky Key to keep hints
+        visible without holding a key, then press Action Key to fire the action
+        or Cancel Key to dismiss. Press [Clear] on each field to disable. Action
+        Key and Cancel Key also work for Magic Key sessions.
+      </p>
+      <table class="config-table">
+        <tr>
+          <th><label for="sticky-key">Sticky Key</label></th>
+          <td>
+            <input
+              is="key-input"
+              id="sticky-key"
+              name="stickyKey"
+              value=""
+              autocomplete="off"
+            />
+            <button
+              type="button"
+              data-clear-target="#sticky-key"
+              alt="Clear to disable"
+              title="Clear to disable"
+            >
+              Clear
+            </button>
+          </td>
+        </tr>
+        <tr>
+          <th><label for="action-key">Action Key</label></th>
+          <td>
+            <input
+              is="key-input"
+              id="action-key"
+              name="actionKey"
+              value=""
+              autocomplete="off"
+            />
+            <button
+              type="button"
+              data-clear-target="#action-key"
+              alt="Clear to disable"
+              title="Clear to disable"
+            >
+              Clear
+            </button>
+          </td>
+        </tr>
+        <tr>
+          <th><label for="cancel-key">Cancel Key</label></th>
+          <td>
+            <input
+              is="key-input"
+              id="cancel-key"
+              name="cancelKey"
+              value=""
+              autocomplete="off"
+            />
+            <button
+              type="button"
+              data-clear-target="#cancel-key"
+              alt="Clear to disable"
+              title="Clear to disable"
+            >
+              Clear
+            </button>
+          </td>
+        </tr>
+      </table>
+
       <h2>Style</h2>
 
       <p>Styles for Hint elements and overlays.</p>

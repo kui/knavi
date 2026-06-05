@@ -26,7 +26,7 @@ interface Messages {
     response: void;
   };
   RemoveHints: {
-    payload: { options: ActionOptions };
+    payload: { options: ActionOptions; execute: boolean };
     response: void;
   };
   GetFrameId: {

@@ -24,6 +24,9 @@ const DEFAULT_SETTINGS: Settings = {
   magicKey: "Space",
   hints: "asdfghjkl",
   blurKey: "",
+  stickyKey: "",
+  actionKey: "",
+  cancelKey: "",
   css: "", // load from an external file
   blackList: DEFAULT_BLACK_LIST,
   additionalSelectors: DEFAULT_ADDITIONAL_SELECTORS,
