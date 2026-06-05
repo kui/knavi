@@ -22,7 +22,7 @@
       <div id="key-conflicts" role="alert" hidden></div>
       <h2>Basic Settings</h2>
       <p>
-        The Magic Key is optional. Press [Disable] to disable it if you prefer
+        The Magic Key is optional. Press [Disable] to turn it off if you prefer
         to use Sticky Mode (below) instead.
       </p>
       <table class="config-table">
@@ -40,8 +40,8 @@
             <button
               data-valueset-target="#magic-key"
               data-valueset=""
-              alt="Disable magic key"
-              title="Disable magic key"
+              alt="Disable the Magic Key"
+              title="Disable the Magic Key"
             >
               Disable
             </button>
@@ -53,10 +53,10 @@
         </tr>
       </table>
 
-      <h2>Blur key</h2>
+      <h2>Blur Key</h2>
       <p>
-        A support function to in-activate a current focused element such as
-        input, textarea and iframe. Press [Clear] if you want to disable.
+        A helper that deactivates the currently focused element, such as an
+        input, textarea, or iframe. Press [Clear] to disable it.
       </p>
       <table class="config-table">
         <tr>
@@ -83,10 +83,11 @@
 
       <h2>Sticky Mode</h2>
       <p>
-        An alternative to the Magic Key hold: press Sticky Key to keep hints
-        visible without holding a key, then press Action Key to fire the action
-        or Cancel Key to dismiss. Press [Clear] on each field to disable. Action
-        Key and Cancel Key also work for Magic Key sessions.
+        An alternative to holding down the Magic Key: press the Sticky Key to
+        show the hints and keep them visible without holding a key down, then
+        press the Action Key to run the action or the Cancel Key to dismiss
+        them. Press [Clear] on a field to disable it. The Action Key and Cancel
+        Key also work during Magic Key sessions.
       </p>
       <table class="config-table">
         <tr>
@@ -153,7 +154,7 @@
 
       <h2>Style</h2>
 
-      <p>Styles for Hint elements and overlays.</p>
+      <p>Styles for the hint elements and overlays.</p>
 
       <textarea id="css" name="css" data-lang="css"></textarea>
       <div><knavi-storage-usage name="css"></knavi-storage-usage></div>
@@ -164,10 +165,10 @@
       <h2>Black List</h2>
 
       <p>
-        Stop knavi on listed pages. You can use some wildcard pattern matching.
-        See
+        Disable knavi on the listed pages. You can use wildcard pattern
+        matching. See
         <a href="https://github.com/rbranson/glob-trie.js#expression-support"
-          >glob-trie.js docs</a
+          >the glob-trie.js docs</a
         >.
       </p>
 
@@ -180,11 +181,12 @@
       <h2>Additional Selectors</h2>
 
       <p>
-        Additional hintable element selectors in the specific pages. A JSON key
-        is an URL pattern used in wildcard matching (<a
+        Extra selectors for hintable elements on specific pages. Each key is a
+        URL pattern matched with wildcards (<a
           href="https://github.com/rbranson/glob-trie.js#expression-support"
           >glob-trie.js</a
-        >). A JSON value is CSS selector or array. This JSON is serialized as
+        >), and each value is a CSS selector or an array of selectors. The
+        config is parsed as
         <a href="https://github.com/json5/json5#example">JSON5</a>.
       </p>
       <textarea
@@ -206,8 +208,8 @@
 
         <h2>Settings Storage</h2>
         <p>
-          Indicate where these setting values are stored.
-          <code>sync</code> shares your settings between your browser.
+          Choose where these settings are stored. <code>sync</code> shares your
+          settings across your browsers.
         </p>
         <table class="config-table">
           <tr>
