@@ -10,15 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Build Docker image
-        run: |
-          docker buildx build \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            --load \
-            -t knavi:latest \
-            .
-      - name: Run tests
-        run: docker compose run make check
+      - uses: jdx/mise-action@v2
+      - name: Install dependencies
+        run: npm ci
+      - name: Run checks
+        run: npm run check

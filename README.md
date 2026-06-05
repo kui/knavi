@@ -24,32 +24,25 @@ The default magic key is space key, but you can change it in options.
 
 ## Build
 
-See [Dockerfile](Dockerfile) for build environment.
+Tool versions are managed by [mise](https://mise.jdx.dev/). Run `mise install`
+and `npm ci` first to set up the build environment.
 
 Debug build:
 
 ```sh
-make
+npm run build
 ```
 
 Interactive debug build:
 
 ```sh
-make watch
+npm run watch
 ```
 
 zip for production build:
 
 ```sh
-make zip
-```
-
-`docker` makes it easy to build environment:
-
-```sh
-docker compose run make
-docker compose run make watch
-docker compose run make zip
+npm run zip
 ```
 
 ## Development note

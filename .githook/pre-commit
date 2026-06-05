@@ -4,4 +4,5 @@
 
 set -euxo pipefail
 
-make fix lint
+npm run fix
+npm run lint
