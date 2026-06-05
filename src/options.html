@@ -19,6 +19,7 @@
     <h1><img src="icon48.png" title="Icon" /> KNavi Settings</h1>
 
     <storage-form storage-area="chrome-sync">
+      <div id="key-conflicts" role="alert" hidden></div>
       <h2>Basic Settings</h2>
       <p>
         The Magic Key is optional. Press [Disable] to disable it if you prefer
@@ -35,14 +36,7 @@
               value="Space"
               autocomplete="off"
             />
-            <button
-              type="button"
-              data-clear-target="#magic-key"
-              alt="Clear to disable"
-              title="Clear to disable"
-            >
-              Clear
-            </button>
+            <button data-clear-target="#magic-key">Reset</button>
             <button
               data-valueset-target="#magic-key"
               data-valueset=""

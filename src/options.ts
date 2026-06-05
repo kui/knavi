@@ -1,6 +1,7 @@
 import * as storageForm from "storage-form";
 import * as keyInput from "key-input-elements";
 import settings from "./lib/settings.ts";
+import { keyCodeToChars } from "./lib/key-chars.ts";
 import { waitUntil } from "./dom/animations.ts";
 import { printError } from "./lib/errors.ts";
 
@@ -17,6 +18,123 @@ async function init() {
   initClearButton(body);
   initRestoreButton(body);
   initValuesetButton(body);
+  initKeyConflictValidation(body);
+}
+
+const KEY_LABELS: Record<string, string> = {
+  magicKey: "Magic Key",
+  stickyKey: "Sticky Key",
+  blurKey: "Blur Key",
+  actionKey: "Action Key",
+  cancelKey: "Cancel Key",
+  hints: "Hint Letters",
+};
+
+// Key-pattern pairs that must not be bound to the same key.
+// Sticky Key is intentionally allowed to share a key with Action/Cancel/hints
+// since it is released before the hinting input phase begins.
+const KEY_PAIR_CONFLICTS: [string, string][] = [
+  ["magicKey", "stickyKey"],
+  ["magicKey", "blurKey"],
+  ["magicKey", "actionKey"],
+  ["magicKey", "cancelKey"],
+  ["stickyKey", "blurKey"],
+  ["blurKey", "actionKey"],
+  ["blurKey", "cancelKey"],
+  ["actionKey", "cancelKey"],
+];
+
+// Key patterns that must not coincide with a hint letter. (Sticky Key excluded.)
+const HINTS_VS_KEYS = ["magicKey", "blurKey", "actionKey", "cancelKey"];
+
+// Normalize a key-input pattern string (e.g. "Ctrl + KeyA") for comparison.
+function normalizeKeyPattern(value: string): string {
+  return value
+    .split("+")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .join(" + ");
+}
+
+// Return the hint letter that a bare single-key pattern (no modifiers/history)
+// would type, or null. Covers letters, digits, and punctuation across common
+// keyboard layouts via `keyCodeToChars`.
+function conflictingHintChar(value: string, hints: string): string | null {
+  const n = normalizeKeyPattern(value);
+  if (n === "" || n.includes(" + ")) return null;
+  return keyCodeToChars(n).find((c) => hints.includes(c.toLowerCase())) ?? null;
+}
+
+function computeKeyConflicts(values: Record<string, string>): {
+  messages: string[];
+  invalid: Set<string>;
+} {
+  const messages: string[] = [];
+  const invalid = new Set<string>();
+
+  for (const [a, b] of KEY_PAIR_CONFLICTS) {
+    const va = normalizeKeyPattern(values[a] ?? "");
+    const vb = normalizeKeyPattern(values[b] ?? "");
+    if (va !== "" && va === vb) {
+      messages.push(
+        `${KEY_LABELS[a]} and ${KEY_LABELS[b]} are both bound to "${va}".`,
+      );
+      invalid.add(a);
+      invalid.add(b);
+    }
+  }
+
+  const hints = (values.hints ?? "").toLowerCase();
+  for (const name of HINTS_VS_KEYS) {
+    const ch = conflictingHintChar(values[name] ?? "", hints);
+    if (ch) {
+      messages.push(`${KEY_LABELS[name]} ("${ch}") is also a Hint Letter.`);
+      invalid.add(name);
+      invalid.add("hints");
+    }
+  }
+
+  return { messages, invalid };
+}
+
+function initKeyConflictValidation(body: HTMLElement) {
+  const inputs = new Map<string, HTMLInputElement>();
+  for (const name of Object.keys(KEY_LABELS)) {
+    const el = body.querySelector<HTMLInputElement>(`[name="${name}"]`);
+    if (el) inputs.set(name, el);
+  }
+  const summary = document.querySelector<HTMLElement>("#key-conflicts");
+
+  const validate = () => {
+    const values: Record<string, string> = {};
+    for (const [name, el] of inputs) values[name] = el.value;
+    const { messages, invalid } = computeKeyConflicts(values);
+
+    for (const [name, el] of inputs) {
+      el.setCustomValidity(
+        invalid.has(name) ? "This key conflicts with another setting." : "",
+      );
+    }
+
+    if (!summary) return;
+    summary.replaceChildren();
+    summary.hidden = messages.length === 0;
+    if (messages.length === 0) return;
+
+    const title = document.createElement("strong");
+    title.textContent = "Key configuration conflicts:";
+    const ul = document.createElement("ul");
+    for (const msg of messages) {
+      const li = document.createElement("li");
+      li.textContent = msg;
+      ul.appendChild(li);
+    }
+    summary.append(title, ul);
+  };
+
+  body.addEventListener("input", validate);
+  body.addEventListener("change", validate);
+  validate();
 }
 
 interface ValueContaienrElement extends HTMLElement {

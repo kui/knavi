@@ -7,6 +7,21 @@ h1 > img {
 .config-table th {
   text-align: right;
 }
+
+/* key configuration conflicts */
+#key-conflicts {
+  background-color: #fcc;
+  color: #900;
+  border: solid #c00 1px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}
+#key-conflicts ul {
+  margin: 4px 0 0;
+}
+.config-table input:invalid {
+  outline: solid #c00 2px;
+}
 input {
   border: solid gray 1px;
   padding: 2px;
