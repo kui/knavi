@@ -20,6 +20,10 @@
 
     <storage-form storage-area="chrome-sync">
       <h2>Basic Settings</h2>
+      <p>
+        The Magic Key is optional. Press [Clear] to disable it if you prefer to
+        use Sticky Mode (below) instead.
+      </p>
       <table class="config-table">
         <tr>
           <th><label for="magic-key">Magic Key</label></th>
@@ -31,6 +35,14 @@
               value="Space"
               autocomplete="off"
             />
+            <button
+              type="button"
+              data-clear-target="#magic-key"
+              alt="Clear to disable"
+              title="Clear to disable"
+            >
+              Clear
+            </button>
           </td>
         </tr>
         <tr>
