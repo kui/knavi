@@ -5,6 +5,9 @@
 *.zip
 *.tsbuildinfo
 
+playwright-report/
+test-results/
+
 .lock-wscript
 .wafpickle-N
 *.swp

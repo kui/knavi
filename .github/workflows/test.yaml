@@ -15,3 +15,17 @@ jobs:
         run: npm ci
       - name: Run checks
         run: npm run check
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: jdx/mise-action@v2
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Build extension
+        run: npm run build
+      - name: Run E2E tests
+        run: npm run test:e2e
