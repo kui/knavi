@@ -110,14 +110,21 @@ export class HinterContentRoot {
     this.view.hit(changes, actionDescriptions);
   }
 
-  async removeHints(options: ActionOptions) {
+  async removeHints(options: ActionOptions, execute: boolean) {
     const context = this.context;
     if (!context) {
       throw Error("Ilegal state invocation: hinting not started");
     }
-    this.view.remove();
-    await this.rectAggregator.action(context.hitTarget?.id, options);
+    // Clear the context synchronously, before any await. Executing the action
+    // round-trips a message (e.g. a target=_blank action opening a new tab); a
+    // second AttachHints arriving meanwhile must not see a stale context and
+    // throw "already started hinting".
     this.context = null;
+    this.view.remove();
+    await this.rectAggregator.action(
+      execute ? context.hitTarget?.id : undefined,
+      options,
+    );
   }
 }
 

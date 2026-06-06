@@ -19,7 +19,17 @@
     <h1><img src="icon48.png" title="Icon" /> KNavi Settings</h1>
 
     <storage-form storage-area="chrome-sync">
+      <div id="key-conflicts" role="alert" hidden></div>
       <h2>Basic Settings</h2>
+      <p>
+        Hold down the Magic Key to show the hints, type a hint's letters to
+        select its element, then release the Magic Key to run the action on it.
+        The Hint Letters are the characters used to label the hints.
+      </p>
+      <p>
+        The Magic Key is optional. Press [Unbind] to turn it off if you prefer
+        to use Sticky Mode (below) instead.
+      </p>
       <table class="config-table">
         <tr>
           <th><label for="magic-key">Magic Key</label></th>
@@ -31,6 +41,20 @@
               value="Space"
               autocomplete="off"
             />
+            <button
+              data-valueset-target="#magic-key"
+              data-valueset-default
+              title="Reset to the default key"
+            >
+              Reset
+            </button>
+            <button
+              data-valueset-target="#magic-key"
+              data-valueset=""
+              title="Unbind to disable"
+            >
+              Unbind
+            </button>
           </td>
         </tr>
         <tr>
@@ -39,10 +63,10 @@
         </tr>
       </table>
 
-      <h2>Blur key</h2>
+      <h2>Blur Key</h2>
       <p>
-        A support function to in-activate a current focused element such as
-        input, textarea and iframe. Press [Clear] if you want to disable.
+        A helper that deactivates the currently focused element, such as an
+        input, textarea, or iframe. Press [Unbind] to disable it.
       </p>
       <table class="config-table">
         <tr>
@@ -56,12 +80,79 @@
               autocomplete="off"
             />
             <button
-              type="button"
-              data-clear-target="#blur-key"
-              alt="Clear to disable"
-              title="Clear to disable"
+              data-valueset-target="#blur-key"
+              data-valueset=""
+              title="Unbind to disable"
             >
-              Clear
+              Unbind
+            </button>
+          </td>
+        </tr>
+      </table>
+
+      <h2>Sticky Mode</h2>
+      <p>
+        An alternative to holding down the Magic Key: press the Sticky Key to
+        show the hints and keep them visible without holding a key down, then
+        press the Action Key to run the action or the Cancel Key to dismiss
+        them. Press [Unbind] on a field to disable it. The Action Key and Cancel
+        Key also work during Magic Key sessions.
+      </p>
+      <table class="config-table">
+        <tr>
+          <th><label for="sticky-key">Sticky Key</label></th>
+          <td>
+            <input
+              is="key-input"
+              id="sticky-key"
+              name="stickyKey"
+              value=""
+              autocomplete="off"
+            />
+            <button
+              data-valueset-target="#sticky-key"
+              data-valueset=""
+              title="Unbind to disable"
+            >
+              Unbind
+            </button>
+          </td>
+        </tr>
+        <tr>
+          <th><label for="action-key">Action Key</label></th>
+          <td>
+            <input
+              is="key-input"
+              id="action-key"
+              name="actionKey"
+              value=""
+              autocomplete="off"
+            />
+            <button
+              data-valueset-target="#action-key"
+              data-valueset=""
+              title="Unbind to disable"
+            >
+              Unbind
+            </button>
+          </td>
+        </tr>
+        <tr>
+          <th><label for="cancel-key">Cancel Key</label></th>
+          <td>
+            <input
+              is="key-input"
+              id="cancel-key"
+              name="cancelKey"
+              value=""
+              autocomplete="off"
+            />
+            <button
+              data-valueset-target="#cancel-key"
+              data-valueset=""
+              title="Unbind to disable"
+            >
+              Unbind
             </button>
           </td>
         </tr>
@@ -69,7 +160,7 @@
 
       <h2>Style</h2>
 
-      <p>Styles for Hint elements and overlays.</p>
+      <p>Styles for the hint elements and overlays.</p>
 
       <textarea id="css" name="css" data-lang="css"></textarea>
       <div><knavi-storage-usage name="css"></knavi-storage-usage></div>
@@ -80,10 +171,10 @@
       <h2>Black List</h2>
 
       <p>
-        Stop knavi on listed pages. You can use some wildcard pattern matching.
-        See
+        Disable knavi on the listed pages. You can use wildcard pattern
+        matching. See
         <a href="https://github.com/rbranson/glob-trie.js#expression-support"
-          >glob-trie.js docs</a
+          >the glob-trie.js docs</a
         >.
       </p>
 
@@ -96,11 +187,12 @@
       <h2>Additional Selectors</h2>
 
       <p>
-        Additional hintable element selectors in the specific pages. A JSON key
-        is an URL pattern used in wildcard matching (<a
+        Extra selectors for hintable elements on specific pages. Each key is a
+        URL pattern matched with wildcards (<a
           href="https://github.com/rbranson/glob-trie.js#expression-support"
           >glob-trie.js</a
-        >). A JSON value is CSS selector or array. This JSON is serialized as
+        >), and each value is a CSS selector or an array of selectors. The
+        config is parsed as
         <a href="https://github.com/json5/json5#example">JSON5</a>.
       </p>
       <textarea
@@ -122,8 +214,8 @@
 
         <h2>Settings Storage</h2>
         <p>
-          Indicate where these setting values are stored.
-          <code>sync</code> shares your settings between your browser.
+          Choose where these settings are stored. <code>sync</code> shares your
+          settings across your browsers.
         </p>
         <table class="config-table">
           <tr>

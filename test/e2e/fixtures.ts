@@ -57,6 +57,30 @@ export { expect };
 // ---------------------------------------------------------------------------
 
 /**
+ * Set extension settings via the background service worker.
+ * Only pass the keys you want to change; others remain untouched.
+ */
+export async function setSettings(
+  context: BrowserContext,
+  settings: Record<string, string>,
+): Promise<void> {
+  const sw = context.serviceWorkers()[0];
+  // chrome is available at runtime in the service worker; not known to TS here.
+  await sw.evaluate(
+    (s) =>
+      new Promise<void>((resolve) => {
+        interface SW {
+          chrome: {
+            storage: { sync: { set(i: typeof s, cb: () => void): void } };
+          };
+        }
+        (globalThis as unknown as SW).chrome.storage.sync.set(s, resolve);
+      }),
+    settings,
+  );
+}
+
+/**
  * Navigate to a test page and wait until the content script is ready
  * (the document has finished loading).
  */
@@ -74,6 +98,18 @@ export async function gotoTest(page: Page, name: string): Promise<void> {
 export async function attachHints(page: Page): Promise<void> {
   await page.keyboard.down("Space");
   // Hint elements live inside a shadow root; Playwright auto-pierces open shadows.
+  await expect(page.locator(".hint").first()).toBeVisible({ timeout: 5_000 });
+}
+
+/**
+ * Press and release the sticky key to activate hints in sticky mode.
+ * Hints should remain visible after the key is released.
+ */
+export async function attachHintsSticky(
+  page: Page,
+  stickyKey: string,
+): Promise<void> {
+  await page.keyboard.press(stickyKey);
   await expect(page.locator(".hint").first()).toBeVisible({ timeout: 5_000 });
 }
 

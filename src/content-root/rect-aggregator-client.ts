@@ -37,7 +37,6 @@ export class RectAggregatorClient {
     this.callback = (rects) => enqueue.next(rects);
     for await (const rects of dequeue) {
       if (rects === "Complete") {
-        this.callback = null;
         return;
       } else if (rects) {
         yield rects;
@@ -63,7 +62,12 @@ export class RectAggregatorClient {
     options: ActionOptions,
   ) {
     if (!this.callback) throw Error("Illegal state: not aggregating");
-    this.callback("Complete");
+    // Clear the callback synchronously before signalling "Complete" (which ends
+    // the aggregate() loop on a later micro-task) so a second aggregate() call
+    // from a concurrent AttachHints does not throw "already fetching".
+    const callback = this.callback;
+    this.callback = null;
+    callback("Complete");
     if (elementId)
       return sendToRuntime("ExecuteAction", { id: elementId, options });
   }

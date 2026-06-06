@@ -23,9 +23,9 @@ export default class HinterClient {
     await sendToRuntime("HitHint", { key });
   }
 
-  async removeHints(options: ActionOptions) {
+  async removeHints(options: ActionOptions, execute: boolean) {
     if (!this.hinting) throw Error("Illegal state");
     this.hinting = false;
-    await sendToRuntime("RemoveHints", { options });
+    await sendToRuntime("RemoveHints", { options, execute });
   }
 }

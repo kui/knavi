@@ -18,7 +18,14 @@ const rectAggregator = new RectAggregator();
 const blurer = new Blurer();
 
 async function setup() {
-  const setting = await settingsClient.get(["magicKey", "blurKey", "hints"]);
+  const setting = await settingsClient.get([
+    "magicKey",
+    "blurKey",
+    "hints",
+    "stickyKey",
+    "actionKey",
+    "cancelKey",
+  ]);
   await keyboardHandler.setup(setting);
   console.debug("settings loaded");
 }
