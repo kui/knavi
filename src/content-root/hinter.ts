@@ -115,12 +115,16 @@ export class HinterContentRoot {
     if (!context) {
       throw Error("Ilegal state invocation: hinting not started");
     }
+    // Clear the context synchronously, before any await. Executing the action
+    // round-trips a message (e.g. a target=_blank action opening a new tab); a
+    // second AttachHints arriving meanwhile must not see a stale context and
+    // throw "already started hinting".
+    this.context = null;
     this.view.remove();
     await this.rectAggregator.action(
       execute ? context.hitTarget?.id : undefined,
       options,
     );
-    this.context = null;
   }
 }
 

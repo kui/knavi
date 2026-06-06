@@ -68,6 +68,32 @@ test.describe("sticky mode", () => {
     expect(await checkbox.isChecked()).toBe(checkedBefore);
   });
 
+  test("second sticky session works after an action steals focus", async ({
+    page,
+  }) => {
+    // First session: fire the action with the Action Key DOWN only and never
+    // send its keyup, simulating a target=_blank action that opens a new tab
+    // and steals focus before keyup arrives. The window then loses focus.
+    await attachHintsSticky(page, STICKY_KEY);
+    const hintText1 = await findHintFor(page, "input[type=checkbox]");
+    for (const ch of hintText1) {
+      await page.keyboard.press(ch);
+    }
+    await page.keyboard.down(ACTION_KEY);
+    await expect(page.locator(".hint").first()).not.toBeVisible({
+      timeout: 3_000,
+    });
+
+    // Second session: hints must appear and stay visible after one hint letter,
+    // i.e. the stuck Action Key must not spuriously fire removeHints.
+    await attachHintsSticky(page, STICKY_KEY);
+    const hintText2 = await findHintFor(page, "input[type=text]");
+    await page.keyboard.press(hintText2[0]);
+    await expect(page.locator(".hint").first()).toBeVisible({ timeout: 3_000 });
+
+    await page.keyboard.up(ACTION_KEY).catch(() => void 0);
+  });
+
   test("action key also fires for a magic key hold session", async ({
     page,
   }) => {

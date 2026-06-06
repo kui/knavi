@@ -50,6 +50,15 @@ export class KeyboardHandlerContentAll {
     this.matchedBlacklist = await settingsClient.matchBlacklist(location.href);
   }
 
+  // Reset the held-key history of every matcher.
+  private resetMatchers() {
+    this.hitMatcher?.reset();
+    this.blurMatcher?.reset();
+    this.stickyMatcher?.reset();
+    this.actionMatcher?.reset();
+    this.cancelMatcher?.reset();
+  }
+
   // Return true if the event is handled.
   handleKeydown(event: KeyboardEvent): boolean {
     const hitMatcher = this.hitMatcher?.keydown(event);
@@ -68,7 +77,7 @@ export class KeyboardHandlerContentAll {
         this.hinter
           .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, false)
           .catch(printError);
-        this.holdHinting = false;
+        this.endSession();
         return true;
       }
       if (actionMatcher?.match()) {
@@ -76,7 +85,7 @@ export class KeyboardHandlerContentAll {
         this.hinter
           .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, true)
           .catch(printError);
-        this.holdHinting = false;
+        this.endSession();
         return true;
       }
       if (isSingleLetter(event.key) && this.hintLetters.includes(event.key)) {
@@ -121,10 +130,20 @@ export class KeyboardHandlerContentAll {
       this.hinter
         .removeHints({ shiftKey, altKey, ctrlKey, metaKey })
         .catch(printError);
-      this.holdHinting = false;
+      this.endSession();
       return true;
     }
     return false;
+  }
+
+  // End the current hint session. Resetting the matchers clears any key left
+  // "held" in their history because its keyup was lost — e.g. an Action Key
+  // that fired a target=_blank action and opened a new tab, stealing focus
+  // before keyup arrived. Without this, the stuck key would spuriously match on
+  // the next session.
+  private endSession() {
+    this.holdHinting = false;
+    this.resetMatchers();
   }
 
   // Just hijack the event when hinting.
