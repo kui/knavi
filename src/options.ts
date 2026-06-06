@@ -15,7 +15,6 @@ async function init() {
   keyInput.register();
   registerKnaviStorageUsage();
 
-  initClearButton(body);
   initRestoreButton(body);
   initValuesetButton(body);
   initKeyConflictValidation(body);
@@ -187,49 +186,39 @@ function initRestoreButton(body: HTMLElement) {
   }
 }
 
-function initClearButton(body: HTMLElement) {
-  for (const element of body.querySelectorAll("[data-clear-target]")) {
-    if (!(element instanceof HTMLElement)) continue;
-    console.log("clear button: ", element);
-    element.addEventListener("click", () => {
-      const targetSelector = element.dataset.clearTarget;
-      if (!targetSelector) return;
-      for (const target of document.querySelectorAll(targetSelector)) {
-        console.log("clear: ", target);
-        (target as HTMLInputElement).value =
-          (target as HTMLInputElement).defaultValue ?? "";
-        dispatchChangeEvent(target as HTMLElement);
-      }
-    });
-  }
-}
-
-// Sets the target input to a fixed value from `data-valueset`.
-// Unlike the clear button (which resets to the input's defaultValue), this can
-// force an empty value to disable a key such as the Magic Key.
+// Sets the target input(s) selected by `data-valueset-target` to a value:
+//   - `data-valueset-default` (boolean): the input's default value, or
+//   - `data-valueset="<literal>"`: a fixed value (e.g. "" to disable a key).
+// The button is disabled while every target already holds that value, since
+// clicking it would be a no-op.
 function initValuesetButton(body: HTMLElement) {
   for (const element of body.querySelectorAll("[data-valueset-target]")) {
     if (!(element instanceof HTMLButtonElement)) continue;
     console.log("valueset button: ", element);
     const targetSelector = element.dataset.valuesetTarget;
     if (!targetSelector) continue;
-    const value = element.dataset.valueset ?? "";
+    const literal = element.dataset.valueset ?? "";
+    const valueFor = (target: HTMLInputElement) =>
+      element.hasAttribute("data-valueset-default")
+        ? target.defaultValue
+        : literal;
 
     element.addEventListener("click", () => {
-      for (const target of document.querySelectorAll(targetSelector)) {
-        console.log("valueset: ", target, value);
-        (target as HTMLInputElement).value = value;
-        dispatchChangeEvent(target as HTMLElement);
+      for (const target of document.querySelectorAll<HTMLInputElement>(
+        targetSelector,
+      )) {
+        console.log("valueset: ", target, valueFor(target));
+        target.value = valueFor(target);
+        dispatchChangeEvent(target);
       }
     });
 
-    // Disable the button while every target already holds the value (e.g. an
-    // already-unbound key), since clicking it would be a no-op.
     const syncDisabled = () => {
       const targets =
         document.querySelectorAll<HTMLInputElement>(targetSelector);
       element.disabled =
-        targets.length > 0 && [...targets].every((t) => t.value === value);
+        targets.length > 0 &&
+        [...targets].every((t) => t.value === valueFor(t));
     };
     body.addEventListener("input", syncDisabled);
     body.addEventListener("change", syncDisabled);
