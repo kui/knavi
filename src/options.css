@@ -7,8 +7,6 @@ h1 > img {
 .config-table th {
   text-align: right;
 }
-
-/* key configuration conflicts */
 #key-conflicts {
   background-color: #fcc;
   color: #900;
@@ -42,7 +40,6 @@ summary {
   cursor: pointer;
 }
 
-/* textarea or similar elements */
 textarea {
   resize: both;
   width: 500px;
@@ -61,7 +58,6 @@ textarea {
     sans-serif;
 }
 
-/* storage usage */
 #total-storage-usage {
   position: fixed;
   top: 0px;
