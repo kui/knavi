@@ -209,18 +209,31 @@ function initClearButton(body: HTMLElement) {
 // force an empty value to disable a key such as the Magic Key.
 function initValuesetButton(body: HTMLElement) {
   for (const element of body.querySelectorAll("[data-valueset-target]")) {
-    if (!(element instanceof HTMLElement)) continue;
+    if (!(element instanceof HTMLButtonElement)) continue;
     console.log("valueset button: ", element);
+    const targetSelector = element.dataset.valuesetTarget;
+    if (!targetSelector) continue;
+    const value = element.dataset.valueset ?? "";
+
     element.addEventListener("click", () => {
-      const targetSelector = element.dataset.valuesetTarget;
-      if (!targetSelector) return;
-      const value = element.dataset.valueset ?? "";
       for (const target of document.querySelectorAll(targetSelector)) {
         console.log("valueset: ", target, value);
         (target as HTMLInputElement).value = value;
         dispatchChangeEvent(target as HTMLElement);
       }
     });
+
+    // Disable the button while every target already holds the value (e.g. an
+    // already-unbound key), since clicking it would be a no-op.
+    const syncDisabled = () => {
+      const targets =
+        document.querySelectorAll<HTMLInputElement>(targetSelector);
+      element.disabled =
+        targets.length > 0 && [...targets].every((t) => t.value === value);
+    };
+    body.addEventListener("input", syncDisabled);
+    body.addEventListener("change", syncDisabled);
+    syncDisabled();
   }
 }
 
