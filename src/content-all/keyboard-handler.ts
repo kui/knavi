@@ -128,7 +128,7 @@ export class KeyboardHandlerContentAll {
     if (this.hinter.isHinting && this.holdHinting && !hitMatcher?.match()) {
       const { shiftKey, altKey, ctrlKey, metaKey } = event;
       this.hinter
-        .removeHints({ shiftKey, altKey, ctrlKey, metaKey })
+        .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, true)
         .catch(printError);
       this.endSession();
       return true;

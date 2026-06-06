@@ -110,7 +110,7 @@ export class HinterContentRoot {
     this.view.hit(changes, actionDescriptions);
   }
 
-  async removeHints(options: ActionOptions, execute = true) {
+  async removeHints(options: ActionOptions, execute: boolean) {
     const context = this.context;
     if (!context) {
       throw Error("Ilegal state invocation: hinting not started");
