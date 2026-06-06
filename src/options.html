@@ -27,7 +27,7 @@
         The Hint Letters are the characters used to label the hints.
       </p>
       <p>
-        The Magic Key is optional. Press [Disable] to turn it off if you prefer
+        The Magic Key is optional. Press [Unbind] to turn it off if you prefer
         to use Sticky Mode (below) instead.
       </p>
       <table class="config-table">
@@ -41,14 +41,18 @@
               value="Space"
               autocomplete="off"
             />
-            <button data-clear-target="#magic-key">Reset</button>
+            <button
+              data-clear-target="#magic-key"
+              title="Reset to the default key"
+            >
+              Reset
+            </button>
             <button
               data-valueset-target="#magic-key"
               data-valueset=""
-              alt="Disable the Magic Key"
-              title="Disable the Magic Key"
+              title="Unbind to disable"
             >
-              Disable
+              Unbind
             </button>
           </td>
         </tr>
@@ -61,7 +65,7 @@
       <h2>Blur Key</h2>
       <p>
         A helper that deactivates the currently focused element, such as an
-        input, textarea, or iframe. Press [Clear] to disable it.
+        input, textarea, or iframe. Press [Unbind] to disable it.
       </p>
       <table class="config-table">
         <tr>
@@ -75,12 +79,11 @@
               autocomplete="off"
             />
             <button
-              type="button"
-              data-clear-target="#blur-key"
-              alt="Clear to disable"
-              title="Clear to disable"
+              data-valueset-target="#blur-key"
+              data-valueset=""
+              title="Unbind to disable"
             >
-              Clear
+              Unbind
             </button>
           </td>
         </tr>
@@ -91,7 +94,7 @@
         An alternative to holding down the Magic Key: press the Sticky Key to
         show the hints and keep them visible without holding a key down, then
         press the Action Key to run the action or the Cancel Key to dismiss
-        them. Press [Clear] on a field to disable it. The Action Key and Cancel
+        them. Press [Unbind] on a field to disable it. The Action Key and Cancel
         Key also work during Magic Key sessions.
       </p>
       <table class="config-table">
@@ -106,12 +109,11 @@
               autocomplete="off"
             />
             <button
-              type="button"
-              data-clear-target="#sticky-key"
-              alt="Clear to disable"
-              title="Clear to disable"
+              data-valueset-target="#sticky-key"
+              data-valueset=""
+              title="Unbind to disable"
             >
-              Clear
+              Unbind
             </button>
           </td>
         </tr>
@@ -126,12 +128,11 @@
               autocomplete="off"
             />
             <button
-              type="button"
-              data-clear-target="#action-key"
-              alt="Clear to disable"
-              title="Clear to disable"
+              data-valueset-target="#action-key"
+              data-valueset=""
+              title="Unbind to disable"
             >
-              Clear
+              Unbind
             </button>
           </td>
         </tr>
@@ -146,12 +147,11 @@
               autocomplete="off"
             />
             <button
-              type="button"
-              data-clear-target="#cancel-key"
-              alt="Clear to disable"
-              title="Clear to disable"
+              data-valueset-target="#cancel-key"
+              data-valueset=""
+              title="Unbind to disable"
             >
-              Clear
+              Unbind
             </button>
           </td>
         </tr>
