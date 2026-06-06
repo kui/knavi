@@ -8,24 +8,15 @@
     "build": "node scripts/build.ts",
     "zip": "node scripts/zip.ts",
     "clean": "node scripts/clean.ts",
-    "lint": "run-s lint:eslint lint:prettier lint:tsc:** lint:changelog",
+    "lint": "run-s lint:eslint lint:prettier lint:tsc lint:changelog",
     "lint:eslint": "eslint --flag unstable_native_nodejs_ts_config .",
     "lint:prettier": "prettier . --check",
-    "lint:tsc:root": "tsc --project . --noEmit",
-    "lint:tsc:src:lib": "tsc --project src/tsconfig.lib.json --noEmit",
-    "lint:tsc:src:background": "tsc --project src/tsconfig.background.json --noEmit",
-    "lint:tsc:src:dom": "tsc --project src/tsconfig.dom.json --noEmit",
-    "lint:tsc:src:content-all": "tsc --project src/tsconfig.content-all.json --noEmit",
-    "lint:tsc:src:content-root": "tsc --project src/tsconfig.content-root.json --noEmit",
-    "lint:tsc:src:options": "tsc --project src/tsconfig.options.json --noEmit",
-    "lint:tsc:test": "tsc --project test --noEmit",
-    "lint:tsc:test:e2e": "tsc --project test/e2e --noEmit",
-    "lint:tsc:scripts": "tsc --project scripts --noEmit",
+    "lint:tsc": "tsc --build",
     "lint:changelog": "./scripts/lint_changelog.bash",
     "fix": "run-s fix:eslint fix:prettier",
     "fix:eslint": "eslint --flag unstable_native_nodejs_ts_config . --fix",
     "fix:prettier": "prettier . --write",
-    "test": "node --test test/lib/*.test.ts",
+    "test": "tsx --test test/lib/*.test.ts",
     "test:e2e": "playwright test",
     "check": "run-s lint test",
     "watch": "run-p watch:build watch:serve",
@@ -50,11 +41,19 @@
     "json5": "^2.2.3",
     "jszip": "^3.10.1",
     "key-input-elements": "^2.0.0",
+    "lint-staged": "^17.0.7",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.8.3",
     "storage-form": "^2.2.0",
+    "tsx": "^4.22.4",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.60.0"
   },
-  "repository": "git@github.com:kui/knavi.git"
+  "repository": "git@github.com:kui/knavi.git",
+  "lint-staged": {
+    "*": [
+      "eslint --flag unstable_native_nodejs_ts_config --fix --no-warn-ignored",
+      "prettier --write --ignore-unknown"
+    ]
+  }
 }

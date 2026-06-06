@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import * as iters from "../../src/lib/iters.ts";
+import * as iters from "../../src/lib/iters";
 
 void describe("length", () => {
   void it("should return the length of a provided iterable", () => {

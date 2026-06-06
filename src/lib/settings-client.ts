@@ -1,4 +1,4 @@
-import { sendToRuntime } from "./chrome-messages.ts";
+import { sendToRuntime } from "./chrome-messages";
 
 export default {
   get<K extends keyof Settings>(names: K[]): Promise<Pick<Settings, K>> {

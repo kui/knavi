@@ -5,5 +5,11 @@
     "lib": ["ESNext"],
     "types": ["node"]
   },
-  "include": ["*.ts", "types"]
+  "include": ["*.ts", "types"],
+  "references": [
+    { "path": "src/tsconfig.json" },
+    { "path": "test/tsconfig.json" },
+    { "path": "test/e2e/tsconfig.json" },
+    { "path": "scripts/tsconfig.json" }
+  ]
 }

@@ -1,5 +1,5 @@
-import { map } from "../lib/iters.ts";
-import { Coordinates, Rect } from "./rects.ts";
+import { map } from "../lib/iters";
+import { Coordinates, Rect } from "./rects";
 
 export const Z_INDEX_OFFSET = 2147483647;
 

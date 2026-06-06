@@ -1,7 +1,7 @@
-import { Z_INDEX_OFFSET, applyStyle, styleByRect } from "../dom/elements.ts";
-import { flatMap } from "../lib/iters.ts";
-import { Rect } from "../dom/rects.ts";
-import * as vp from "./viewports.ts";
+import { Z_INDEX_OFFSET, applyStyle, styleByRect } from "../dom/elements";
+import { flatMap } from "../lib/iters";
+import { Rect } from "../dom/rects";
+import * as vp from "./viewports";
 
 const CONTAINER_ID = "com-github-kui-knavi-container";
 const OVERLAY_ID = "overlay";

@@ -1,6 +1,6 @@
-import * as rectAggregator from "./background/rect-aggregator.ts";
-import * as hinter from "./background/hinter.ts";
-import * as settings from "./background/settings.ts";
+import * as rectAggregator from "./background/rect-aggregator";
+import * as hinter from "./background/hinter";
+import * as settings from "./background/settings";
 
 globalThis.KNAVI_FILE = "background";
 

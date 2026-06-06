@@ -4,5 +4,6 @@
 
 set -euxo pipefail
 
-npm run fix
-npm run lint
+npx lint-staged
+npm run lint:tsc
+npm run lint:changelog

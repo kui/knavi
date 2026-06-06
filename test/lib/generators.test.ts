@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createQueue } from "../../src/lib/generators.ts";
+import { createQueue } from "../../src/lib/generators";
 
 void describe("createQueue", () => {
   void it("should dequeue all values if enqueued before dequeueing", async () => {

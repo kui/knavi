@@ -3,8 +3,8 @@ import {
   applyRect,
   applyStyle,
   getPaddingRects,
-} from "../dom/elements.ts";
-import { Coordinates, Rect } from "../dom/rects.ts";
+} from "../dom/elements";
+import { Coordinates, Rect } from "../dom/rects";
 
 const ANIMATION_DURATION_MS = 400;
 

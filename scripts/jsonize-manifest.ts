@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import manifest from "../src/manifest.ts";
+import manifest from "../src/manifest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Pkg } from "../types/npm.d.ts";
+import type { Pkg } from "../types/npm";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

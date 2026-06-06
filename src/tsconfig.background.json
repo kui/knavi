@@ -2,10 +2,9 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "verbatimModuleSyntax": true,
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
     "lib": ["ESNext", "WebWorker"],
     "types": ["chrome"]
   },
-  "include": ["background.ts", "manifest.ts", "background", "types"]
+  "include": ["background.ts", "manifest.ts", "background", "types"],
+  "references": [{ "path": "tsconfig.lib.json" }]
 }

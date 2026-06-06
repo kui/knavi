@@ -1,4 +1,4 @@
-import { test, expect, gotoTest, hit, attachHints } from "./fixtures.ts";
+import { test, expect, gotoTest, hit, attachHints } from "./fixtures";
 
 test.describe("hint actions", () => {
   test.afterEach(async ({ page }) => {

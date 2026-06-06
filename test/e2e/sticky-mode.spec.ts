@@ -5,7 +5,7 @@ import {
   attachHintsSticky,
   findHintFor,
   setSettings,
-} from "./fixtures.ts";
+} from "./fixtures";
 
 // Use keys unlikely to conflict with the default magicKey (Space).
 const STICKY_KEY = "KeyQ";

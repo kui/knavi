@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { AdditionalSelectors } from "../../src/lib/additional-selectors.ts";
+import { AdditionalSelectors } from "../../src/lib/additional-selectors";
 
 void describe("AdditionalSelectors", () => {
   void describe("#constructor", () => {

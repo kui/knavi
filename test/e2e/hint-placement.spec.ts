@@ -1,10 +1,4 @@
-import {
-  test,
-  expect,
-  gotoTest,
-  attachHints,
-  findHintFor,
-} from "./fixtures.ts";
+import { test, expect, gotoTest, attachHints, findHintFor } from "./fixtures";
 
 test.describe("hint placement", () => {
   test.afterEach(async ({ page }) => {

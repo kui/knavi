@@ -4,6 +4,7 @@
 
 *.zip
 *.tsbuildinfo
+.tsbuild/
 
 playwright-report/
 test-results/

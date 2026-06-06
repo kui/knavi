@@ -1,5 +1,5 @@
 import GlobTrie from "glob-trie.js";
-import { filter, map, reduce } from "./iters.ts";
+import { filter, map, reduce } from "./iters";
 
 export class BlackList {
   private patterns: GlobTrie<string>;

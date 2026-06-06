@@ -1,9 +1,9 @@
 import * as storageForm from "storage-form";
 import * as keyInput from "key-input-elements";
-import settings from "./lib/settings.ts";
-import { keyCodeToChars } from "./lib/key-chars.ts";
-import { waitUntil } from "./dom/animations.ts";
-import { printError } from "./lib/errors.ts";
+import settings from "./lib/settings";
+import { keyCodeToChars } from "./lib/key-chars";
+import { waitUntil } from "./dom/animations";
+import { printError } from "./lib/errors";
 
 async function init() {
   await waitUntil(() => Boolean(document.body));

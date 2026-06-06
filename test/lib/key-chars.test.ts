@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { keyCodeToChars } from "../../src/lib/key-chars.ts";
+import { keyCodeToChars } from "../../src/lib/key-chars";
 
 void describe("keyCodeToChars", () => {
   void test("maps letter codes to lowercase letters", () => {

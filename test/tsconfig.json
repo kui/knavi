@@ -5,5 +5,6 @@
     "lib": ["ESNext"],
     "types": ["node"]
   },
-  "include": [".", "../src/types", "../types"]
+  "include": [".", "../src/types", "../types"],
+  "references": [{ "path": "../src/tsconfig.lib.json" }]
 }

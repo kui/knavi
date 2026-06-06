@@ -1,4 +1,4 @@
-import type { Pkg } from "../types/npm.d.ts";
+import type { Pkg } from "../types/npm";
 
 export default function manifest(pkg: Pkg): chrome.runtime.ManifestV3 {
   return {

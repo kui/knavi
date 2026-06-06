@@ -1,5 +1,5 @@
-import { sendToRuntime } from "./chrome-messages.ts";
-import type { SingleLetter } from "./strings.ts";
+import { sendToRuntime } from "./chrome-messages";
+import type { SingleLetter } from "./strings";
 
 export default class HinterClient {
   private hinting: boolean;

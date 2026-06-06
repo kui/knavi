@@ -2,10 +2,9 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "verbatimModuleSyntax": true,
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
     "lib": ["ESNext", "DOM"],
     "types": ["chrome"]
   },
-  "include": ["dom", "types"]
+  "include": ["dom", "types"],
+  "references": [{ "path": "tsconfig.lib.json" }]
 }

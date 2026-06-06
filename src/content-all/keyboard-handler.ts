@@ -1,10 +1,10 @@
 import { KeyHoldMatcher } from "key-input-elements/event-matchers/key-hold";
-import settingsClient from "../lib/settings-client.ts";
-import Hinter from "../lib/hinter-client.ts";
-import Blurer from "./blurer-client.ts";
-import { isEditable } from "../dom/elements.ts";
-import { isSingleLetter } from "../lib/strings.ts";
-import { printError } from "../lib/errors.ts";
+import settingsClient from "../lib/settings-client";
+import Hinter from "../lib/hinter-client";
+import Blurer from "./blurer-client";
+import { isEditable } from "../dom/elements";
+import { isSingleLetter } from "../lib/strings";
+import { printError } from "../lib/errors";
 
 // TODO: Factor out the blurer and then rename this class.
 export class KeyboardHandlerContentAll {

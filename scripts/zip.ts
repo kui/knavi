@@ -4,8 +4,8 @@ import JSZip from "jszip";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { build } from "./build.ts";
-import { version } from "./version.ts";
+import { build } from "./build";
+import { version } from "./version";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");

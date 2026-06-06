@@ -1,8 +1,8 @@
-import { waitUntil } from "../dom/animations.ts";
-import { HintView } from "./hinter-view.ts";
-import { map, zip } from "../lib/iters.ts";
-import type { RectAggregatorClient } from "./rect-aggregator-client.ts";
-import type { SingleLetter } from "../lib/strings.ts";
+import { waitUntil } from "../dom/animations";
+import { HintView } from "./hinter-view";
+import { map, zip } from "../lib/iters";
+import type { RectAggregatorClient } from "./rect-aggregator-client";
+import type { SingleLetter } from "../lib/strings";
 
 interface HintContext {
   targets: HintedElement[];

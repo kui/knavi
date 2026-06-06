@@ -1,4 +1,4 @@
-import { Router, sendToTab } from "../lib/chrome-messages.ts";
+import { Router, sendToTab } from "../lib/chrome-messages";
 
 export const router = Router.newInstance().addAll(
   ["AttachHints", "RemoveHints", "HitHint"],

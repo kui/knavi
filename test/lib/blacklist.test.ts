@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { BlackList } from "../../src/lib/blacklist.ts";
+import { BlackList } from "../../src/lib/blacklist";
 
 const patterns = `https://www.google.co.jp/search
 https://twitter.com/*/status/*`;

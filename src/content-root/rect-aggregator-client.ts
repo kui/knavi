@@ -1,7 +1,7 @@
-import { sendToRuntime } from "../lib/chrome-messages.ts";
-import { postMessageTo } from "../dom/dom-messages.ts";
-import { createQueue } from "../lib/generators.ts";
-import * as vp from "./viewports.ts";
+import { sendToRuntime } from "../lib/chrome-messages";
+import { postMessageTo } from "../dom/dom-messages";
+import { createQueue } from "../lib/generators";
+import * as vp from "./viewports";
 
 export class RectAggregatorClient {
   private requestIndex = 0;

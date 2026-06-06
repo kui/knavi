@@ -10,20 +10,15 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { convertSvg } from "./convert-svg.ts";
-import { jsonizeManifest } from "./jsonize-manifest.ts";
+import { convertSvg } from "./convert-svg";
+import { jsonizeManifest } from "./jsonize-manifest";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 const SRC = path.join(ROOT, "src");
 const BUILD = path.join(ROOT, "build");
 
-const JS_ENTRIES = [
-  "background.ts",
-  "content-root.ts",
-  "content-all.ts",
-  "options.ts",
-];
+const JS_ENTRIES = ["background", "content-root", "content-all", "options"];
 const ICON_WIDTHS = [16, 48, 128];
 
 export interface BuildOptions {
