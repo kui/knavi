@@ -5,9 +5,9 @@
   "description": "Hit-a-Hint with magic key. You can click without the mouse by holding down the space key and hint text.",
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.ts",
-    "zip": "node scripts/zip.ts",
-    "clean": "node scripts/clean.ts",
+    "build": "tsx scripts/build.ts",
+    "zip": "tsx scripts/zip.ts",
+    "clean": "tsx scripts/clean.ts",
     "lint": "run-s lint:eslint lint:prettier lint:tsc lint:changelog",
     "lint:eslint": "eslint --flag unstable_native_nodejs_ts_config .",
     "lint:prettier": "prettier . --check",
