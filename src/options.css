@@ -1,5 +1,7 @@
 body {
   font-size: 100%;
+  max-width: 800px;
+  margin: 0 auto;
 }
 h1 > img {
   width: 1em;
@@ -33,6 +35,7 @@ input[is^="key"] {
 }
 details {
   margin: 9px 6px;
+  padding: 6px;
   background-color: #eee;
 }
 summary {
@@ -42,9 +45,8 @@ summary {
 
 textarea {
   resize: both;
-  width: 500px;
+  width: 100%;
   height: 20em;
-  font-size: 14px;
   font-family:
     Consolas,
     Menlo,
