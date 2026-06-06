@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S npx tsx
 
 import { readFileSync } from "node:fs";
 import path from "node:path";

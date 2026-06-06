@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S npx tsx
 
 import JSZip from "jszip";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
