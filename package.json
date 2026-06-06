@@ -16,7 +16,7 @@
     "fix": "run-s fix:eslint fix:prettier",
     "fix:eslint": "eslint --flag unstable_native_nodejs_ts_config . --fix",
     "fix:prettier": "prettier . --write",
-    "test": "tsx --test test/lib/*.test.ts",
+    "test": "tsx --test test/lib/*.test.ts test/background/*.test.ts",
     "test:e2e": "playwright test",
     "check": "run-s lint test",
     "watch": "run-p watch:build watch:serve",

@@ -8,7 +8,8 @@
   "include": ["*.ts", "types"],
   "references": [
     { "path": "src/tsconfig.json" },
-    { "path": "test/tsconfig.json" },
+    { "path": "test/lib/tsconfig.json" },
+    { "path": "test/background/tsconfig.json" },
     { "path": "test/e2e/tsconfig.json" },
     { "path": "scripts/tsconfig.json" }
   ]

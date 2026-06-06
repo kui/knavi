@@ -1,8 +1,12 @@
 import * as rectAggregator from "./background/rect-aggregator";
 import * as hinter from "./background/hinter";
 import * as settings from "./background/settings";
+import * as migration from "./background/migration";
+import libSettings from "./lib/settings";
 
 globalThis.KNAVI_FILE = "background";
+
+migration.init(libSettings);
 
 chrome.runtime.onMessage.addListener(
   rectAggregator.router

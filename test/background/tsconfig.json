@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "lib": ["ESNext"],
+    "types": ["node", "chrome"]
+  },
+  "include": ["./*.ts", "../../src/types", "../../types"],
+  "references": [
+    { "path": "../../src/tsconfig.lib.json" },
+    { "path": "../../src/tsconfig.background.json" }
+  ]
+}
