@@ -61,11 +61,13 @@ export function init() {
       .then(([t, list]) => updateTab(tabId, t.url, list))
       .catch(printError);
   });
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-    const url = changeInfo.url;
-    if (!url) return;
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    // The exact onUpdated firing behavior (e.g. for history.pushState/
+    // replaceState navigations) is not documented, so we react broadly to any
+    // URL/status change and re-evaluate from the tab's current URL.
+    if (changeInfo.url == null && changeInfo.status == null) return;
     loadBlackList()
-      .then((list) => updateTab(tabId, url, list))
+      .then((list) => updateTab(tabId, tab.url, list))
       .catch(printError);
   });
   chrome.storage.onChanged.addListener((changes, area) => {
