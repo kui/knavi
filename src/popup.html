@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="popup.css" />
+    <script src="popup.js" async></script>
+  </head>
+  <body>
+    <div id="status" class="status"></div>
+    <button id="blacklist-site" class="btn">
+      <span class="btn-label">Blacklist site</span>
+      <span id="site-pattern" class="pattern"></span>
+    </button>
+    <button id="blacklist-url" class="btn">
+      <span class="btn-label">Blacklist URL</span>
+      <span id="url-pattern" class="pattern"></span>
+    </button>
+    <button id="reload" class="btn btn-reload" hidden>
+      <span class="btn-label">Reload page</span>
+    </button>
+  </body>
+</html>

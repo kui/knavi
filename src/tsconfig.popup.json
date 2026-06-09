@@ -1,6 +1,6 @@
 {
   "extends": "./tsconfig.dom-app.json",
-  "include": ["options.ts", "options", "types"],
+  "include": ["popup.ts", "types"],
   "references": [
     { "path": "tsconfig.lib.json" },
     { "path": "tsconfig.dom.json" }

@@ -125,6 +125,13 @@ export default {
     await storage.init();
     return storage;
   },
+  // Returns the active storage area without running init(). Use this for
+  // read-only consumers that must not trigger the default-value back-fill,
+  // whose non-atomic read-modify-write can clobber a concurrent settings
+  // write (e.g. during startup).
+  async readonlyStorage(): Promise<Storage> {
+    return getStorage();
+  },
   async defaults(): Promise<Settings> {
     return {
       ...DEFAULT_SETTINGS,

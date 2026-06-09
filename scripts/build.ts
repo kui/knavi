@@ -18,7 +18,13 @@ const ROOT = path.join(__dirname, "..");
 const SRC = path.join(ROOT, "src");
 const BUILD = path.join(ROOT, "build");
 
-const JS_ENTRIES = ["background", "content-root", "content-all", "options"];
+const JS_ENTRIES = [
+  "background",
+  "content-root",
+  "content-all",
+  "options",
+  "popup",
+];
 const ICON_WIDTHS = [16, 48, 128];
 
 export interface BuildOptions {
@@ -44,14 +50,22 @@ export async function build({
     }
   }
 
-  // Generate icons from icon.svg.
+  // Generate icons from icon.svg and icon-disabled.svg at toolbar widths.
+  const TOOLBAR_ICONS = ["icon", "icon-disabled"];
   for (const w of ICON_WIDTHS) {
-    convertSvg(path.join(SRC, "icon.svg"), path.join(BUILD, `icon${w}.png`), w);
+    for (const name of TOOLBAR_ICONS) {
+      convertSvg(
+        path.join(SRC, `${name}.svg`),
+        path.join(BUILD, `${name}${w}.png`),
+        w,
+      );
+    }
   }
 
   // Generate other PNGs from the remaining SVGs (width 40).
+  const skip = new Set(TOOLBAR_ICONS.map((n) => `${n}.svg`));
   for (const file of readdirSync(SRC)) {
-    if (file.endsWith(".svg") && file !== "icon.svg") {
+    if (file.endsWith(".svg") && !skip.has(file)) {
       const name = path.basename(file, ".svg");
       convertSvg(path.join(SRC, file), path.join(BUILD, `${name}.png`), 40);
     }

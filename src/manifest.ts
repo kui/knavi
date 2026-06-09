@@ -36,6 +36,14 @@ export default function manifest(pkg: Pkg): chrome.runtime.ManifestV3 {
       page: "options.html",
       open_in_tab: true,
     },
+    action: {
+      default_popup: "popup.html",
+      default_icon: {
+        16: "icon16.png",
+        48: "icon48.png",
+        128: "icon128.png",
+      },
+    },
     permissions: ["storage"],
     host_permissions: ["<all_urls>"],
     web_accessible_resources: [
