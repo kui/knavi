@@ -2,7 +2,7 @@
   "private": true,
   "name": "knavi",
   "version": "4.0.0",
-  "description": "Hit-a-Hint with magic key. You can click without the mouse by holding down the space key and hint text.",
+  "description": "A Hit-a-Hint Chrome extension. Press the space key plus a hint key to click links and buttons without a mouse.",
   "type": "module",
   "scripts": {
     "build": "tsx scripts/build.ts",

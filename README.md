@@ -1,6 +1,6 @@
 # knavi
 
-A Chrome extension that enables Hit-a-Hint using a magic key.
+A Hit-a-Hint Chrome extension. Press the space key plus a hint key to click links and buttons without a mouse.
 
 <a target="_blank" href="https://chrome.google.com/webstore/detail/knavi/pfcgnkljgjobpkbgcifmpnhglafhkifg">![Try it now in Chrome Web Store](docs/tryitnowbutton.png)</a>
 
