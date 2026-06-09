@@ -1,6 +1,3 @@
-type StoredSettings = Settings & { _area: "chrome-sync" | "chrome-local" };
-type StorageKey = keyof StoredSettings;
-
 const DEFAULT_BLACK_LIST = `# Example (Start with # if you want comments)
 http://k-ui.jp/*
 `;
@@ -41,7 +38,7 @@ class Storage {
   }
 
   async backfillDefaults() {
-    const current = await this.getRaw(SETTINGS_KEYS);
+    const current = await this.storage.get<Partial<Settings>>(SETTINGS_KEYS);
     const defaults: Partial<Settings> = {};
     for (const name of SETTINGS_KEYS) {
       if (current[name] != null) continue;
@@ -53,10 +50,9 @@ class Storage {
     }
 
     if (Object.keys(defaults).length > 0) {
-      const recheck = await this.getRaw(
-        Object.keys(defaults) as (keyof Settings)[],
-      );
-      for (const key of Object.keys(defaults) as (keyof Settings)[]) {
+      const keys = Object.keys(defaults) as (keyof Settings)[];
+      const recheck = await this.storage.get<Partial<Settings>>(keys);
+      for (const key of keys) {
         if (recheck[key] != null) delete defaults[key];
       }
     }
@@ -67,57 +63,32 @@ class Storage {
     }
   }
 
-  // Raw read: returns whatever is stored, with no default substitution.
-  // Private because the only legitimate consumers are within this module.
-  private getRaw<K extends StorageKey>(
-    names: K[] | K,
-  ): Promise<Pick<StoredSettings, K>> {
-    return new Promise((resolve, reject) => {
-      this.storage.get(names, (items) => {
-        const err = chrome.runtime.lastError;
-        if (err) {
-          reject(Error(err.message));
-          return;
-        }
-        resolve(items as Pick<StoredSettings, K>);
-      });
-    });
-  }
-
   // Read-only: substitutes the default value for any key still missing in
   // storage. Consumers use this so reads stay correct even before the
   // onInstalled back-fill has run (e.g. right after a fresh install). No write
   // happens, so there is no read-modify-write race.
   async get<K extends keyof Settings>(names: K[]): Promise<Pick<Settings, K>> {
-    const current = await this.getRaw(names);
-    const result = {} as Pick<Settings, K>;
+    const current = await this.storage.get<Pick<Settings, K>>(names);
+    const result: Partial<Pick<Settings, K>> = {};
     for (const name of names) {
-      if (current[name] != null) {
-        result[name] = current[name];
+      const value = current[name];
+      if (value != null) {
+        result[name] = value;
       } else if (name === "css") {
         result[name] = await fetchCss();
       } else {
         result[name] = DEFAULT_SETTINGS[name];
       }
     }
-    return result;
+    return result as Pick<Settings, K>;
   }
 
   async getSingle<K extends keyof Settings>(name: K): Promise<Settings[K]> {
     return (await this.get([name]))[name];
   }
 
-  set(items: Partial<Settings>) {
-    return new Promise<void>((resolve, reject) => {
-      this.storage.set(items, () => {
-        const err = chrome.runtime.lastError;
-        if (err) {
-          reject(Error(err.message));
-          return;
-        }
-        resolve();
-      });
-    });
+  async set(items: Partial<Settings>) {
+    await this.storage.set(items);
   }
 
   async setSingle<K extends keyof Settings>(name: K, value: Settings[K]) {
@@ -125,16 +96,7 @@ class Storage {
   }
 
   getBytes<K extends keyof Settings>(names: K[] | K | null = null) {
-    return new Promise<number>((resolve, reject) => {
-      this.storage.getBytesInUse(names, (b) => {
-        const err = chrome.runtime.lastError;
-        if (err) {
-          reject(Error(err.message));
-          return;
-        }
-        resolve(b);
-      });
-    });
+    return this.storage.getBytesInUse(names);
   }
 
   async getTotalBytes() {
@@ -185,19 +147,8 @@ async function fetchCss() {
 }
 
 async function isLocal() {
-  const a = await new Promise<StoredSettings["_area"] | undefined>(
-    (resolve, reject) => {
-      chrome.storage.local.get("_area", (items) => {
-        const err = chrome.runtime.lastError;
-        if (err) {
-          reject(Error(err.message));
-          return;
-        }
-        resolve((items as Partial<StoredSettings>)._area);
-      });
-    },
-  );
-  return a === "chrome-local";
+  const { _area } = await chrome.storage.local.get("_area");
+  return _area === "chrome-local";
 }
 
 async function getStorage() {
