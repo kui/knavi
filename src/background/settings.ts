@@ -17,13 +17,11 @@ chrome.storage.onChanged.addListener(() => {
 export const router = Router.newInstance()
   .add("GetSettings", async (message) => {
     const storage = await settings.init();
-    return storage.getWithDefaults(message.names);
+    return storage.get(message.names);
   })
   .add("MatchBlacklist", async (message) => {
     const storage = await settings.init();
-    const blacklist = new BlackList(
-      await storage.getSingleWithDefault("blackList"),
-    );
+    const blacklist = new BlackList(await storage.getSingle("blackList"));
     return blacklist.match(message.url);
   })
   .add("MatchAdditionalSelectors", async (message) => {
@@ -31,7 +29,7 @@ export const router = Router.newInstance()
     let additionalSelectors;
     try {
       additionalSelectors = new AdditionalSelectors(
-        await storage.getSingleWithDefault("additionalSelectors"),
+        await storage.getSingle("additionalSelectors"),
       );
     } catch (e) {
       printError(e);
@@ -42,7 +40,7 @@ export const router = Router.newInstance()
   .add("ToggleBlacklist", (message) => {
     const run = async () => {
       const storage = await settings.init();
-      const current = await storage.getSingleWithDefault("blackList");
+      const current = await storage.getSingle("blackList");
       const { text, added } = togglePattern(current, message.pattern);
       await storage.setSingle("blackList", text);
       return { added };

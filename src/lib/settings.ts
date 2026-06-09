@@ -41,7 +41,7 @@ class Storage {
   }
 
   async backfillDefaults() {
-    const current = await this.get(SETTINGS_KEYS);
+    const current = await this.getRaw(SETTINGS_KEYS);
     const defaults: Partial<Settings> = {};
     for (const name of SETTINGS_KEYS) {
       if (current[name] != null) continue;
@@ -53,7 +53,7 @@ class Storage {
     }
 
     if (Object.keys(defaults).length > 0) {
-      const recheck = await this.get(
+      const recheck = await this.getRaw(
         Object.keys(defaults) as (keyof Settings)[],
       );
       for (const key of Object.keys(defaults) as (keyof Settings)[]) {
@@ -67,7 +67,11 @@ class Storage {
     }
   }
 
-  get<K extends StorageKey>(names: K[] | K): Promise<Pick<StoredSettings, K>> {
+  // Raw read: returns whatever is stored, with no default substitution.
+  // Private because the only legitimate consumers are within this module.
+  private getRaw<K extends StorageKey>(
+    names: K[] | K,
+  ): Promise<Pick<StoredSettings, K>> {
     return new Promise((resolve, reject) => {
       this.storage.get(names, (items) => {
         const err = chrome.runtime.lastError;
@@ -80,20 +84,12 @@ class Storage {
     });
   }
 
-  async getSingle<K extends keyof StoredSettings>(
-    name: K,
-  ): Promise<StoredSettings[K]> {
-    return (await this.get(name))[name];
-  }
-
-  // Read-only counterparts of get/getSingle that substitute the default value
-  // for any key still missing in storage. Used by consumers so reads stay
-  // correct even before the onInstalled back-fill has run (e.g. right after a
-  // fresh install). No write happens, so there is no read-modify-write race.
-  async getWithDefaults<K extends keyof Settings>(
-    names: K[],
-  ): Promise<Pick<Settings, K>> {
-    const current = await this.get(names);
+  // Read-only: substitutes the default value for any key still missing in
+  // storage. Consumers use this so reads stay correct even before the
+  // onInstalled back-fill has run (e.g. right after a fresh install). No write
+  // happens, so there is no read-modify-write race.
+  async get<K extends keyof Settings>(names: K[]): Promise<Pick<Settings, K>> {
+    const current = await this.getRaw(names);
     const result = {} as Pick<Settings, K>;
     for (const name of names) {
       if (current[name] != null) {
@@ -107,10 +103,8 @@ class Storage {
     return result;
   }
 
-  async getSingleWithDefault<K extends keyof Settings>(
-    name: K,
-  ): Promise<Settings[K]> {
-    return (await this.getWithDefaults([name]))[name];
+  async getSingle<K extends keyof Settings>(name: K): Promise<Settings[K]> {
+    return (await this.get([name]))[name];
   }
 
   set(items: Partial<Settings>) {
@@ -191,7 +185,18 @@ async function fetchCss() {
 }
 
 async function isLocal() {
-  const a = await local.getSingle("_area");
+  const a = await new Promise<StoredSettings["_area"] | undefined>(
+    (resolve, reject) => {
+      chrome.storage.local.get("_area", (items) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          reject(Error(err.message));
+          return;
+        }
+        resolve((items as Partial<StoredSettings>)._area);
+      });
+    },
+  );
   return a === "chrome-local";
 }
 
