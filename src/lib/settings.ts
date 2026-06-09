@@ -40,7 +40,7 @@ class Storage {
     this.storage = storage;
   }
 
-  async init() {
+  async backfillDefaults() {
     const current = await this.get(SETTINGS_KEYS);
     const defaults: Partial<Settings> = {};
     for (const name of SETTINGS_KEYS) {
@@ -53,7 +53,16 @@ class Storage {
     }
 
     if (Object.keys(defaults).length > 0) {
-      console.debug("Initialize some settings to default values", defaults);
+      const recheck = await this.get(
+        Object.keys(defaults) as (keyof Settings)[],
+      );
+      for (const key of Object.keys(defaults) as (keyof Settings)[]) {
+        if (recheck[key] != null) delete defaults[key];
+      }
+    }
+
+    if (Object.keys(defaults).length > 0) {
+      console.debug("Backfill settings to default values", defaults);
       await this.set(defaults);
     }
   }
@@ -122,15 +131,14 @@ export default {
     if (force) storage = null;
     if (storage) return storage;
     storage = await getStorage();
-    await storage.init();
     return storage;
   },
-  // Returns the active storage area without running init(). Use this for
-  // read-only consumers that must not trigger the default-value back-fill,
-  // whose non-atomic read-modify-write can clobber a concurrent settings
-  // write (e.g. during startup).
-  async readonlyStorage(): Promise<Storage> {
-    return getStorage();
+  // Writes default values for any missing keys. Run only from the
+  // onInstalled handler, never on ordinary startup: this read-modify-write is
+  // non-atomic and could clobber a concurrent settings write.
+  async backfillDefaults(): Promise<void> {
+    const s = await getStorage();
+    await s.backfillDefaults();
   },
   async defaults(): Promise<Settings> {
     return {

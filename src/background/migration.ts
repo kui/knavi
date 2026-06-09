@@ -10,6 +10,7 @@ export interface StorageHandle {
 }
 
 type SettingsInit = () => Promise<StorageHandle>;
+type BackfillDefaults = () => Promise<void>;
 
 export function isOlderThan400(version: string): boolean {
   const [major] = version.split(".").map(Number);
@@ -28,17 +29,32 @@ export async function migrate400(storage: StorageHandle) {
 export function onInstalled(
   { reason, previousVersion }: chrome.runtime.InstalledDetails,
   settingsInit: SettingsInit,
+  backfillDefaults: BackfillDefaults,
 ) {
-  if (reason !== "update" || !previousVersion) return;
-  if (!isOlderThan400(previousVersion)) return;
+  if (reason === "install") {
+    backfillDefaults().catch(printError);
+    return;
+  }
 
-  settingsInit()
-    .then((storage) => migrate400(storage))
-    .catch(printError);
+  if (reason !== "update" || !previousVersion) return;
+
+  const chain = backfillDefaults();
+  if (isOlderThan400(previousVersion)) {
+    chain
+      .then(() => settingsInit())
+      .then((storage) => migrate400(storage))
+      .catch(printError);
+  } else {
+    chain.catch(printError);
+  }
 }
 
 export function init(settings: typeof Settings) {
   chrome.runtime.onInstalled.addListener((details) =>
-    onInstalled(details, settings.init.bind(settings)),
+    onInstalled(
+      details,
+      settings.init.bind(settings),
+      settings.backfillDefaults.bind(settings),
+    ),
   );
 }
