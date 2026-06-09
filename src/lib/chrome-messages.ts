@@ -15,6 +15,10 @@ interface Messages {
     payload: { url: string };
     response: string[];
   };
+  ToggleBlacklist: {
+    payload: { pattern: string };
+    response: { added: boolean };
+  };
 
   // Hint
   AttachHints: {

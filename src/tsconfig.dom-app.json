@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "verbatimModuleSyntax": true,
+    "lib": ["ESNext", "DOM"],
+    "types": ["chrome"]
+  }
+}

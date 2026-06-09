@@ -10,4 +10,7 @@ export default {
   matchAdditionalSelectors(url: string): Promise<string[]> {
     return sendToRuntime("MatchAdditionalSelectors", { url });
   },
+  toggleBlacklist(pattern: string): Promise<{ added: boolean }> {
+    return sendToRuntime("ToggleBlacklist", { pattern });
+  },
 };
