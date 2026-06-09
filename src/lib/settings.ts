@@ -86,6 +86,33 @@ class Storage {
     return (await this.get(name))[name];
   }
 
+  // Read-only counterparts of get/getSingle that substitute the default value
+  // for any key still missing in storage. Used by consumers so reads stay
+  // correct even before the onInstalled back-fill has run (e.g. right after a
+  // fresh install). No write happens, so there is no read-modify-write race.
+  async getWithDefaults<K extends keyof Settings>(
+    names: K[],
+  ): Promise<Pick<Settings, K>> {
+    const current = await this.get(names);
+    const result = {} as Pick<Settings, K>;
+    for (const name of names) {
+      if (current[name] != null) {
+        result[name] = current[name];
+      } else if (name === "css") {
+        result[name] = await fetchCss();
+      } else {
+        result[name] = DEFAULT_SETTINGS[name];
+      }
+    }
+    return result;
+  }
+
+  async getSingleWithDefault<K extends keyof Settings>(
+    name: K,
+  ): Promise<Settings[K]> {
+    return (await this.getWithDefaults([name]))[name];
+  }
+
   set(items: Partial<Settings>) {
     return new Promise<void>((resolve, reject) => {
       this.storage.set(items, () => {
