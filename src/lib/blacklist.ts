@@ -1,4 +1,4 @@
-import GlobTrie from "glob-trie.js";
+import GlobTrie from "./glob-trie";
 
 export class BlackList {
   private patterns: GlobTrie<string>;

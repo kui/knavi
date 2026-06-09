@@ -1,5 +1,5 @@
 import JSON5 from "json5";
-import GlobTrie from "glob-trie.js";
+import GlobTrie from "./glob-trie";
 import { flatMap, reduce } from "./iters";
 
 export class AdditionalSelectors {
