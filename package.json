@@ -35,7 +35,6 @@
     "chokidar-cli": "^3.0.0",
     "esbuild": "0.28.0",
     "eslint": "^10.4.1",
-    "glob-trie.js": "^0.2.1",
     "globals": "^17.6.0",
     "http-server": "^14.1.1",
     "json5": "^2.2.3",

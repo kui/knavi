@@ -1,4 +1,4 @@
-import GlobTrie from "glob-trie.js";
+import GlobTrie from "./glob-trie";
 import { filter, map, reduce } from "./iters";
 
 export class BlackList {
@@ -23,6 +23,6 @@ function parse(text: string) {
       gt.add(s, s);
       return gt;
     },
-    new GlobTrie(),
+    new GlobTrie<string>(),
   );
 }

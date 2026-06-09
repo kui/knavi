@@ -65,7 +65,7 @@ export async function build({
     sourcemap: true,
     minify,
     target: "chrome100",
-    tsconfig: path.join(SRC, "tsconfig.esbuild.json"),
+    tsconfig: path.join(SRC, "tsconfig.content-all.json"),
     pure: [
       "console.debug",
       "console.log",
