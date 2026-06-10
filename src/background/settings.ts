@@ -10,22 +10,30 @@ import { printError } from "../lib/errors";
 // going through this message.
 let toggleQueue: Promise<unknown> = Promise.resolve();
 
-chrome.storage.onChanged.addListener(() => {
-  settings.init(true).catch(printError);
+// The active storage area (sync vs local) is selected by the `_area` marker
+// in local storage. When the user switches it, invalidate the memoized area
+// and back-fill defaults into the newly active area: onInstalled only ran on
+// install/update, so a later switch would otherwise leave that area empty.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local" || !("_area" in changes)) return;
+  settings
+    .getStorage(true)
+    .then(() => settings.backfillDefaults())
+    .catch(printError);
 });
 
 export const router = Router.newInstance()
   .add("GetSettings", async (message) => {
-    const storage = await settings.init();
+    const storage = await settings.getStorage();
     return storage.get(message.names);
   })
   .add("MatchBlacklist", async (message) => {
-    const storage = await settings.init();
+    const storage = await settings.getStorage();
     const blacklist = new BlackList(await storage.getSingle("blackList"));
     return blacklist.match(message.url);
   })
   .add("MatchAdditionalSelectors", async (message) => {
-    const storage = await settings.init();
+    const storage = await settings.getStorage();
     let additionalSelectors;
     try {
       additionalSelectors = new AdditionalSelectors(
@@ -39,7 +47,7 @@ export const router = Router.newInstance()
   })
   .add("ToggleBlacklist", (message) => {
     const run = async () => {
-      const storage = await settings.init();
+      const storage = await settings.getStorage();
       const current = await storage.getSingle("blackList");
       const { text, added } = togglePattern(current, message.pattern);
       await storage.setSingle("blackList", text);

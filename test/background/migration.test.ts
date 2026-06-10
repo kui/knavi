@@ -5,8 +5,9 @@ import {
   type StorageHandle,
 } from "../../src/background/migration";
 
-function makeSettingsInit(css: string | null) {
+function makeSettings(css: string | null) {
   let stored = css;
+  let backfilled = false;
   const storage: StorageHandle = {
     getSingle: () => Promise.resolve(stored),
     setSingle: (_key: "css", value: string) => {
@@ -15,43 +16,50 @@ function makeSettingsInit(css: string | null) {
     },
   };
   return {
-    settingsInit: () => Promise.resolve(storage),
+    settings: {
+      getStorage: () => Promise.resolve(storage),
+      backfillDefaults: () => {
+        backfilled = true;
+        return Promise.resolve();
+      },
+    },
     getStored: () => stored,
+    wasBackfilled: () => backfilled,
   };
 }
 
 void describe("onInstalled", () => {
-  void test("migrates css when upgrading from v3.x", async () => {
-    const { settingsInit, getStored } = makeSettingsInit(
+  void test("backfills and migrates css when upgrading from v3.x", async () => {
+    const { settings, getStored, wasBackfilled } = makeSettings(
       ".hint { color: red; }",
     );
-    onInstalled({ reason: "update", previousVersion: "3.2.0" }, settingsInit);
-    await new Promise((r) => setTimeout(r, 10));
+    await onInstalled({ reason: "update", previousVersion: "3.2.0" }, settings);
 
+    assert.ok(wasBackfilled());
     assert.ok(getStored()!.includes(":host::backdrop"));
   });
 
-  void test("does nothing on fresh install (reason=install)", async () => {
-    const { settingsInit, getStored } = makeSettingsInit(".hint {}");
-    onInstalled({ reason: "install" }, settingsInit);
-    await new Promise((r) => setTimeout(r, 10));
+  void test("backfills on fresh install without migrating", async () => {
+    const { settings, getStored, wasBackfilled } = makeSettings(".hint {}");
+    await onInstalled({ reason: "install" }, settings);
 
+    assert.ok(wasBackfilled());
     assert.equal(getStored(), ".hint {}");
   });
 
-  void test("does nothing when updating from v4.x", async () => {
-    const { settingsInit, getStored } = makeSettingsInit(".hint {}");
-    onInstalled({ reason: "update", previousVersion: "4.0.0" }, settingsInit);
-    await new Promise((r) => setTimeout(r, 10));
+  void test("backfills but skips migration when updating from v4.x", async () => {
+    const { settings, getStored, wasBackfilled } = makeSettings(".hint {}");
+    await onInstalled({ reason: "update", previousVersion: "4.0.0" }, settings);
 
+    assert.ok(wasBackfilled());
     assert.equal(getStored(), ".hint {}");
   });
 
-  void test("does nothing when previousVersion is absent", async () => {
-    const { settingsInit, getStored } = makeSettingsInit(".hint {}");
-    onInstalled({ reason: "update" }, settingsInit);
-    await new Promise((r) => setTimeout(r, 10));
+  void test("backfills but skips migration when previousVersion is absent", async () => {
+    const { settings, getStored, wasBackfilled } = makeSettings(".hint {}");
+    await onInstalled({ reason: "update" }, settings);
 
+    assert.ok(wasBackfilled());
     assert.equal(getStored(), ".hint {}");
   });
 });

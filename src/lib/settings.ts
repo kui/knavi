@@ -1,6 +1,3 @@
-type StoredSettings = Settings & { _area: "chrome-sync" | "chrome-local" };
-type StorageKey = keyof StoredSettings;
-
 const DEFAULT_BLACK_LIST = `# Example (Start with # if you want comments)
 http://k-ui.jp/*
 `;
@@ -40,8 +37,8 @@ class Storage {
     this.storage = storage;
   }
 
-  async init() {
-    const current = await this.get(SETTINGS_KEYS);
+  async backfillDefaults() {
+    const current = await this.storage.get<Partial<Settings>>(SETTINGS_KEYS);
     const defaults: Partial<Settings> = {};
     for (const name of SETTINGS_KEYS) {
       if (current[name] != null) continue;
@@ -52,42 +49,50 @@ class Storage {
       }
     }
 
+    if (Object.keys(defaults).length === 0) return;
+
+    // Re-read right before writing and drop any key that gained a value while
+    // we were computing defaults (the slow `fetchCss` in particular). This
+    // read-modify-write is not atomic, so a settings write landing right after
+    // install would otherwise be clobbered by our default.
+    const keys = Object.keys(defaults) as (keyof Settings)[];
+    const recheck = await this.storage.get<Partial<Settings>>(keys);
+    for (const key of keys) {
+      if (recheck[key] != null) delete defaults[key];
+    }
+
     if (Object.keys(defaults).length > 0) {
-      console.debug("Initialize some settings to default values", defaults);
+      console.debug("Backfill settings to default values", defaults);
       await this.set(defaults);
     }
   }
 
-  get<K extends StorageKey>(names: K[] | K): Promise<Pick<StoredSettings, K>> {
-    return new Promise((resolve, reject) => {
-      this.storage.get(names, (items) => {
-        const err = chrome.runtime.lastError;
-        if (err) {
-          reject(Error(err.message));
-          return;
-        }
-        resolve(items as Pick<StoredSettings, K>);
-      });
-    });
+  // Read-only: substitutes the default value for any key still missing in
+  // storage. Consumers use this so reads stay correct even before the
+  // onInstalled back-fill has run (e.g. right after a fresh install). No write
+  // happens, so there is no read-modify-write race.
+  async get<K extends keyof Settings>(names: K[]): Promise<Pick<Settings, K>> {
+    const current = await this.storage.get<Pick<Settings, K>>(names);
+    const result: Partial<Pick<Settings, K>> = {};
+    for (const name of names) {
+      const value = current[name];
+      if (value != null) {
+        result[name] = value;
+      } else if (name === "css") {
+        result[name] = await fetchCss();
+      } else {
+        result[name] = DEFAULT_SETTINGS[name];
+      }
+    }
+    return result as Pick<Settings, K>;
   }
 
-  async getSingle<K extends keyof StoredSettings>(
-    name: K,
-  ): Promise<StoredSettings[K]> {
-    return (await this.get(name))[name];
+  async getSingle<K extends keyof Settings>(name: K): Promise<Settings[K]> {
+    return (await this.get([name]))[name];
   }
 
-  set(items: Partial<Settings>) {
-    return new Promise<void>((resolve, reject) => {
-      this.storage.set(items, () => {
-        const err = chrome.runtime.lastError;
-        if (err) {
-          reject(Error(err.message));
-          return;
-        }
-        resolve();
-      });
-    });
+  async set(items: Partial<Settings>) {
+    await this.storage.set(items);
   }
 
   async setSingle<K extends keyof Settings>(name: K, value: Settings[K]) {
@@ -95,16 +100,7 @@ class Storage {
   }
 
   getBytes<K extends keyof Settings>(names: K[] | K | null = null) {
-    return new Promise<number>((resolve, reject) => {
-      this.storage.getBytesInUse(names, (b) => {
-        const err = chrome.runtime.lastError;
-        if (err) {
-          reject(Error(err.message));
-          return;
-        }
-        resolve(b);
-      });
-    });
+    return this.storage.getBytesInUse(names);
   }
 
   async getTotalBytes() {
@@ -118,19 +114,20 @@ const local = new Storage(chrome.storage.local);
 let storage: Storage | null = null;
 
 export default {
-  async init(force = false): Promise<Storage> {
+  // Resolves the active storage area (sync vs local) and memoizes it. Pass
+  // `force` to re-resolve after the area may have changed.
+  async getStorage(force = false): Promise<Storage> {
     if (force) storage = null;
     if (storage) return storage;
-    storage = await getStorage();
-    await storage.init();
+    storage = (await isLocal()) ? local : sync;
     return storage;
   },
-  // Returns the active storage area without running init(). Use this for
-  // read-only consumers that must not trigger the default-value back-fill,
-  // whose non-atomic read-modify-write can clobber a concurrent settings
-  // write (e.g. during startup).
-  async readonlyStorage(): Promise<Storage> {
-    return getStorage();
+  // Writes default values for any missing keys. Run only from the
+  // onInstalled handler, never on ordinary startup: this read-modify-write is
+  // non-atomic and could clobber a concurrent settings write.
+  async backfillDefaults(): Promise<void> {
+    const s = await this.getStorage();
+    await s.backfillDefaults();
   },
   async defaults(): Promise<Settings> {
     return {
@@ -156,10 +153,6 @@ async function fetchCss() {
 }
 
 async function isLocal() {
-  const a = await local.getSingle("_area");
-  return a === "chrome-local";
-}
-
-async function getStorage() {
-  return (await isLocal()) ? local : sync;
+  const { _area } = await chrome.storage.local.get("_area");
+  return _area === "chrome-local";
 }

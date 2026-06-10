@@ -9,7 +9,13 @@ export interface StorageHandle {
   setSingle(key: "css", value: string): Promise<void>;
 }
 
-type SettingsInit = () => Promise<StorageHandle>;
+// The subset of the settings module the install/update handlers depend on.
+// Passing the module behind this interface keeps the handlers (and tests)
+// decoupled from the rest of the settings API.
+interface MigrationSettings {
+  getStorage(): Promise<StorageHandle>;
+  backfillDefaults(): Promise<void>;
+}
 
 export function isOlderThan400(version: string): boolean {
   const [major] = version.split(".").map(Number);
@@ -25,20 +31,38 @@ export async function migrate400(storage: StorageHandle) {
   console.info("[knavi] migration 4.0.0: prepended backdrop rule to css");
 }
 
-export function onInstalled(
-  { reason, previousVersion }: chrome.runtime.InstalledDetails,
-  settingsInit: SettingsInit,
+// Thin router: dispatch each onInstalled reason to its handler. Keep the
+// back-fill / migration logic in the handlers below, not here.
+export async function onInstalled(
+  details: chrome.runtime.InstalledDetails,
+  settings: MigrationSettings,
 ) {
-  if (reason !== "update" || !previousVersion) return;
-  if (!isOlderThan400(previousVersion)) return;
+  switch (details.reason) {
+    case "install":
+      await handleInstall(settings);
+      break;
+    case "update":
+      await handleUpdate(settings, details.previousVersion);
+      break;
+  }
+}
 
-  settingsInit()
-    .then((storage) => migrate400(storage))
-    .catch(printError);
+async function handleInstall(settings: MigrationSettings) {
+  await settings.backfillDefaults();
+}
+
+async function handleUpdate(
+  settings: MigrationSettings,
+  previousVersion?: string,
+) {
+  await settings.backfillDefaults();
+  if (previousVersion && isOlderThan400(previousVersion)) {
+    await migrate400(await settings.getStorage());
+  }
 }
 
 export function init(settings: typeof Settings) {
-  chrome.runtime.onInstalled.addListener((details) =>
-    onInstalled(details, settings.init.bind(settings)),
-  );
+  chrome.runtime.onInstalled.addListener((details) => {
+    onInstalled(details, settings).catch(printError);
+  });
 }

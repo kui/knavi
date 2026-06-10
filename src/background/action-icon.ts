@@ -17,10 +17,11 @@ let cachedList: BlackList | undefined;
 
 async function loadBlackList(): Promise<BlackList> {
   if (cachedList) return cachedList;
-  // Read-only: use readonlyStorage() so updating the icon never back-fills
-  // default settings, which could clobber a concurrent write at startup.
-  const storage = await settings.readonlyStorage();
-  cachedList = new BlackList((await storage.getSingle("blackList")) ?? "");
+  // getStorage() is read-only (back-fill runs only on install/update), so
+  // updating the icon never writes default settings. getSingle still yields
+  // the default blacklist before any back-fill has run.
+  const storage = await settings.getStorage();
+  cachedList = new BlackList(await storage.getSingle("blackList"));
   return cachedList;
 }
 
