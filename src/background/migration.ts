@@ -13,7 +13,7 @@ export interface StorageHandle {
 // Passing the module behind this interface keeps the handlers (and tests)
 // decoupled from the rest of the settings API.
 interface MigrationSettings {
-  init(): Promise<StorageHandle>;
+  getStorage(): Promise<StorageHandle>;
   backfillDefaults(): Promise<void>;
 }
 
@@ -57,7 +57,7 @@ async function handleUpdate(
 ) {
   await settings.backfillDefaults();
   if (previousVersion && isOlderThan400(previousVersion)) {
-    await migrate400(await settings.init());
+    await migrate400(await settings.getStorage());
   }
 }
 

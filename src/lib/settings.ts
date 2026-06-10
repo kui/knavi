@@ -102,17 +102,19 @@ const local = new Storage(chrome.storage.local);
 let storage: Storage | null = null;
 
 export default {
-  async init(force = false): Promise<Storage> {
+  // Resolves the active storage area (sync vs local) and memoizes it. Pass
+  // `force` to re-resolve after the area may have changed.
+  async getStorage(force = false): Promise<Storage> {
     if (force) storage = null;
     if (storage) return storage;
-    storage = await getStorage();
+    storage = (await isLocal()) ? local : sync;
     return storage;
   },
   // Writes default values for any missing keys. Run only from the
   // onInstalled handler, never on ordinary startup: this read-modify-write is
   // non-atomic and could clobber a concurrent settings write.
   async backfillDefaults(): Promise<void> {
-    const s = await getStorage();
+    const s = await this.getStorage();
     await s.backfillDefaults();
   },
   async defaults(): Promise<Settings> {
@@ -141,8 +143,4 @@ async function fetchCss() {
 async function isLocal() {
   const { _area } = await chrome.storage.local.get("_area");
   return _area === "chrome-local";
-}
-
-async function getStorage() {
-  return (await isLocal()) ? local : sync;
 }

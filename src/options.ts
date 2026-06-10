@@ -9,7 +9,7 @@ async function init() {
   await waitUntil(() => Boolean(document.body));
 
   const body = document.body;
-  await settings.init();
+  await settings.getStorage();
 
   storageForm.register();
   keyInput.register();

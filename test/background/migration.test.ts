@@ -17,7 +17,7 @@ function makeSettings(css: string | null) {
   };
   return {
     settings: {
-      init: () => Promise.resolve(storage),
+      getStorage: () => Promise.resolve(storage),
       backfillDefaults: () => {
         backfilled = true;
         return Promise.resolve();
