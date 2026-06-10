@@ -50,14 +50,6 @@ class Storage {
     }
 
     if (Object.keys(defaults).length > 0) {
-      const keys = Object.keys(defaults) as (keyof Settings)[];
-      const recheck = await this.storage.get<Partial<Settings>>(keys);
-      for (const key of keys) {
-        if (recheck[key] != null) delete defaults[key];
-      }
-    }
-
-    if (Object.keys(defaults).length > 0) {
       console.debug("Backfill settings to default values", defaults);
       await this.set(defaults);
     }
