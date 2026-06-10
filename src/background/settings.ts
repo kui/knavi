@@ -10,8 +10,16 @@ import { printError } from "../lib/errors";
 // going through this message.
 let toggleQueue: Promise<unknown> = Promise.resolve();
 
-chrome.storage.onChanged.addListener(() => {
-  settings.getStorage(true).catch(printError);
+// The active storage area (sync vs local) is selected by the `_area` marker
+// in local storage. When the user switches it, invalidate the memoized area
+// and back-fill defaults into the newly active area: onInstalled only ran on
+// install/update, so a later switch would otherwise leave that area empty.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local" || !("_area" in changes)) return;
+  settings
+    .getStorage(true)
+    .then(() => settings.backfillDefaults())
+    .catch(printError);
 });
 
 export const router = Router.newInstance()
