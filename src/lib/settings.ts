@@ -49,6 +49,18 @@ class Storage {
       }
     }
 
+    if (Object.keys(defaults).length === 0) return;
+
+    // Re-read right before writing and drop any key that gained a value while
+    // we were computing defaults (the slow `fetchCss` in particular). This
+    // read-modify-write is not atomic, so a settings write landing right after
+    // install would otherwise be clobbered by our default.
+    const keys = Object.keys(defaults) as (keyof Settings)[];
+    const recheck = await this.storage.get<Partial<Settings>>(keys);
+    for (const key of keys) {
+      if (recheck[key] != null) delete defaults[key];
+    }
+
     if (Object.keys(defaults).length > 0) {
       console.debug("Backfill settings to default values", defaults);
       await this.set(defaults);
