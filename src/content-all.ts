@@ -48,6 +48,14 @@ chrome.storage.onChanged.addListener((changes) => {
   if (debounceTimer !== null) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     debounceTimer = null;
+    if (hinterClient.isHinting) {
+      // Re-schedule; apply settings after the hint session ends.
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        setup().catch(printError);
+      }, 200);
+      return;
+    }
     setup().catch(printError);
   }, 200);
 });
