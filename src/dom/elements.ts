@@ -20,10 +20,25 @@ export function isScrollable(
   return false;
 }
 
-export function isEditable(element: EventTarget) {
-  if ("selectionStart" in element && element.selectionStart != null)
-    return true;
+// Input types that never accept character input from the keyboard.
+const NON_TEXT_INPUT_TYPES = new Set([
+  "hidden",
+  "checkbox",
+  "radio",
+  "button",
+  "submit",
+  "reset",
+  "image",
+  "file",
+  "color",
+  "range",
+]);
 
+export function isEditable(element: EventTarget) {
+  if (element instanceof HTMLInputElement)
+    return !element.disabled && !NON_TEXT_INPUT_TYPES.has(element.type);
+  if ("selectionStart" in element && element.selectionStart != null)
+    return true; // textarea and custom elements exposing the selection API
   return "isContentEditable" in element && Boolean(element.isContentEditable);
 }
 
