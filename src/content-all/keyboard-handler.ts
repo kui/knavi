@@ -50,6 +50,10 @@ export class KeyboardHandlerContentAll {
     this.matchedBlacklist = await settingsClient.matchBlacklist(location.href);
   }
 
+  async updateBlacklist(href: string) {
+    this.matchedBlacklist = await settingsClient.matchBlacklist(href);
+  }
+
   // Reset the held-key history of every matcher.
   private resetMatchers() {
     this.hitMatcher?.reset();

@@ -35,6 +35,12 @@ chrome.storage.onChanged.addListener(() => {
   setup().catch(printError);
 });
 
+if (window.navigation) {
+  window.navigation.onnavigatesuccess = () => {
+    keyboardHandler.updateBlacklist(location.href).catch(printError);
+  };
+}
+
 chrome.runtime.onMessage.addListener(
   ChromeMessageRouter.newInstance()
     .add("ExecuteAction", ({ id, options }) =>
