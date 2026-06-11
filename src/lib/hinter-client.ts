@@ -15,7 +15,12 @@ export default class HinterClient {
   async attachHints() {
     if (this.hinting) throw Error("Illegal state");
     this.hinting = true;
-    await sendToRuntime("AttachHints", undefined);
+    try {
+      await sendToRuntime("AttachHints", undefined);
+    } catch (e) {
+      this.hinting = false;
+      throw e;
+    }
   }
 
   async hitHint(key: SingleLetter) {
