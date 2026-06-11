@@ -1,16 +1,17 @@
 import { Router, sendToTab } from "../lib/chrome-messages";
+import { requireFrameId, requireTabId } from "../lib/sender-guards";
 
 export const router = Router.newInstance()
-  .add("GetFrameId", (_, sender) => sender.frameId!)
+  .add("GetFrameId", (_, sender) => requireFrameId(sender))
 
   .add("ResponseRectsFragment", async (message, sender) => {
-    await sendToTab(sender.tab!.id!, "ResponseRectsFragment", message, {
+    await sendToTab(requireTabId(sender), "ResponseRectsFragment", message, {
       frameId: 0,
     });
   })
 
   .add("ExecuteAction", async (message, sender) => {
-    await sendToTab(sender.tab!.id!, "ExecuteAction", message, {
+    await sendToTab(requireTabId(sender), "ExecuteAction", message, {
       frameId: message.id.frameId,
     });
   });
