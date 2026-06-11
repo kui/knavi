@@ -77,10 +77,12 @@ window.addEventListener(
 window.addEventListener(
   "message",
   new DOMMessageRouter()
-    .add("com.github.kui.knavi.Blur", (e) =>
-      blurer.handleBlurMessage(e.source, e.data.rect),
-    )
+    .add("com.github.kui.knavi.Blur", (e) => {
+      if (e.source !== window.parent && e.source !== window) return;
+      blurer.handleBlurMessage(e.source, e.data.rect);
+    })
     .add("com.github.kui.knavi.AllRectsRequest", async (e) => {
+      if (e.source !== window.parent && e.source !== window) return;
       const { id, viewport, offsets } = e.data;
       await rectAggregator.handleAllRectsRequest(
         id,
