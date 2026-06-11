@@ -31,8 +31,22 @@ async function setup() {
 }
 setup().catch(printError);
 
-chrome.storage.onChanged.addListener(() => {
-  setup().catch(printError);
+const SETUP_KEYS: ReadonlySet<string> = new Set([
+  "magicKey",
+  "blurKey",
+  "hints",
+  "stickyKey",
+  "actionKey",
+  "cancelKey",
+]);
+
+let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+chrome.storage.onChanged.addListener((changes) => {
+  if (!Object.keys(changes).some((k) => SETUP_KEYS.has(k))) return;
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    setup().catch(printError);
+  }, 200);
 });
 
 chrome.runtime.onMessage.addListener(
