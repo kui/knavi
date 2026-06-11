@@ -6,7 +6,7 @@ export default function manifest(pkg: Pkg): chrome.runtime.ManifestV3 {
     name: pkg.name,
     version: pkg.version,
     description: pkg.description,
-    author: { email: pkg.author },
+    minimum_chrome_version: "114",
     icons: {
       16: "icon16.png",
       48: "icon48.png",
@@ -47,11 +47,5 @@ export default function manifest(pkg: Pkg): chrome.runtime.ManifestV3 {
     },
     permissions: ["storage"],
     host_permissions: ["<all_urls>"],
-    web_accessible_resources: [
-      {
-        matches: ["<all_urls>"],
-        resources: ["*.js.map"],
-      },
-    ],
   };
 }
