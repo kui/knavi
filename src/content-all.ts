@@ -63,6 +63,13 @@ chrome.storage.onChanged.addListener((changes) => {
   });
 });
 
+window.navigation?.addEventListener("navigatesuccess", () => {
+  settingsClient
+    .matchBlacklist(location.href)
+    .then((matched) => keyboardHandler.updateBlacklist(matched))
+    .catch(printError);
+});
+
 chrome.runtime.onMessage.addListener(
   ChromeMessageRouter.newInstance()
     .add("ExecuteAction", ({ id, options }) =>
