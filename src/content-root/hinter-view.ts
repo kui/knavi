@@ -206,11 +206,12 @@ export class HintView {
 
   remove() {
     if (!this.hints) throw Error("Illegal state");
-
-    document.body.removeChild(this.container);
-    for (const e of flatMap(this.hints.all(), (h) => h.hints))
-      this.root.removeChild(e);
-    this.hints = null;
+    try {
+      this.container.remove();
+      for (const e of flatMap(this.hints.all(), (h) => h.hints)) e.remove();
+    } finally {
+      this.hints = null;
+    }
   }
 }
 
