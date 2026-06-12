@@ -21,15 +21,15 @@ globalThis.KNAVI_FILE = "content-all";
 // hint cycle.
 let parentNonce: string | null = null;
 
-const rectAggregator = new RectAggregator();
+// Nonce this frame distributes; child frames echo it back in Blur for verification.
+const childNonce = crypto.randomUUID();
+const rectAggregator = new RectAggregator(childNonce);
 
-// Register this frame's childNonce with the background and, for non-root frames,
-// fetch the parent frame's nonce.  Both calls go over chrome.runtime which page
-// scripts cannot intercept.
+// Register childNonce with the background and, for non-root frames, fetch the
+// parent frame's nonce.  Both calls go over chrome.runtime which page scripts
+// cannot intercept.
 (async () => {
-  await sendToRuntime("RegisterFrameNonce", {
-    nonce: rectAggregator.getChildNonce(),
-  });
+  await sendToRuntime("RegisterFrameNonce", { nonce: childNonce });
   if (window !== window.parent) {
     // chrome.runtime.getFrameId is available since Chrome 106 (min version 114).
     const parentFrameId = (

@@ -33,8 +33,10 @@ export class RectAggregatorContentAll {
   private elements: ElementProfile[] = [];
   private readonly actionFinder: ActionFinder | null = null;
   private readonly frameIdPromise = sendToRuntime("GetFrameId", undefined);
-  // Nonce echoed by child frames in Blur messages; verified here to authenticate them.
-  private readonly childNonce = crypto.randomUUID();
+
+  // childNonce is generated in content-all.ts and passed in so that the same
+  // value is used for both RegisterFrameNonce and Blur verification.
+  constructor(private readonly childNonce: string) {}
 
   getChildNonce(): string {
     return this.childNonce;
