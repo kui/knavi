@@ -1,5 +1,4 @@
 import { KeyHoldMatcher } from "key-input-elements/event-matchers/key-hold";
-import settingsClient from "../lib/settings-client";
 import Hinter from "../lib/hinter-client";
 import Blurer from "./blurer-client";
 import { isEditable } from "../dom/elements";
@@ -24,11 +23,12 @@ export class KeyboardHandlerContentAll {
     private readonly hinter: Hinter,
   ) {}
 
-  async setup(
+  setup(
     settings: Pick<
       Settings,
       "magicKey" | "blurKey" | "hints" | "stickyKey" | "actionKey" | "cancelKey"
     >,
+    matchedBlacklist: string[],
   ) {
     this.hintLetters = settings.hints;
     this.hitMatcher =
@@ -47,7 +47,7 @@ export class KeyboardHandlerContentAll {
       settings.cancelKey === ""
         ? null
         : KeyHoldMatcher.parse(settings.cancelKey);
-    this.matchedBlacklist = await settingsClient.matchBlacklist(location.href);
+    this.matchedBlacklist = matchedBlacklist;
   }
 
   // Reset the held-key history of every matcher.

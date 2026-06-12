@@ -3,6 +3,7 @@ import { KeyboardHandlerContentAll as KeyboardHandler } from "./content-all/keyb
 import { BlurerContentAll as Blurer } from "./content-all/blurer";
 import settingsClient from "./lib/settings-client";
 import { printError } from "./lib/errors";
+import { wait } from "./lib/promises";
 import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
 import { Router as DOMMessageRouter } from "./dom/dom-messages";
@@ -18,21 +19,48 @@ const rectAggregator = new RectAggregator();
 const blurer = new Blurer();
 
 async function setup() {
-  const setting = await settingsClient.get([
-    "magicKey",
-    "blurKey",
-    "hints",
-    "stickyKey",
-    "actionKey",
-    "cancelKey",
+  const [setting, matchedBlacklist] = await Promise.all([
+    settingsClient.get([
+      "magicKey",
+      "blurKey",
+      "hints",
+      "stickyKey",
+      "actionKey",
+      "cancelKey",
+    ]),
+    settingsClient.matchBlacklist(location.href),
   ]);
-  await keyboardHandler.setup(setting);
+  keyboardHandler.setup(setting, matchedBlacklist);
   console.debug("settings loaded");
 }
 setup().catch(printError);
 
-chrome.storage.onChanged.addListener(() => {
-  setup().catch(printError);
+const RELEVANT_KEYS: (keyof Settings)[] = [
+  "magicKey",
+  "blurKey",
+  "hints",
+  "stickyKey",
+  "actionKey",
+  "cancelKey",
+  "blackList",
+];
+
+let debounceController: AbortController | null = null;
+
+chrome.storage.onChanged.addListener((changes) => {
+  (async () => {
+    if (!RELEVANT_KEYS.some((k) => k in changes)) return;
+    debounceController?.abort();
+    debounceController = new AbortController();
+    const { signal } = debounceController;
+    do {
+      await wait(200, signal);
+    } while (hinterClient.isHinting);
+    await setup();
+  })().catch((e) => {
+    if (e instanceof DOMException && e.name === "AbortError") return;
+    printError(e);
+  });
 });
 
 chrome.runtime.onMessage.addListener(
