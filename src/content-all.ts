@@ -35,7 +35,7 @@ async function setup() {
 }
 setup().catch(printError);
 
-const RELEVANT_KEYS = [
+const RELEVANT_KEYS: (keyof Settings)[] = [
   "magicKey",
   "blurKey",
   "hints",
