@@ -48,20 +48,19 @@ const RELEVANT_KEYS = [
 let debounceController: AbortController | null = null;
 
 chrome.storage.onChanged.addListener((changes) => {
-  void (async () => {
+  (async () => {
     if (!RELEVANT_KEYS.some((k) => k in changes)) return;
     debounceController?.abort();
     debounceController = new AbortController();
     const { signal } = debounceController;
-    try {
+    do {
       await wait(200, signal);
-      while (hinterClient.isHinting) await wait(200, signal);
-      await setup();
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      printError(e);
-    }
-  })();
+    } while (hinterClient.isHinting);
+    await setup();
+  })().catch((e) => {
+    if (e instanceof DOMException && e.name === "AbortError") return;
+    printError(e);
+  });
 });
 
 chrome.runtime.onMessage.addListener(
