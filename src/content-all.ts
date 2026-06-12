@@ -3,7 +3,7 @@ import { KeyboardHandlerContentAll as KeyboardHandler } from "./content-all/keyb
 import { BlurerContentAll as Blurer } from "./content-all/blurer";
 import settingsClient from "./lib/settings-client";
 import { printError } from "./lib/errors";
-import { debounceUntilReady } from "./lib/debounce";
+import { wait } from "./lib/promises";
 import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
 import { Router as DOMMessageRouter } from "./dom/dom-messages";
@@ -45,15 +45,23 @@ const RELEVANT_KEYS = [
   "blackList",
 ];
 
-const scheduleSetup = debounceUntilReady(
-  () => setup().catch(printError),
-  200,
-  () => !hinterClient.isHinting,
-);
+let debounceController: AbortController | null = null;
 
 chrome.storage.onChanged.addListener((changes) => {
-  if (!RELEVANT_KEYS.some((k) => k in changes)) return;
-  scheduleSetup();
+  void (async () => {
+    if (!RELEVANT_KEYS.some((k) => k in changes)) return;
+    debounceController?.abort();
+    debounceController = new AbortController();
+    const { signal } = debounceController;
+    try {
+      await wait(200, signal);
+      while (hinterClient.isHinting) await wait(200, signal);
+      await setup();
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      printError(e);
+    }
+  })();
 });
 
 chrome.runtime.onMessage.addListener(
