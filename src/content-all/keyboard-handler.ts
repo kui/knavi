@@ -50,6 +50,10 @@ export class KeyboardHandlerContentAll {
     this.matchedBlacklist = matchedBlacklist;
   }
 
+  updateBlacklist(matchedBlacklist: string[]) {
+    this.matchedBlacklist = matchedBlacklist;
+  }
+
   // Reset the held-key history of every matcher.
   private resetMatchers() {
     this.hitMatcher?.reset();
