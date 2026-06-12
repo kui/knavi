@@ -23,7 +23,7 @@ let parentNonce: string | null = null;
 
 // Nonce this frame distributes; child frames echo it back in Blur for verification.
 const childNonce = crypto.randomUUID();
-const rectAggregator = new RectAggregator(childNonce);
+const rectAggregator = new RectAggregator();
 
 // Register childNonce with the background and, for non-root frames, fetch the
 // parent frame's nonce.  Both calls go over chrome.runtime which page scripts
@@ -135,10 +135,7 @@ window.addEventListener(
       // source === window is a relay-to-self (root-frame blur); BlurerContentAll ignores it.
       // For child-frame sources, require the nonce sent in AllRectsRequest to prevent
       // forged Blur messages from third-party or malicious iframes.
-      if (
-        e.source !== window &&
-        e.data.nonce !== rectAggregator.getChildNonce()
-      ) {
+      if (e.source !== window && e.data.nonce !== childNonce) {
         console.warn("Blur dropped: invalid nonce from", e.source);
         return;
       }
