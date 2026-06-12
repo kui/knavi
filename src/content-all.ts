@@ -30,10 +30,7 @@ const childNonce = crypto.randomUUID();
 (async () => {
   await sendToRuntime("RegisterFrameNonce", { nonce: childNonce });
   if (window !== window.parent) {
-    // chrome.runtime.getFrameId is available since Chrome 106 (min version 114).
-    const parentFrameId = (
-      chrome.runtime as unknown as { getFrameId(w: Window): number }
-    ).getFrameId(window.parent);
+    const parentFrameId = chrome.runtime.getFrameId(window.parent);
     parentNonce = await sendToRuntime("GetParentNonce", { parentFrameId });
   }
 })().catch(printError);
