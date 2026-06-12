@@ -12,7 +12,11 @@ import { Coordinates, Rect } from "./dom/rects";
 
 globalThis.KNAVI_FILE = "content-all";
 
-const blurerClient = new BlurerClient();
+// Nonce received from parent frame in AllRectsRequest; echoed back in Blur messages
+// so the parent can verify the message came from a knavi-controlled frame.
+let parentNonce: string | null = null;
+
+const blurerClient = new BlurerClient(() => parentNonce);
 const hinterClient = new HinterClient();
 const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
 const rectAggregator = new RectAggregator();
@@ -105,10 +109,23 @@ window.addEventListener(
 window.addEventListener(
   "message",
   new DOMMessageRouter()
-    .add("com.github.kui.knavi.Blur", (e) =>
-      blurer.handleBlurMessage(e.source, e.data.rect),
-    )
+    .add("com.github.kui.knavi.Blur", (e) => {
+      // source === window is a relay-to-self (root-frame blur); BlurerContentAll ignores it.
+      // For child-frame sources, require the nonce sent in AllRectsRequest to prevent
+      // forged Blur messages from third-party or malicious iframes.
+      if (e.source !== window && e.data.nonce !== rectAggregator.getChildNonce()) {
+        console.warn("Blur dropped: invalid nonce from", e.source);
+        return;
+      }
+      blurer.handleBlurMessage(e.source, e.data.rect, parentNonce);
+    })
     .add("com.github.kui.knavi.AllRectsRequest", async (e) => {
+      // Only accept from our direct parent (or self for the root-frame bootstrap).
+      if (e.source !== window.parent && e.source !== window) {
+        console.warn("AllRectsRequest dropped: unexpected source", e.source);
+        return;
+      }
+      parentNonce = e.data.nonce;
       const { id, viewport, offsets } = e.data;
       await rectAggregator.handleAllRectsRequest(
         id,

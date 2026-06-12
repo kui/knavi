@@ -4,6 +4,8 @@ interface MessageDefinition {
   "com.github.kui.knavi.AllRectsRequest": {
     payload: {
       id: number;
+      // Per-aggregation nonce used to authenticate Blur replies from child frames.
+      nonce: string;
       // This viewport is cropped by the root viewport and actually visible area to the user.
       viewport: RectJSON<"actual-viewport", "root-viewport">;
       // This viewport is not cropped by the root viewport
@@ -13,6 +15,9 @@ interface MessageDefinition {
   };
   "com.github.kui.knavi.Blur": {
     payload: {
+      // Echoes the nonce received from the parent's AllRectsRequest so the
+      // receiving frame can verify the message came from a knavi-controlled frame.
+      nonce: string | null;
       rect: RectJSON<"element-border", "layout-viewport"> | null;
     };
   };

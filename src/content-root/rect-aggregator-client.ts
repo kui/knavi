@@ -5,6 +5,8 @@ import * as vp from "./viewports";
 
 export class RectAggregatorClient {
   private requestIndex = 0;
+  // Nonce distributed to child frames so they can authenticate their Blur replies.
+  readonly nonce = crypto.randomUUID();
   private callback:
     | ((elementRects: ElementRects[] | "Complete") => void)
     | null = null;
@@ -22,6 +24,7 @@ export class RectAggregatorClient {
 
     postMessageTo(window, "com.github.kui.knavi.AllRectsRequest", {
       id: ++this.requestIndex,
+      nonce: this.nonce,
       viewport: {
         type: "actual-viewport",
         origin: "root-viewport",

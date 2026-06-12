@@ -9,6 +9,8 @@ export class BlurerContentAll {
   handleBlurMessage(
     source: MessageEventSource | null,
     rectJson: RectJSON<"element-border", "layout-viewport"> | null,
+    // Nonce to echo in the relay so the parent can authenticate it.
+    parentNonce: string | null,
   ) {
     if (!source) {
       console.warn("Unexpected event source: ", source);
@@ -21,7 +23,7 @@ export class BlurerContentAll {
       return;
 
     const rect = buildBlurRect(source, rectJson);
-    postMessageTo(parent, "com.github.kui.knavi.Blur", { rect });
+    postMessageTo(parent, "com.github.kui.knavi.Blur", { nonce: parentNonce, rect });
   }
 }
 
