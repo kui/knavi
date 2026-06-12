@@ -46,21 +46,22 @@ const RELEVANT_KEYS = [
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-chrome.storage.onChanged.addListener((changes) => {
-  if (!RELEVANT_KEYS.some((k) => k in changes)) return;
+function scheduleSetup() {
   if (debounceTimer !== null) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     debounceTimer = null;
     if (hinterClient.isHinting) {
-      // Re-schedule; apply settings after the hint session ends.
-      debounceTimer = setTimeout(() => {
-        debounceTimer = null;
-        setup().catch(printError);
-      }, 200);
+      // Still hinting; keep re-checking until the session ends.
+      scheduleSetup();
       return;
     }
     setup().catch(printError);
   }, 200);
+}
+
+chrome.storage.onChanged.addListener((changes) => {
+  if (!RELEVANT_KEYS.some((k) => k in changes)) return;
+  scheduleSetup();
 });
 
 chrome.runtime.onMessage.addListener(
