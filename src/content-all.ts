@@ -113,9 +113,11 @@ window.addEventListener(
       // source === window is a relay-to-self (root-frame blur); BlurerContentAll ignores it.
       // For child-frame sources, require the nonce sent in AllRectsRequest to prevent
       // forged Blur messages from third-party or malicious iframes.
+      const activeNonce = rectAggregator.getActiveChildNonce();
       if (
         e.source !== window &&
-        e.data.nonce !== rectAggregator.getChildNonce()
+        activeNonce !== null &&
+        e.data.nonce !== activeNonce
       ) {
         console.warn("Blur dropped: invalid nonce from", e.source);
         return;

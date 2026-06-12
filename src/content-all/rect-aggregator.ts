@@ -35,9 +35,15 @@ export class RectAggregatorContentAll {
   private readonly frameIdPromise = sendToRuntime("GetFrameId", undefined);
   // Nonce sent to child frames in AllRectsRequest; child frames echo it back in Blur.
   private readonly childNonce = crypto.randomUUID();
+  // True once the nonce has been distributed to at least one child frame.
+  // Nonce enforcement is deferred until then so blur-key presses before the
+  // first hint cycle are not silently dropped.
+  private childNonceDistributed = false;
 
-  getChildNonce(): string {
-    return this.childNonce;
+  // Returns the nonce only after it has been distributed to child frames.
+  // Returns null before any hint cycle, allowing pre-session Blur through.
+  getActiveChildNonce(): string | null {
+    return this.childNonceDistributed ? this.childNonce : null;
   }
 
   async handleAllRectsRequest(
@@ -163,6 +169,7 @@ export class RectAggregatorContentAll {
       return;
     }
 
+    this.childNonceDistributed = true;
     postMessageTo(frame.contentWindow, "com.github.kui.knavi.AllRectsRequest", {
       id: requestId,
       nonce: this.childNonce,
