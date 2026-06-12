@@ -157,7 +157,11 @@ HANDLERS.push({
   async handle(target: HTMLInputElement) {
     target.focus();
     await nextAnimationFrame();
-    target.showPicker();
+    try {
+      target.showPicker();
+    } catch {
+      // NotAllowedError when the frame lacks user activation; focus is enough.
+    }
   },
 });
 
@@ -205,7 +209,11 @@ HANDLERS.push({
     target.focus();
     await nextAnimationFrame();
     if ("showPicker" in target && typeof target.showPicker === "function") {
-      target.showPicker();
+      try {
+        target.showPicker();
+      } catch {
+        // NotAllowedError when the frame lacks user activation; focus is enough.
+      }
     }
   },
 });
