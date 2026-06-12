@@ -23,7 +23,10 @@ export class BlurerContentAll {
       return;
 
     const rect = buildBlurRect(source, rectJson);
-    postMessageTo(parent, "com.github.kui.knavi.Blur", { nonce: parentNonce, rect });
+    postMessageTo(parent, "com.github.kui.knavi.Blur", {
+      nonce: parentNonce,
+      rect,
+    });
   }
 }
 
