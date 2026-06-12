@@ -3,6 +3,7 @@ import { KeyboardHandlerContentAll as KeyboardHandler } from "./content-all/keyb
 import { BlurerContentAll as Blurer } from "./content-all/blurer";
 import settingsClient from "./lib/settings-client";
 import { printError } from "./lib/errors";
+import { debounceUntilReady } from "./lib/debounce";
 import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
 import { Router as DOMMessageRouter } from "./dom/dom-messages";
@@ -44,20 +45,11 @@ const RELEVANT_KEYS = [
   "blackList",
 ];
 
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-function scheduleSetup() {
-  if (debounceTimer !== null) clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    debounceTimer = null;
-    if (hinterClient.isHinting) {
-      // Still hinting; keep re-checking until the session ends.
-      scheduleSetup();
-      return;
-    }
-    setup().catch(printError);
-  }, 200);
-}
+const scheduleSetup = debounceUntilReady(
+  () => setup().catch(printError),
+  200,
+  () => !hinterClient.isHinting,
+);
 
 chrome.storage.onChanged.addListener((changes) => {
   if (!RELEVANT_KEYS.some((k) => k in changes)) return;
