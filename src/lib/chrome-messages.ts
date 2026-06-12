@@ -48,6 +48,19 @@ interface Messages {
     };
     response: void;
   };
+
+  // Frame nonce exchange — used to authenticate window.postMessage Blur messages.
+  // Each content-all frame registers its childNonce at startup, and child frames
+  // retrieve their parent's nonce so Blur can be verified from the first keypress.
+  RegisterFrameNonce: {
+    payload: { nonce: string };
+    response: void;
+  };
+  // parentFrameId is obtained by the content script via chrome.runtime.getFrameId(window.parent).
+  GetParentNonce: {
+    payload: { parentFrameId: number };
+    response: string | null;
+  };
 }
 
 type Message<T extends keyof Messages> = {

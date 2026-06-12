@@ -7,19 +7,38 @@ import { wait } from "./lib/promises";
 import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
 import { Router as DOMMessageRouter } from "./dom/dom-messages";
-import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
+import { Router as ChromeMessageRouter, sendToRuntime } from "./lib/chrome-messages";
 import { Coordinates, Rect } from "./dom/rects";
 
 globalThis.KNAVI_FILE = "content-all";
 
-// Nonce received from parent frame in AllRectsRequest; echoed back in Blur messages
-// so the parent can verify the message came from a knavi-controlled frame.
+// Nonce received from parent frame; echoed back in Blur so the parent can verify
+// the message came from a knavi-controlled frame.  Initialized at startup via
+// chrome.runtime (unforgeable) so that blur-key presses work before the first
+// hint cycle.
 let parentNonce: string | null = null;
+
+const rectAggregator = new RectAggregator();
+
+// Register this frame's childNonce with the background and, for non-root frames,
+// fetch the parent frame's nonce.  Both calls go over chrome.runtime which page
+// scripts cannot intercept.
+(async () => {
+  await sendToRuntime("RegisterFrameNonce", {
+    nonce: rectAggregator.getChildNonce(),
+  });
+  if (window !== window.parent) {
+    // chrome.runtime.getFrameId is available since Chrome 106 (min version 114).
+    const parentFrameId = (
+      chrome.runtime as unknown as { getFrameId(w: Window): number }
+    ).getFrameId(window.parent);
+    parentNonce = await sendToRuntime("GetParentNonce", { parentFrameId });
+  }
+})().catch(printError);
 
 const blurerClient = new BlurerClient(() => parentNonce);
 const hinterClient = new HinterClient();
 const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
-const rectAggregator = new RectAggregator();
 const blurer = new Blurer();
 
 async function setup() {
@@ -113,11 +132,9 @@ window.addEventListener(
       // source === window is a relay-to-self (root-frame blur); BlurerContentAll ignores it.
       // For child-frame sources, require the nonce sent in AllRectsRequest to prevent
       // forged Blur messages from third-party or malicious iframes.
-      const activeNonce = rectAggregator.getActiveChildNonce();
       if (
         e.source !== window &&
-        activeNonce !== null &&
-        e.data.nonce !== activeNonce
+        e.data.nonce !== rectAggregator.getChildNonce()
       ) {
         console.warn("Blur dropped: invalid nonce from", e.source);
         return;
