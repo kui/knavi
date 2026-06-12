@@ -150,7 +150,6 @@ window.addEventListener(
         console.warn("AllRectsRequest dropped: unexpected source", e.source);
         return;
       }
-      parentNonce = e.data.nonce;
       const { id, viewport, offsets } = e.data;
       await rectAggregator.handleAllRectsRequest(
         id,

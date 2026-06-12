@@ -33,7 +33,7 @@ export class RectAggregatorContentAll {
   private elements: ElementProfile[] = [];
   private readonly actionFinder: ActionFinder | null = null;
   private readonly frameIdPromise = sendToRuntime("GetFrameId", undefined);
-  // Nonce sent to child frames in AllRectsRequest; child frames echo it back in Blur.
+  // Nonce echoed by child frames in Blur messages; verified here to authenticate them.
   private readonly childNonce = crypto.randomUUID();
 
   getChildNonce(): string {
@@ -165,7 +165,6 @@ export class RectAggregatorContentAll {
 
     postMessageTo(frame.contentWindow, "com.github.kui.knavi.AllRectsRequest", {
       id: requestId,
-      nonce: this.childNonce,
       viewport: iframeViewport,
       offsets: { ...contentRect, type: "layout-viewport" },
     });
