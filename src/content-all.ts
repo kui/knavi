@@ -7,7 +7,10 @@ import { wait } from "./lib/promises";
 import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
 import { Router as DOMMessageRouter } from "./dom/dom-messages";
-import { Router as ChromeMessageRouter, sendToRuntime } from "./lib/chrome-messages";
+import {
+  Router as ChromeMessageRouter,
+  sendToRuntime,
+} from "./lib/chrome-messages";
 import { Coordinates, Rect } from "./dom/rects";
 
 globalThis.KNAVI_FILE = "content-all";
