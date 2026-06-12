@@ -61,17 +61,8 @@ type Handler<T extends keyof Messages> = (
 ) => Response<T> | Promise<Response<T>>;
 
 type SendResponseArg<T extends keyof Messages> =
-  | {
-      response: Response<T>;
-    }
-  | {
-      error: {
-        name?: string;
-        message: string;
-        stack?: string;
-        cause?: unknown;
-      };
-    };
+  | { response: Response<T> }
+  | { error: Error };
 
 function type<T extends keyof Messages>(m: Message<T>): T {
   return m["@type"];
@@ -173,26 +164,11 @@ function buildErrorArg<T extends keyof Messages>(
   console.warn(error);
 
   if (error instanceof Error) {
-    return {
-      error: {
-        name: error.name,
-        message: error.message,
-        cause: error.cause,
-        stack: error.stack,
-      },
-    };
+    return { error };
   } else if (typeof error === "string") {
-    return {
-      error: {
-        message: error,
-      },
-    };
+    return { error: new Error(error) };
   } else {
-    return {
-      error: {
-        message: JSON.stringify(error),
-      },
-    };
+    return { error: new Error(JSON.stringify(error)) };
   }
 }
 
@@ -207,7 +183,7 @@ export async function sendToRuntime<T extends keyof Messages>(
     throw Error(
       `No response for ${type}: receiver missing or handler not registered`,
     );
-  if ("error" in r) throw Error(r.error.message, { cause: r.error });
+  if ("error" in r) throw r.error;
   return r.response;
 }
 
@@ -226,6 +202,6 @@ export async function sendToTab<T extends keyof Messages>(
     throw Error(
       `No response for ${type}: receiver missing or handler not registered`,
     );
-  if ("error" in r) throw Error(r.error.message, { cause: r.error });
+  if ("error" in r) throw r.error;
   return r.response;
 }
