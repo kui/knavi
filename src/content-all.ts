@@ -23,7 +23,6 @@ let parentNonce: string | null = null;
 
 // Nonce this frame distributes; child frames echo it back in Blur for verification.
 const childNonce = crypto.randomUUID();
-const rectAggregator = new RectAggregator();
 
 // Register childNonce with the background and, for non-root frames, fetch the
 // parent frame's nonce.  Both calls go over chrome.runtime which page scripts
@@ -42,6 +41,7 @@ const rectAggregator = new RectAggregator();
 const blurerClient = new BlurerClient(() => parentNonce);
 const hinterClient = new HinterClient();
 const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
+const rectAggregator = new RectAggregator();
 const blurer = new Blurer();
 
 async function setup() {
