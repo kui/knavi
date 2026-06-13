@@ -17,3 +17,4 @@ test-results/
 npm-debug.log
 
 /.claude
+/.eslintcache
