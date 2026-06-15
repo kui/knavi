@@ -8,7 +8,8 @@ export class BlurerContentAll {
     childFrameId: number,
     rectJson: RectJSON<"element-border", "layout-viewport"> | null,
   ) {
-    if (parent === window) return;
+    // Registered only in sub-frames (see content-all.ts), so the relay always
+    // needs to be transformed and forwarded one level up.
     if (!rectJson) {
       console.warn("Unexpected origin rect:", rectJson);
       return;

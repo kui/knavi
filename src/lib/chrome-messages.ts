@@ -221,6 +221,18 @@ function buildErrorArg<T extends keyof Messages>(
   }
 }
 
+function unwrapResponse<T extends keyof Messages>(
+  type: T,
+  r: SendResponseArg<T> | undefined | null,
+): Response<T> {
+  if (r == null)
+    throw Error(
+      `No response for ${type}: receiver missing or handler not registered`,
+    );
+  if ("error" in r) throw r.error;
+  return r.response;
+}
+
 export async function sendToRuntime<T extends keyof Messages>(
   type: T,
 ): Promise<Response<T>>;
@@ -235,12 +247,7 @@ export async function sendToRuntime<T extends keyof Messages>(
   const r = await chrome.runtime.sendMessage<Message<T>, SendResponseArg<T>>(
     message(type, payload),
   );
-  if (r == null)
-    throw Error(
-      `No response for ${type}: receiver missing or handler not registered`,
-    );
-  if ("error" in r) throw r.error;
-  return r.response;
+  return unwrapResponse(type, r);
 }
 
 export async function sendToTab<T extends keyof Messages>(
@@ -254,10 +261,5 @@ export async function sendToTab<T extends keyof Messages>(
     message(type, payload),
     options,
   );
-  if (r == null)
-    throw Error(
-      `No response for ${type}: receiver missing or handler not registered`,
-    );
-  if ("error" in r) throw r.error;
-  return r.response;
+  return unwrapResponse(type, r);
 }
