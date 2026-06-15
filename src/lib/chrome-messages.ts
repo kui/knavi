@@ -229,13 +229,6 @@ function unwrapResponse<T extends keyof Messages>(
 
 export async function sendToRuntime<T extends keyof Messages>(
   type: T,
-): Promise<Response<T>>;
-export async function sendToRuntime<T extends keyof Messages>(
-  type: T,
-  payload: MessagePayload<T>,
-): Promise<Response<T>>;
-export async function sendToRuntime<T extends keyof Messages>(
-  type: T,
   payload?: MessagePayload<T>,
 ): Promise<Response<T>> {
   const r = await chrome.runtime.sendMessage<Message<T>, SendResponseArg<T>>(
