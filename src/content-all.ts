@@ -6,17 +6,26 @@ import { printError } from "./lib/errors";
 import { wait } from "./lib/promises";
 import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
-import { Router as DOMMessageRouter } from "./dom/dom-messages";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
-import { Coordinates, Rect } from "./dom/rects";
+import {
+  listenForChildFrames,
+  registerWithParent,
+} from "./dom/frame-registration";
 
 globalThis.KNAVI_FILE = "content-all";
+
+const iframeMap = new Map<number, HTMLIFrameElement>();
+listenForChildFrames(iframeMap, true);
+registerWithParent().catch(console.warn);
+
+// Keep a port open so background can detect when this frame unloads.
+chrome.runtime.connect({ name: "knavi-frame" });
 
 const blurerClient = new BlurerClient();
 const hinterClient = new HinterClient();
 const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
-const rectAggregator = new RectAggregator();
-const blurer = new Blurer();
+const rectAggregator = new RectAggregator(iframeMap);
+const blurer = new Blurer(iframeMap);
 
 async function setup() {
   const [setting, matchedBlacklist] = await Promise.all([
@@ -75,6 +84,12 @@ chrome.runtime.onMessage.addListener(
     .add("ExecuteAction", ({ id, options }) =>
       rectAggregator.handleExecuteAction(id.index, options),
     )
+    .add("BlurRelay", ({ childFrameId, rect }) =>
+      blurer.handleBlurRelay(childFrameId, rect),
+    )
+    .add("FetchFrameRects", ({ requestId }) =>
+      rectAggregator.handleFetchFrameRects(requestId),
+    )
     .buildListener(),
 );
 
@@ -107,21 +122,4 @@ window.addEventListener(
     }
   },
   true,
-);
-
-window.addEventListener(
-  "message",
-  new DOMMessageRouter()
-    .add("com.github.kui.knavi.Blur", (e) =>
-      blurer.handleBlurMessage(e.source, e.data.rect),
-    )
-    .add("com.github.kui.knavi.AllRectsRequest", async (e) => {
-      const { id, viewport, offsets } = e.data;
-      await rectAggregator.handleAllRectsRequest(
-        id,
-        new Rect(viewport),
-        new Coordinates(offsets),
-      );
-    })
-    .buildListener(),
 );

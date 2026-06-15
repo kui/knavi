@@ -1,13 +1,45 @@
 import { Router, sendToTab } from "../lib/chrome-messages";
-import { requireFrameId, requireTabId } from "./sender-guards";
+import { requireTabId } from "./sender-guards";
+import { getAllFrameIds } from "./frame-registry";
+import { Rect } from "../lib/rects";
 
 export const router = Router.newInstance()
-  .add("GetFrameId", (_, sender) => requireFrameId(sender))
+  .add("InitAllRects", async ({ requestId }, sender) => {
+    const tabId = requireTabId(sender);
+    const frameIds = getAllFrameIds(tabId);
 
-  .add("ResponseRectsFragment", async (message, sender) => {
-    await sendToTab(requireTabId(sender), "ResponseRectsFragment", message, {
-      frameId: 0,
-    });
+    const responses = await Promise.allSettled(
+      frameIds.map(async (frameId) => {
+        const response = await sendToTab(
+          tabId,
+          "FetchFrameRects",
+          { requestId },
+          { frameId },
+        );
+        return { frameId, response };
+      }),
+    );
+
+    const frameData = new Map<number, FrameResponse>();
+    for (const result of responses) {
+      if (result.status === "fulfilled") {
+        frameData.set(result.value.frameId, result.value.response);
+      } else {
+        console.debug("FetchFrameRects failed:", result.reason);
+      }
+    }
+
+    const composed = composeFrame(0, { x: 0, y: 0 }, null, frameData);
+
+    // Always send ResponseRectsFragment (even when empty) so that the
+    // root frame's aggregate() generator receives at least one message
+    // and does not hang indefinitely.
+    await sendToTab(
+      tabId,
+      "ResponseRectsFragment",
+      { requestId, rects: composed },
+      { frameId: 0 },
+    );
   })
 
   .add("ExecuteAction", async (message, sender) => {
@@ -15,3 +47,74 @@ export const router = Router.newInstance()
       frameId: message.id.frameId,
     });
   });
+
+interface FrameOffset {
+  x: number;
+  y: number;
+}
+
+type FrameResponse = Awaited<ReturnType<typeof sendToTab<"FetchFrameRects">>>;
+type ClipRect = RectJSON<"actual-viewport", "root-viewport">;
+
+function composeFrame(
+  frameId: number,
+  offset: FrameOffset,
+  clip: ClipRect | null,
+  frameData: Map<number, FrameResponse>,
+): ElementRects[] {
+  const data = frameData.get(frameId);
+  if (!data) return [];
+
+  const result: ElementRects[] = [];
+
+  for (const elem of data.elements) {
+    const translatedRects = elem.rects
+      .map((r) => ({
+        ...r,
+        x: r.x + offset.x,
+        y: r.y + offset.y,
+        origin: "root-viewport" as const,
+      }))
+      .filter(
+        (r) =>
+          clip === null ||
+          Rect.intersection("element-border", r, clip) !== null,
+      );
+    if (translatedRects.length > 0) {
+      result.push({
+        id: { index: elem.index, frameId },
+        rects: translatedRects,
+        descriptions: elem.descriptions,
+      });
+    }
+  }
+
+  for (const child of data.childIframes) {
+    const childOffset: FrameOffset = {
+      x: offset.x + child.contentOffsets.x,
+      y: offset.y + child.contentOffsets.y,
+    };
+
+    let childClip: ClipRect | null = null;
+    if (child.visibleViewport) {
+      const translatedVisible: ClipRect = {
+        ...child.visibleViewport,
+        x: child.visibleViewport.x + offset.x,
+        y: child.visibleViewport.y + offset.y,
+        origin: "root-viewport",
+      };
+      childClip =
+        clip === null
+          ? translatedVisible
+          : Rect.intersectionWithSameType(translatedVisible, clip);
+    }
+
+    if (childClip === null) continue;
+
+    result.push(
+      ...composeFrame(child.childFrameId, childOffset, childClip, frameData),
+    );
+  }
+
+  return result;
+}

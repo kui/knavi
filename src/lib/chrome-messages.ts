@@ -33,9 +33,51 @@ interface Messages {
     payload: { options: ActionOptions; execute: boolean };
     response: void;
   };
+  // Background → frame: ask background for the calling frame's own frameId.
   GetFrameId: {
-    payload: void;
+    payload: Record<string, never>;
     response: number;
+  };
+  // Parent frame → background: register a child frame's frameId.
+  // sender.frameId is the parent; childFrameId is the child.
+  RegisterChildFrame: {
+    payload: { childFrameId: number };
+    response: void;
+  };
+  // Child frame → background: relay blur upward through frame hierarchy.
+  BlurUp: {
+    payload: { rect: RectJSON<"element-border", "layout-viewport"> | null };
+    response: void;
+  };
+  // Background → parent/root frame: relay blur from child.
+  // childFrameId === 0 means the root frame is blurring itself (no iframe transform).
+  BlurRelay: {
+    payload: {
+      childFrameId: number;
+      rect: RectJSON<"element-border", "layout-viewport"> | null;
+    };
+    response: void;
+  };
+  // Root frame → background: start fan-out to collect rects from all frames.
+  InitAllRects: {
+    payload: { requestId: number };
+    response: void;
+  };
+  // Background → each frame: request local rects + child iframe geometry.
+  FetchFrameRects: {
+    payload: { requestId: number };
+    response: {
+      elements: {
+        index: number;
+        rects: RectJSON<"element-border", "layout-viewport">[];
+        descriptions: ActionDescriptions;
+      }[];
+      childIframes: {
+        childFrameId: number;
+        contentOffsets: CoordinatesJSON<"element-content", "layout-viewport">;
+        visibleViewport: RectJSON<"actual-viewport", "layout-viewport"> | null;
+      }[];
+    };
   };
   ExecuteAction: {
     payload: { id: ElementId; options: ActionOptions };
