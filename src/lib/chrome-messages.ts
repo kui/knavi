@@ -163,6 +163,12 @@ export class Router<
     return this;
   }
 
+  // Do NOT add a mergeAll() convenience method that takes variadic Router
+  // arguments.  Router generics are invariant, so heterogeneous Router<>s
+  // cannot be collected into a tuple without resorting to Router<any>, which
+  // defeats compile-time duplicate-detection.  Use chained .merge() instead:
+  //   r.merge(a).merge(b).merge(c).buildListener()
+
   // Returns true if the message is handled asynchronously.
   // See https://developer.chrome.com/docs/extensions/mv3/messaging/#simple.
   private route<T extends keyof Messages>(
