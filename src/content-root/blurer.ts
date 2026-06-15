@@ -1,6 +1,5 @@
 import BlurView from "./blurer-view";
 import { transformBlurRect } from "../dom/blur-rect";
-import { Rect } from "../dom/rects";
 
 if (parent !== window)
   throw Error("This script must be loaded in the root frame.");
@@ -20,7 +19,13 @@ export class BlurerContentRoot {
       return;
     }
 
-    const rect = this.toRootViewport(childFrameId, rectJson);
+    // In root frame, layout-viewport === root-viewport.
+    const rect = transformBlurRect(
+      this.iframeMap,
+      childFrameId,
+      rectJson,
+      "root-viewport",
+    );
     if (!rect) return;
 
     const activeElement = document.activeElement;
@@ -28,18 +33,5 @@ export class BlurerContentRoot {
     (activeElement.blur as () => void)();
 
     this.view.blur(rect);
-  }
-
-  // In root frame, layout-viewport === root-viewport.
-  private toRootViewport(
-    childFrameId: number,
-    rectJson: RectJSON<"element-border", "layout-viewport">,
-  ): Rect<"element-border", "root-viewport"> | null {
-    return transformBlurRect(
-      this.iframeMap,
-      childFrameId,
-      rectJson,
-      "root-viewport",
-    );
   }
 }

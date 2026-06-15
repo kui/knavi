@@ -1,7 +1,7 @@
 import type { SingleLetter } from "./strings";
 
 // TODO separate by the handler (background, content, popup, etc)
-interface Messages {
+export interface Messages {
   // Settings
   GetSettings: {
     payload: { names: (keyof Settings)[] };
@@ -112,8 +112,9 @@ function type<T extends keyof Messages>(m: Message<T>): T {
 
 function message<T extends keyof Messages>(
   type: T,
-  payload: MessagePayload<T>,
+  payload?: MessagePayload<T>,
 ): Message<T> {
+  if (payload === undefined) return { "@type": type } as Message<T>;
   return { "@type": type, ...payload };
 }
 
@@ -158,6 +159,16 @@ export class Router<
   ): Router<Exclude<RegisteredTypes | T, void>> {
     for (const [type, handler] of router.handlers) {
       this.handlers.set(type, handler);
+    }
+    return this;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- merging heterogeneous routers
+  mergeAll(...routers: Router<any>[]): Router<any> {
+    for (const router of routers) {
+      for (const [type, handler] of router.handlers) {
+        this.handlers.set(type, handler);
+      }
     }
     return this;
   }
@@ -226,7 +237,7 @@ export async function sendToRuntime<T extends keyof Messages>(
   payload?: MessagePayload<T>,
 ): Promise<Response<T>> {
   const r = await chrome.runtime.sendMessage<Message<T>, SendResponseArg<T>>(
-    message(type, payload ?? ({} as MessagePayload<T>)),
+    message(type, payload),
   );
   if (r == null)
     throw Error(

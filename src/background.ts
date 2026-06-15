@@ -12,11 +12,16 @@ globalThis.KNAVI_FILE = "background";
 migration.init(libSettings);
 actionIcon.init();
 
+import { Router } from "./lib/chrome-messages";
+
 chrome.runtime.onMessage.addListener(
-  rectAggregator.router
-    .merge(hinter.router)
-    .merge(blurer.router)
-    .merge(frameRegistry.router)
-    .merge(settings.router)
+  Router.newInstance()
+    .mergeAll(
+      rectAggregator.router,
+      hinter.router,
+      blurer.router,
+      frameRegistry.router,
+      settings.router,
+    )
     .buildListener(),
 );
