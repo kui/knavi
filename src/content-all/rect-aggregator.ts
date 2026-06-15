@@ -153,7 +153,10 @@ function collectChildIframes(
   }[] = [];
 
   for (const [childFrameId, iframe] of iframeMap) {
-    if (!iframe.isConnected) continue;
+    if (!iframe.isConnected) {
+      iframeMap.delete(childFrameId);
+      continue;
+    }
 
     const [contentRect] = getContentRects(
       iframe,

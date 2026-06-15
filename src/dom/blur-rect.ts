@@ -29,6 +29,7 @@ export function transformBlurRect(
   const sourceIframe = iframeMap.get(childFrameId);
   if (!sourceIframe?.isConnected) {
     console.warn("Blur target iframe not found for childFrameId", childFrameId);
+    iframeMap.delete(childFrameId);
     return null;
   }
   const sourceViewport = getContentRects(sourceIframe)[0];
