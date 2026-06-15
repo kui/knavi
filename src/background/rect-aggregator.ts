@@ -1,4 +1,4 @@
-import { Router, sendToTab } from "../lib/chrome-messages";
+import { Router, sendToTab, type Messages } from "../lib/chrome-messages";
 import { requireTabId } from "./sender-guards";
 import { getAllFrameIds } from "./frame-registry";
 import { Rect } from "../lib/rects";
@@ -53,7 +53,7 @@ interface FrameOffset {
   y: number;
 }
 
-type FrameResponse = Awaited<ReturnType<typeof sendToTab<"FetchFrameRects">>>;
+type FrameResponse = Messages["FetchFrameRects"]["response"];
 type ClipRect = RectJSON<"actual-viewport", "root-viewport">;
 
 function composeFrame(

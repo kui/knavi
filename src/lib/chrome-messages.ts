@@ -1,7 +1,7 @@
 import type { SingleLetter } from "./strings";
 
 // TODO separate by the handler (background, content, popup, etc)
-interface Messages {
+export interface Messages {
   // Settings
   GetSettings: {
     payload: { names: (keyof Settings)[] };
@@ -112,8 +112,9 @@ function type<T extends keyof Messages>(m: Message<T>): T {
 
 function message<T extends keyof Messages>(
   type: T,
-  payload: MessagePayload<T>,
+  payload?: MessagePayload<T>,
 ): Message<T> {
+  if (payload === undefined) return { "@type": type } as Message<T>;
   return { "@type": type, ...payload };
 }
 
@@ -161,6 +162,12 @@ export class Router<
     }
     return this;
   }
+
+  // Do NOT add a mergeAll() convenience method that takes variadic Router
+  // arguments.  Router generics are invariant, so heterogeneous Router<>s
+  // cannot be collected into a tuple without resorting to Router<any>, which
+  // defeats compile-time duplicate-detection.  Use chained .merge() instead:
+  //   r.merge(a).merge(b).merge(c).buildListener()
 
   // Returns true if the message is handled asynchronously.
   // See https://developer.chrome.com/docs/extensions/mv3/messaging/#simple.
@@ -226,7 +233,7 @@ export async function sendToRuntime<T extends keyof Messages>(
   payload?: MessagePayload<T>,
 ): Promise<Response<T>> {
   const r = await chrome.runtime.sendMessage<Message<T>, SendResponseArg<T>>(
-    message(type, payload ?? ({} as MessagePayload<T>)),
+    message(type, payload),
   );
   if (r == null)
     throw Error(
