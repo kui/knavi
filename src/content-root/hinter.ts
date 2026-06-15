@@ -36,21 +36,20 @@ export class HinterContentRoot {
 
     await waitUntil(() => Boolean(document.body));
 
-    const hintTextGenerator = this.generateHintTexts();
-    for await (const elementRects of this.rectAggregator.aggregate()) {
-      if (!this.view.isStarted()) this.view.start();
-      if (elementRects.length === 0) continue;
-      const hintTexts = take(hintTextGenerator, elementRects.length);
-      hintTexts.sort(this.compareByHintLettersOrder());
-      const targets: HintedElement[] = [
-        ...map(
-          zip(elementRects, hintTexts),
-          ([er, hint]): HintedElement => ({ state: "init", hint, ...er }),
-        ),
-      ];
-      this.context.targets.push(...targets);
-      this.view.render(targets);
-    }
+    const elementRects = await this.rectAggregator.aggregate();
+    this.view.start();
+    if (elementRects.length === 0) return;
+
+    const hintTexts = take(this.generateHintTexts(), elementRects.length);
+    hintTexts.sort(this.compareByHintLettersOrder());
+    const targets: HintedElement[] = [
+      ...map(
+        zip(elementRects, hintTexts),
+        ([er, hint]): HintedElement => ({ state: "init", hint, ...er }),
+      ),
+    ];
+    this.context.targets.push(...targets);
+    this.view.render(targets);
   }
 
   // TODO We can meke this function better for keyboard typing.
