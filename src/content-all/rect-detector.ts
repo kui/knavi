@@ -61,7 +61,7 @@ export class RectDetector {
           timerEnd = this.timers.start("viewport intersection");
           // out of viewport
           let croppedRect: Rect<"element-border", "layout-viewport"> | null =
-            Rect.intersection("element-border", rect, this.viewport);
+            Rect.intersectionAs("element-border", rect, this.viewport);
           timerEnd();
           if (!croppedRect || isSmallRect(croppedRect)) return [];
 
@@ -140,7 +140,6 @@ export class RectDetector {
     if (!parentRect) return null;
 
     const cropped = Rect.intersection(
-      "element-border",
       rect,
       parentRect.offsets(this.viewport.reverse()),
     );

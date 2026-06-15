@@ -52,8 +52,22 @@ export class Rect<Type extends CoordinateType, Origin extends CoordinateType>
     this.height = json.height;
   }
 
-  // Returns null if the rects don't intersect.
+  // Intersects rects that share the same coordinate Type; the result Type is
+  // inferred from the inputs. Prefer this over intersectionAs: mixing rects of
+  // different Types is then a compile error. Returns null if they don't
+  // intersect.
   static intersection<
+    Type extends CoordinateType,
+    Origin extends CoordinateType,
+  >(...rects: RectJSON<Type, Origin>[]): Rect<Type, Origin> | null {
+    if (rects.length === 0) return null;
+    return Rect.intersectionAs(rects[0].type, ...rects);
+  }
+
+  // Intersects rects that may differ in coordinate Type, relabeling the result
+  // with the explicitly given `type`. Use only when the cross-type
+  // reinterpretation is intentional. Returns null if they don't intersect.
+  static intersectionAs<
     Type extends CoordinateType,
     Origin extends CoordinateType,
   >(
@@ -159,7 +173,7 @@ export class Rect<Type extends CoordinateType, Origin extends CoordinateType>
     const newRects: Rect<Type, Origin>[] = [...rects];
     let isIntersected = false;
     for (const rect of rects) {
-      const intersection = Rect.intersection(this.type, this, rect);
+      const intersection = Rect.intersection(this, rect);
       if (intersection) {
         isIntersected = true;
         newRects.splice(newRects.indexOf(rect), 1, Rect.boundRects(this, rect));

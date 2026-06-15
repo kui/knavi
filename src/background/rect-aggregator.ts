@@ -72,7 +72,7 @@ function composeFrame(
       .filter(
         (r) =>
           clip === null ||
-          Rect.intersection("element-border", r, clip) !== null,
+          Rect.intersectionAs("element-border", r, clip) !== null,
       );
     if (translatedRects.length > 0) {
       result.push({
@@ -98,7 +98,7 @@ function composeFrame(
     const childClip: ClipRect | null =
       clip === null
         ? translatedVisible
-        : Rect.intersection(translatedVisible.type, translatedVisible, clip);
+        : Rect.intersection(translatedVisible, clip);
 
     result.push(
       ...composeFrame(child.childFrameId, childOffset, childClip, frameData),

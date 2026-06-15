@@ -169,7 +169,7 @@ function collectChildIframes(
     );
     if (!contentRect) continue;
 
-    const visibleViewport = Rect.intersection(
+    const visibleViewport = Rect.intersectionAs(
       "actual-viewport",
       borderRect,
       viewport,
