@@ -11,7 +11,8 @@ function isKnaviFrameIdMessage(data: unknown): data is KnaviFrameIdMessage {
   return (
     typeof data === "object" &&
     data !== null &&
-    (data as Record<string, unknown>).type === KNAVI_FRAME_ID_MSG
+    (data as Record<string, unknown>).type === KNAVI_FRAME_ID_MSG &&
+    typeof (data as Record<string, unknown>).frameId === "number"
   );
 }
 
