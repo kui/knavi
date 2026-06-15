@@ -240,49 +240,13 @@ export async function sendToRuntime<T extends keyof Messages>(
 export async function sendToTab<T extends keyof Messages>(
   tabId: number,
   type: T,
+  payload?: MessagePayload<T>,
   options?: chrome.tabs.MessageSendOptions,
-): Promise<Response<T>>;
-export async function sendToTab<T extends keyof Messages>(
-  tabId: number,
-  type: T,
-  payload: MessagePayload<T>,
-  options?: chrome.tabs.MessageSendOptions,
-): Promise<Response<T>>;
-export async function sendToTab<T extends keyof Messages>(
-  tabId: number,
-  type: T,
-  payloadOrOptions?: MessagePayload<T> | chrome.tabs.MessageSendOptions,
-  maybeOptions?: chrome.tabs.MessageSendOptions,
 ): Promise<Response<T>> {
-  let payload: MessagePayload<T>;
-  let options: chrome.tabs.MessageSendOptions;
-  if (maybeOptions !== undefined) {
-    payload = payloadOrOptions as MessagePayload<T>;
-    options = maybeOptions;
-  } else if (payloadOrOptions === undefined) {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    payload = undefined as MessagePayload<T>;
-    options = {};
-  } else if (isMessageSendOptions(payloadOrOptions)) {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    payload = undefined as MessagePayload<T>;
-    options = payloadOrOptions;
-  } else {
-    payload = payloadOrOptions;
-    options = {};
-  }
   const r = await chrome.tabs.sendMessage<Message<T>, SendResponseArg<T>>(
     tabId,
     message(type, payload),
-    options,
+    options ?? {},
   );
   return unwrapResponse(type, r);
-}
-
-function isMessageSendOptions(
-  value: unknown,
-): value is chrome.tabs.MessageSendOptions {
-  if (typeof value !== "object" || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return "frameId" in v || "documentId" in v;
 }

@@ -10,7 +10,7 @@ export const router = Router.newInstance()
 
     const responses = await Promise.allSettled(
       frameIds.map(async (frameId) => {
-        const response = await sendToTab(tabId, "FetchFrameRects", {
+        const response = await sendToTab(tabId, "FetchFrameRects", undefined, {
           frameId,
         });
         return { frameId, response };
