@@ -1,6 +1,6 @@
 import { Z_INDEX_OFFSET, applyStyle, styleByRect } from "../dom/elements";
 import { flatMap } from "../lib/iters";
-import { Rect } from "../dom/rects";
+import { Rect } from "../lib/rects";
 import * as vp from "./viewports";
 
 const CONTAINER_ID = "com-github-kui-knavi-container";

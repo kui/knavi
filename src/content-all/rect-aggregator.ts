@@ -4,7 +4,7 @@ import { getClientRects, getContentRects, listAll } from "../dom/elements";
 import { flatMap } from "../lib/iters";
 import { Timers } from "../lib/metrics";
 import { RectDetector } from "./rect-detector";
-import { Coordinates, Rect } from "../dom/rects";
+import { Coordinates, Rect } from "../lib/rects";
 import settingsClient from "../lib/settings-client";
 
 interface ElementProfile {

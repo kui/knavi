@@ -1,5 +1,5 @@
 import { getContentRects } from "./elements";
-import { Rect } from "./rects";
+import { Rect } from "../lib/rects";
 
 export function transformBlurRect(
   iframeMap: Map<number, HTMLIFrameElement>,

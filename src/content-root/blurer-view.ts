@@ -4,7 +4,7 @@ import {
   applyStyle,
   getPaddingRects,
 } from "../dom/elements";
-import { Coordinates, Rect } from "../dom/rects";
+import { Coordinates, Rect } from "../lib/rects";
 
 const ANIMATION_DURATION_MS = 400;
 

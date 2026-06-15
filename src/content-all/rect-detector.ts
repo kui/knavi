@@ -3,7 +3,7 @@ import { getBoundingClientRect, traverseParent } from "../dom/elements";
 import { filter, first, flatMap } from "../lib/iters";
 import { Timers } from "../lib/metrics";
 import { PointerCrawler } from "./rect-detector-pointer-crawler";
-import { Rect } from "../dom/rects";
+import { Rect } from "../lib/rects";
 
 interface ElementRect {
   rect: Rect<"element-border", "layout-viewport">;

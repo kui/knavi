@@ -1,5 +1,5 @@
 import { Timers } from "../lib/metrics";
-import { Rect } from "../dom/rects";
+import { Rect } from "../lib/rects";
 
 interface Area {
   minX: number;
