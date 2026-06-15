@@ -14,7 +14,7 @@ export class BlurerContentRoot {
     childFrameId: number,
     rectJson: RectJSON<"element-border", "layout-viewport">,
   ) {
-    // In root frame, layout-viewport === root-viewport.
+    // In the root frame, layout-viewport coincides with root-viewport.
     const rect = transformBlurRect(
       this.iframeMap,
       childFrameId,

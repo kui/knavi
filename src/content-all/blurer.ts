@@ -10,7 +10,12 @@ export class BlurerContentAll {
   ) {
     // Registered only in sub-frames (see content-all.ts), so the relay always
     // needs to be transformed and forwarded one level up.
-    const rect = transformBlurRect(this.iframeMap, childFrameId, rectJson);
+    const rect = transformBlurRect(
+      this.iframeMap,
+      childFrameId,
+      rectJson,
+      "layout-viewport",
+    );
     if (!rect) return;
     sendToRuntime("BlurUp", { rect }).catch(console.warn);
   }
