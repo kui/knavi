@@ -21,13 +21,8 @@ export class RectAggregatorContentAll {
 
   constructor(private iframeMap: Map<number, HTMLIFrameElement>) {}
 
-  async handleFetchFrameRects(requestId: number) {
-    console.debug(
-      "FetchFrameRects requestId=",
-      requestId,
-      "location=",
-      location.href,
-    );
+  async handleFetchFrameRects() {
+    console.debug("FetchFrameRects location=", location.href);
 
     const clientRectsFetcher = new CachedFetcher((e: Element) =>
       getClientRects(e),

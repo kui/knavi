@@ -4,18 +4,15 @@ import { getAllFrameIds } from "./frame-registry";
 import { Rect } from "../lib/rects";
 
 export const router = Router.newInstance()
-  .add("InitAllRects", async ({ requestId }, sender) => {
+  .add("InitAllRects", async (_payload, sender) => {
     const tabId = requireTabId(sender);
     const frameIds = getAllFrameIds(tabId);
 
     const responses = await Promise.allSettled(
       frameIds.map(async (frameId) => {
-        const response = await sendToTab(
-          tabId,
-          "FetchFrameRects",
-          { requestId },
-          { frameId },
-        );
+        const response = await sendToTab(tabId, "FetchFrameRects", undefined, {
+          frameId,
+        });
         return { frameId, response };
       }),
     );
@@ -29,17 +26,7 @@ export const router = Router.newInstance()
       }
     }
 
-    const composed = composeFrame(0, { x: 0, y: 0 }, null, frameData);
-
-    // Always send ResponseRectsFragment (even when empty) so that the
-    // root frame's aggregate() generator receives at least one message
-    // and does not hang indefinitely.
-    await sendToTab(
-      tabId,
-      "ResponseRectsFragment",
-      { requestId, rects: composed },
-      { frameId: 0 },
-    );
+    return composeFrame(0, { x: 0, y: 0 }, null, frameData);
   })
 
   .add("ExecuteAction", async (message, sender) => {

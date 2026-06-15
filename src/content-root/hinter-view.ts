@@ -42,10 +42,6 @@ export class HintView {
     this.style.textContent = css;
   }
 
-  isStarted(): boolean {
-    return Boolean(this.hints);
-  }
-
   start() {
     if (this.hints) throw Error("Illegal state");
     const body = document.body;

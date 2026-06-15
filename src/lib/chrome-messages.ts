@@ -58,14 +58,15 @@ export interface Messages {
     };
     response: void;
   };
-  // Root frame → background: start fan-out to collect rects from all frames.
+  // Root frame → background: fan out to all frames and return the composed,
+  // root-viewport rects in a single response.
   InitAllRects: {
-    payload: { requestId: number };
-    response: void;
+    payload: void;
+    response: ElementRects[];
   };
   // Background → each frame: request local rects + child iframe geometry.
   FetchFrameRects: {
-    payload: { requestId: number };
+    payload: void;
     response: {
       elements: {
         index: number;
@@ -81,13 +82,6 @@ export interface Messages {
   };
   ExecuteAction: {
     payload: { id: ElementId; options: ActionOptions };
-    response: void;
-  };
-  ResponseRectsFragment: {
-    payload: {
-      requestId: number;
-      rects: ElementRects[];
-    };
     response: void;
   };
 }

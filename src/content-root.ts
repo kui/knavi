@@ -39,9 +39,6 @@ chrome.storage.onChanged.addListener((changes) => {
 
 chrome.runtime.onMessage.addListener(
   ChromeMessageRouter.newInstance()
-    .add("ResponseRectsFragment", (m) =>
-      rectAggregator.handleRects(m.requestId, m.rects),
-    )
     .add("AttachHints", () => hinter.attachHints())
     .add("HitHint", ({ key }) => hinter.hitHint(key))
     .add("RemoveHints", ({ options, execute }) =>
