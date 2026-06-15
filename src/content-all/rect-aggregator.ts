@@ -94,8 +94,12 @@ export class RectAggregatorContentAll {
         timerEnd();
         if (!action) return [];
 
-        // Reinterpret actual-viewport coords as layout-viewport (origin is the same:
-        // getBoundingClientRect() is viewport-relative, and actualViewport starts at 0,0).
+        // getBoundingClientRect() in Chrome returns coordinates relative to the
+        // layout viewport (initial containing block). buildLocalViewport() places
+        // the actual-viewport origin at (0,0) in layout-viewport space, so the
+        // numeric values are already in the layout-viewport system; we only need
+        // to relabel the origin. (This may differ on browsers where the API uses
+        // the visual viewport as its reference.)
         const layoutRects = rects.map(
           (r) =>
             new Rect<"element-border", "layout-viewport">({
@@ -150,7 +154,7 @@ function collectChildIframes(
   const result: {
     childFrameId: number;
     contentOffsets: CoordinatesJSON<"element-content", "layout-viewport">;
-    visibleViewport: RectJSON<"actual-viewport", "layout-viewport"> | null;
+    visibleViewport: RectJSON<"actual-viewport", "layout-viewport">;
   }[] = [];
 
   for (const [childFrameId, iframe] of iframeMap) {
@@ -172,6 +176,8 @@ function collectChildIframes(
       viewport,
     );
 
+    if (!visibleViewport) continue;
+
     result.push({
       childFrameId,
       contentOffsets: new Coordinates({
@@ -180,9 +186,10 @@ function collectChildIframes(
         x: contentRect.x,
         y: contentRect.y,
       }),
-      visibleViewport: visibleViewport
-        ? new Rect({ ...visibleViewport, origin: "layout-viewport" })
-        : null,
+      visibleViewport: new Rect({
+        ...visibleViewport,
+        origin: "layout-viewport",
+      }),
     });
   }
 

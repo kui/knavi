@@ -35,12 +35,11 @@ export class BlurerContentRoot {
     childFrameId: number,
     rectJson: RectJSON<"element-border", "layout-viewport">,
   ): Rect<"element-border", "root-viewport"> | null {
-    // childFrameId === 0 means the root frame itself sent the blur (no iframe transform).
-    if (childFrameId === 0) {
-      return new Rect({ ...rectJson, origin: "root-viewport" as const });
-    }
-    const r = transformBlurRect(this.iframeMap, childFrameId, rectJson);
-    if (!r) return null;
-    return new Rect({ ...r, origin: "root-viewport" as const });
+    return transformBlurRect(
+      this.iframeMap,
+      childFrameId,
+      rectJson,
+      "root-viewport",
+    );
   }
 }

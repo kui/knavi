@@ -22,7 +22,12 @@ export class RectAggregatorClient {
     // Set callback before sending InitAllRects: background sends ResponseRectsFragment
     // before returning, so the callback must be ready when it arrives.
     this.callback = (rects) => enqueue.next(rects);
-    sendToRuntime("InitAllRects", { requestId }).catch(console.warn);
+    sendToRuntime("InitAllRects", { requestId }).catch((e) => {
+      console.warn(e);
+      // Unblock the generator if the background handler fails before
+      // sending ResponseRectsFragment so that aggregate() does not hang.
+      enqueue.next("Complete");
+    });
 
     for await (const rects of dequeue) {
       if (rects === "Complete") {

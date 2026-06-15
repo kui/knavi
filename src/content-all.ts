@@ -8,14 +8,14 @@ import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
 import {
-  listenForChildFrames,
+  listenForChildFramesAndRegister,
   registerWithParent,
 } from "./dom/frame-registration";
 
 globalThis.KNAVI_FILE = "content-all";
 
 const iframeMap = new Map<number, HTMLIFrameElement>();
-listenForChildFrames(iframeMap, true);
+listenForChildFramesAndRegister(iframeMap);
 registerWithParent().catch(console.warn);
 
 // Keep a port open so background can detect when this frame unloads.
@@ -79,19 +79,19 @@ window.navigation?.addEventListener("navigatesuccess", () => {
     .catch(printError);
 });
 
-chrome.runtime.onMessage.addListener(
-  ChromeMessageRouter.newInstance()
-    .add("ExecuteAction", ({ id, options }) =>
-      rectAggregator.handleExecuteAction(id.index, options),
-    )
-    .add("BlurRelay", ({ childFrameId, rect }) =>
-      blurer.handleBlurRelay(childFrameId, rect),
-    )
-    .add("FetchFrameRects", ({ requestId }) =>
-      rectAggregator.handleFetchFrameRects(requestId),
-    )
-    .buildListener(),
-);
+const router = ChromeMessageRouter.newInstance()
+  .add("ExecuteAction", ({ id, options }) =>
+    rectAggregator.handleExecuteAction(id.index, options),
+  )
+  .add("FetchFrameRects", ({ requestId }) =>
+    rectAggregator.handleFetchFrameRects(requestId),
+  );
+if (parent !== window) {
+  router.add("BlurRelay", ({ childFrameId, rect }) =>
+    blurer.handleBlurRelay(childFrameId, rect),
+  );
+}
+chrome.runtime.onMessage.addListener(router.buildListener());
 
 window.addEventListener(
   "keydown",

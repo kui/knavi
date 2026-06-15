@@ -35,7 +35,7 @@ interface Messages {
   };
   // Background → frame: ask background for the calling frame's own frameId.
   GetFrameId: {
-    payload: Record<string, never>;
+    payload: void;
     response: number;
   };
   // Parent frame → background: register a child frame's frameId.
@@ -75,7 +75,7 @@ interface Messages {
       childIframes: {
         childFrameId: number;
         contentOffsets: CoordinatesJSON<"element-content", "layout-viewport">;
-        visibleViewport: RectJSON<"actual-viewport", "layout-viewport"> | null;
+        visibleViewport: RectJSON<"actual-viewport", "layout-viewport">;
       }[];
     };
   };
@@ -172,7 +172,7 @@ export class Router<
     const handler = this.handlers.get(type(message));
     if (!handler) return;
 
-    console.debug("Recieve: ", message);
+    console.debug("Receive: ", message);
     console.debug("Handle: ", handler);
 
     let response: Response<T> | Promise<Response<T>> | undefined;
@@ -216,10 +216,17 @@ function buildErrorArg<T extends keyof Messages>(
 
 export async function sendToRuntime<T extends keyof Messages>(
   type: T,
+): Promise<Response<T>>;
+export async function sendToRuntime<T extends keyof Messages>(
+  type: T,
   payload: MessagePayload<T>,
+): Promise<Response<T>>;
+export async function sendToRuntime<T extends keyof Messages>(
+  type: T,
+  payload?: MessagePayload<T>,
 ): Promise<Response<T>> {
   const r = await chrome.runtime.sendMessage<Message<T>, SendResponseArg<T>>(
-    message(type, payload),
+    message(type, payload ?? ({} as MessagePayload<T>)),
   );
   if (r == null)
     throw Error(

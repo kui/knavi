@@ -63,7 +63,14 @@ function composeFrame(
   frameData: Map<number, FrameResponse>,
 ): ElementRects[] {
   const data = frameData.get(frameId);
-  if (!data) return [];
+  if (!data) {
+    if (frameId === 0) {
+      console.warn(
+        "Root frame did not respond to FetchFrameRects; no rects will be composed.",
+      );
+    }
+    return [];
+  }
 
   const result: ElementRects[] = [];
 
@@ -95,21 +102,16 @@ function composeFrame(
       y: offset.y + child.contentOffsets.y,
     };
 
-    let childClip: ClipRect | null = null;
-    if (child.visibleViewport) {
-      const translatedVisible: ClipRect = {
-        ...child.visibleViewport,
-        x: child.visibleViewport.x + offset.x,
-        y: child.visibleViewport.y + offset.y,
-        origin: "root-viewport",
-      };
-      childClip =
-        clip === null
-          ? translatedVisible
-          : Rect.intersectionWithSameType(translatedVisible, clip);
-    }
-
-    if (childClip === null) continue;
+    const translatedVisible: ClipRect = {
+      ...child.visibleViewport,
+      x: child.visibleViewport.x + offset.x,
+      y: child.visibleViewport.y + offset.y,
+      origin: "root-viewport",
+    };
+    const childClip: ClipRect | null =
+      clip === null
+        ? translatedVisible
+        : Rect.intersection(translatedVisible.type, translatedVisible, clip);
 
     result.push(
       ...composeFrame(child.childFrameId, childOffset, childClip, frameData),

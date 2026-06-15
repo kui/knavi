@@ -6,14 +6,14 @@ import { RectAggregatorClient } from "./content-root/rect-aggregator-client";
 import { HintView } from "./content-root/hinter-view";
 import BlurView from "./content-root/blurer-view";
 import { printError } from "./lib/errors";
-import { listenForChildFrames } from "./dom/frame-registration";
+import { listenForChildFramesLocal } from "./dom/frame-registration";
 
 globalThis.KNAVI_FILE = "content-root";
 
 // Maintain a local iframe map for blur rect transforms.
 // content-all.ts handles RegisterChildFrame; here we only track the DOM mapping.
 const iframeMap = new Map<number, HTMLIFrameElement>();
-listenForChildFrames(iframeMap, false);
+listenForChildFramesLocal(iframeMap);
 
 const rectAggregator = new RectAggregatorClient();
 const hinterView = new HintView();

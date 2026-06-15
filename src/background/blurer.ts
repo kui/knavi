@@ -8,10 +8,22 @@ export const router = Router.newInstance().add(
     const tabId = requireTabId(sender);
     const childFrameId = requireFrameId(sender);
 
-    // Root frame (frameId 0) is never registered as a child, so look it up
-    // explicitly rather than falling through via a `?? 0` default.
-    const parentFrameId =
-      childFrameId === 0 ? 0 : (getParentFrameId(tabId, childFrameId) ?? 0);
+    // Root frame (frameId 0) blurs itself; no lookup needed.
+    if (childFrameId === 0) {
+      await sendToTab(
+        tabId,
+        "BlurRelay",
+        { childFrameId, rect },
+        { frameId: 0 },
+      );
+      return;
+    }
+
+    const parentFrameId = getParentFrameId(tabId, childFrameId);
+    if (parentFrameId === undefined) {
+      console.warn(`Unregistered frame ${childFrameId} sent BlurUp; dropping`);
+      return;
+    }
 
     await sendToTab(
       tabId,

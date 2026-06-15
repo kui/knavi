@@ -5,7 +5,27 @@ export function transformBlurRect(
   iframeMap: Map<number, HTMLIFrameElement>,
   childFrameId: number,
   originRectJson: RectJSON<"element-border", "layout-viewport">,
-): Rect<"element-border", "layout-viewport"> | null {
+): Rect<"element-border", "layout-viewport"> | null;
+export function transformBlurRect(
+  iframeMap: Map<number, HTMLIFrameElement>,
+  childFrameId: number,
+  originRectJson: RectJSON<"element-border", "layout-viewport">,
+  targetOrigin: "root-viewport",
+): Rect<"element-border", "root-viewport"> | null;
+export function transformBlurRect(
+  iframeMap: Map<number, HTMLIFrameElement>,
+  childFrameId: number,
+  originRectJson: RectJSON<"element-border", "layout-viewport">,
+  targetOrigin?: "root-viewport",
+): Rect<"element-border", "layout-viewport" | "root-viewport"> | null {
+  // childFrameId === 0 means the caller is the root frame itself (no iframe transform).
+  if (childFrameId === 0) {
+    return new Rect({
+      ...originRectJson,
+      origin: targetOrigin ?? "layout-viewport",
+    });
+  }
+
   const sourceIframe = iframeMap.get(childFrameId);
   if (!sourceIframe?.isConnected) {
     console.warn("Blur target iframe not found for childFrameId", childFrameId);
@@ -18,5 +38,6 @@ export function transformBlurRect(
   }
 
   const originRect = new Rect({ ...originRectJson, origin: "element-content" });
-  return originRect.offsets(sourceViewport.reverse());
+  const layoutRect = originRect.offsets(sourceViewport.reverse());
+  return new Rect({ ...layoutRect, origin: targetOrigin ?? "layout-viewport" });
 }

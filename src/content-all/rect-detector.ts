@@ -139,7 +139,8 @@ export class RectDetector {
     const [parentRect] = this.detect(parent);
     if (!parentRect) return null;
 
-    const cropped = Rect.intersectionWithSameType(
+    const cropped = Rect.intersection(
+      "element-border",
       rect,
       parentRect.offsets(this.viewport.reverse()),
     );

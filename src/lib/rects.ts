@@ -52,14 +52,6 @@ export class Rect<Type extends CoordinateType, Origin extends CoordinateType>
     this.height = json.height;
   }
 
-  static intersectionWithSameType<
-    Type extends CoordinateType,
-    Origin extends CoordinateType,
-  >(...rects: RectJSON<Type, Origin>[]): Rect<Type, Origin> | null {
-    if (rects.length === 0) return null;
-    return Rect.intersection(rects[0].type, ...rects);
-  }
-
   // Returns null if the rects don't intersect.
   static intersection<
     Type extends CoordinateType,
@@ -167,7 +159,7 @@ export class Rect<Type extends CoordinateType, Origin extends CoordinateType>
     const newRects: Rect<Type, Origin>[] = [...rects];
     let isIntersected = false;
     for (const rect of rects) {
-      const intersection = Rect.intersectionWithSameType(this, rect);
+      const intersection = Rect.intersection(this.type, this, rect);
       if (intersection) {
         isIntersected = true;
         newRects.splice(newRects.indexOf(rect), 1, Rect.boundRects(this, rect));
