@@ -37,6 +37,9 @@ export function transformBlurRect(
     return null;
   }
 
+  // A child frame's layout-viewport origin coincides with its iframe's
+  // content-box top-left, so we can reinterpret the incoming rect as relative
+  // to element-content for the purposes of coordinate transformation.
   const originRect = new Rect({ ...originRectJson, origin: "element-content" });
   const layoutRect = originRect.offsets(sourceViewport.reverse());
   return new Rect({ ...layoutRect, origin: targetOrigin ?? "layout-viewport" });
