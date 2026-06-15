@@ -46,7 +46,7 @@ export interface Messages {
   };
   // Child frame → background: relay blur upward through frame hierarchy.
   BlurUp: {
-    payload: { rect: RectJSON<"element-border", "layout-viewport"> | null };
+    payload: { rect: RectJSON<"element-border", "layout-viewport"> };
     response: void;
   };
   // Background → parent/root frame: relay blur from child.
@@ -54,7 +54,7 @@ export interface Messages {
   BlurRelay: {
     payload: {
       childFrameId: number;
-      rect: RectJSON<"element-border", "layout-viewport"> | null;
+      rect: RectJSON<"element-border", "layout-viewport">;
     };
     response: void;
   };

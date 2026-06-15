@@ -6,15 +6,10 @@ export class BlurerContentAll {
 
   handleBlurRelay(
     childFrameId: number,
-    rectJson: RectJSON<"element-border", "layout-viewport"> | null,
+    rectJson: RectJSON<"element-border", "layout-viewport">,
   ) {
     // Registered only in sub-frames (see content-all.ts), so the relay always
     // needs to be transformed and forwarded one level up.
-    if (!rectJson) {
-      console.warn("Unexpected origin rect:", rectJson);
-      return;
-    }
-
     const rect = transformBlurRect(this.iframeMap, childFrameId, rectJson);
     if (!rect) return;
     sendToRuntime("BlurUp", { rect }).catch(console.warn);

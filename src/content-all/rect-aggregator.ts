@@ -158,15 +158,16 @@ function collectChildIframes(
       continue;
     }
 
+    const borderRects = clientRectsFetcher.get(iframe);
+    const borderRect = borderRects[0];
+    if (!borderRect) continue;
+
     const [contentRect] = getContentRects(
       iframe,
-      clientRectsFetcher.get(iframe),
+      borderRects,
       styleFetcher.get(iframe),
     );
     if (!contentRect) continue;
-
-    const borderRect = (clientRectsFetcher.get(iframe) ?? [])[0];
-    if (!borderRect) continue;
 
     const visibleViewport = Rect.intersection(
       "actual-viewport",

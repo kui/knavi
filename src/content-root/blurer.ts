@@ -12,13 +12,8 @@ export class BlurerContentRoot {
 
   handleBlurRelay(
     childFrameId: number,
-    rectJson: RectJSON<"element-border", "layout-viewport"> | null,
+    rectJson: RectJSON<"element-border", "layout-viewport">,
   ) {
-    if (!rectJson) {
-      console.warn("Unexpected rect:", rectJson);
-      return;
-    }
-
     // In root frame, layout-viewport === root-viewport.
     const rect = transformBlurRect(
       this.iframeMap,
