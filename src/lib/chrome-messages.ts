@@ -163,16 +163,6 @@ export class Router<
     return this;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- merging heterogeneous routers
-  mergeAll(...routers: Router<any>[]): Router<any> {
-    for (const router of routers) {
-      for (const [type, handler] of router.handlers) {
-        this.handlers.set(type, handler);
-      }
-    }
-    return this;
-  }
-
   // Returns true if the message is handled asynchronously.
   // See https://developer.chrome.com/docs/extensions/mv3/messaging/#simple.
   private route<T extends keyof Messages>(
