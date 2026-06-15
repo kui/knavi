@@ -195,6 +195,7 @@ function collectChildIframes(
   return result;
 }
 
+// Bond rects if they have same actual target.
 function bondByActualTarget(
   elementProfiles: ElementProfile[],
 ): ElementProfile[] {
