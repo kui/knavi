@@ -25,7 +25,6 @@ const blurerClient = new BlurerClient();
 const hinterClient = new HinterClient();
 const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
 const rectAggregator = new RectAggregator(iframeMap);
-const blurer = new Blurer(iframeMap);
 
 async function setup() {
   const [setting, matchedBlacklist] = await Promise.all([
@@ -85,6 +84,7 @@ const router = ChromeMessageRouter.newInstance()
   )
   .add("FetchFrameRects", () => rectAggregator.handleFetchFrameRects());
 if (parent !== window) {
+  const blurer = new Blurer(iframeMap);
   router.add("BlurRelay", ({ childFrameId, rect }) =>
     blurer.handleBlurRelay(childFrameId, rect),
   );
