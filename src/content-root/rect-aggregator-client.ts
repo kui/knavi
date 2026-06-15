@@ -13,8 +13,7 @@ export class RectAggregatorClient {
     return sendToRuntime("InitAllRects");
   }
 
-  action(elementId: ElementId | undefined, options: ActionOptions) {
-    if (elementId)
-      return sendToRuntime("ExecuteAction", { id: elementId, options });
+  action(elementId: ElementId, options: ActionOptions) {
+    return sendToRuntime("ExecuteAction", { id: elementId, options });
   }
 }

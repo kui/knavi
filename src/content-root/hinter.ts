@@ -120,10 +120,9 @@ export class HinterContentRoot {
     // throw "already started hinting".
     this.context = null;
     this.view.remove();
-    await this.rectAggregator.action(
-      execute ? context.hitTarget?.id : undefined,
-      options,
-    );
+    if (execute && context.hitTarget) {
+      await this.rectAggregator.action(context.hitTarget.id, options);
+    }
   }
 }
 
