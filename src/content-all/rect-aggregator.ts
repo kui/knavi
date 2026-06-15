@@ -1,7 +1,5 @@
 import { ActionFinder } from "./action-handlers";
 import { CachedFetcher } from "../lib/cache";
-import { sendToRuntime } from "../lib/chrome-messages";
-import { postMessageTo } from "../dom/dom-messages";
 import { getClientRects, getContentRects, listAll } from "../dom/elements";
 import { flatMap } from "../lib/iters";
 import { Timers } from "../lib/metrics";
@@ -10,80 +8,70 @@ import { Coordinates, Rect } from "../dom/rects";
 import settingsClient from "../lib/settings-client";
 
 interface ElementProfile {
-  id: ElementId;
+  index: number;
   element: Element;
-  rects: Rect<"element-border", "root-viewport">[];
+  rects: Rect<"element-border", "layout-viewport">[];
   descriptions: ActionDescriptions;
   handle: (options: ActionOptions) => Promise<void> | void;
   actualTarget?: HTMLElement | SVGElement;
 }
 
-interface AggregationContext {
-  requestId: number;
-  currentViewport: Rect<"actual-viewport", "root-viewport">;
-  frameOffsets: Coordinates<"layout-viewport", "root-viewport">;
-  clientRectsFetcher: CachedFetcher<
-    Element,
-    Rect<"element-border", "layout-viewport">[]
-  >;
-  styleFetcher: CachedFetcher<Element, StylePropertyMapReadOnly>;
-}
-
 export class RectAggregatorContentAll {
   private elements: ElementProfile[] = [];
-  private readonly actionFinder: ActionFinder | null = null;
-  private readonly frameIdPromise = sendToRuntime("GetFrameId", undefined);
 
-  async handleAllRectsRequest(
-    requestId: number,
-    // Actual viewport of the current frame.
-    // This is cropped by the root frame.
-    currentViewport: Rect<"actual-viewport", "root-viewport">,
-    // Coordinate of viewport of the current frame.
-    // This coordinates could be negative because it could be out of the root frame.
-    frameOffsets: Coordinates<"layout-viewport", "root-viewport">,
-  ) {
+  constructor(private iframeMap: Map<number, HTMLIFrameElement>) {}
+
+  async handleFetchFrameRects(requestId: number) {
     console.debug(
-      "AllRectsRequest currentViewport=",
-      currentViewport,
-      "frameOffsets=",
-      frameOffsets,
+      "FetchFrameRects requestId=",
+      requestId,
       "location=",
       location.href,
     );
 
-    const context: AggregationContext = {
-      requestId,
-      currentViewport,
-      frameOffsets,
-      clientRectsFetcher: new CachedFetcher((e: Element) => getClientRects(e)),
-      styleFetcher: new CachedFetcher((e: Element) => e.computedStyleMap()),
-    };
+    const clientRectsFetcher = new CachedFetcher((e: Element) =>
+      getClientRects(e),
+    );
+    const styleFetcher = new CachedFetcher((e: Element) =>
+      e.computedStyleMap(),
+    );
+
+    const viewport = buildLocalViewport();
 
     console.time("aggregateRects");
-    this.elements = await this.aggregateRects(context);
+    this.elements = await this.aggregateRects(
+      viewport,
+      clientRectsFetcher,
+      styleFetcher,
+    );
     console.timeEnd("aggregateRects");
-    console.debug("Aggrigate rects", this.elements);
+    console.debug("Aggregate rects", this.elements);
 
-    await sendToRuntime("ResponseRectsFragment", {
-      requestId,
-      rects: this.elements,
-    });
+    const childIframes = collectChildIframes(
+      this.iframeMap,
+      viewport,
+      clientRectsFetcher,
+      styleFetcher,
+    );
 
-    for (const { element, rects } of this.elements) {
-      if (element instanceof HTMLIFrameElement)
-        this.propergateMessage(element, rects[0], context);
-    }
+    return {
+      elements: this.elements.map((p) => ({
+        index: p.index,
+        rects: p.rects,
+        descriptions: p.descriptions,
+      })),
+      childIframes,
+    };
   }
 
-  private async aggregateRects({
-    currentViewport,
-    frameOffsets,
-    clientRectsFetcher,
-    styleFetcher,
-  }: AggregationContext): Promise<ElementProfile[]> {
-    const actualViewport: Rect<"actual-viewport", "layout-viewport"> =
-      currentViewport.offsets(frameOffsets);
+  private async aggregateRects(
+    actualViewport: Rect<"actual-viewport", "layout-viewport">,
+    clientRectsFetcher: CachedFetcher<
+      Element,
+      Rect<"element-border", "layout-viewport">[]
+    >,
+    styleFetcher: CachedFetcher<Element, StylePropertyMapReadOnly>,
+  ): Promise<ElementProfile[]> {
     const additionalSelectors = await settingsClient.matchAdditionalSelectors(
       location.href,
     );
@@ -93,7 +81,6 @@ export class RectAggregatorContentAll {
       clientRectsFetcher,
       styleFetcher,
     );
-    const frameId = await this.frameIdPromise;
     const timers = new Timers("aggregateRects");
     const elementProfiles = [
       ...flatMap(listAll(), (element, index): ElementProfile[] => {
@@ -107,11 +94,21 @@ export class RectAggregatorContentAll {
         timerEnd();
         if (!action) return [];
 
+        // Reinterpret actual-viewport coords as layout-viewport (origin is the same:
+        // getBoundingClientRect() is viewport-relative, and actualViewport starts at 0,0).
+        const layoutRects = rects.map(
+          (r) =>
+            new Rect<"element-border", "layout-viewport">({
+              ...r,
+              origin: "layout-viewport",
+            }),
+        );
+
         return [
           {
-            id: { index, frameId },
+            index,
             element,
-            rects: rects.map((r) => r.offsets(currentViewport.reverse())),
+            rects: layoutRects,
             ...action,
           },
         ];
@@ -122,57 +119,76 @@ export class RectAggregatorContentAll {
     return bondByActualTarget(elementProfiles);
   }
 
-  private propergateMessage(
-    frame: HTMLIFrameElement,
-    rect: Rect<"element-border", "root-viewport"> | null,
-    {
-      requestId,
-      frameOffsets,
-      clientRectsFetcher,
-      styleFetcher,
-    }: AggregationContext,
-  ) {
-    if (!frame.contentWindow) {
-      console.debug("No contentWindow to post message", frame);
-      return;
-    }
-    if (!rect) return;
-
-    const [contentRect] = getContentRects(
-      frame,
-      clientRectsFetcher.get(frame),
-      styleFetcher.get(frame),
-    ).map((r) => r.offsets(frameOffsets.reverse()));
-    if (!contentRect) {
-      console.warn("No conent rects", frame);
-      return;
-    }
-    const iframeViewport = Rect.intersection(
-      "actual-viewport",
-      rect,
-      contentRect,
-    );
-    if (!iframeViewport) {
-      console.debug("No viewport", rect, contentRect);
-      return;
-    }
-
-    postMessageTo(frame.contentWindow, "com.github.kui.knavi.AllRectsRequest", {
-      id: requestId,
-      viewport: iframeViewport,
-      offsets: { ...contentRect, type: "layout-viewport" },
-    });
-  }
-
   async handleExecuteAction(index: number, options: ActionOptions) {
-    const e = this.elements.find((e) => e.id.index === index);
+    const e = this.elements.find((e) => e.index === index);
     console.debug("handleExecuteAction", index, e);
     if (!e) throw new Error(`No element with index ${index}`);
     await e.handle(options);
   }
 }
 
-// Bond rects if they have same actual target.
+function buildLocalViewport(): Rect<"actual-viewport", "layout-viewport"> {
+  return new Rect({
+    type: "actual-viewport",
+    origin: "layout-viewport",
+    x: 0,
+    y: 0,
+    width: document.documentElement.clientWidth,
+    height: document.documentElement.clientHeight,
+  });
+}
+
+function collectChildIframes(
+  iframeMap: Map<number, HTMLIFrameElement>,
+  viewport: Rect<"actual-viewport", "layout-viewport">,
+  clientRectsFetcher: CachedFetcher<
+    Element,
+    Rect<"element-border", "layout-viewport">[]
+  >,
+  styleFetcher: CachedFetcher<Element, StylePropertyMapReadOnly>,
+) {
+  const result: {
+    childFrameId: number;
+    contentOffsets: CoordinatesJSON<"element-content", "layout-viewport">;
+    visibleViewport: RectJSON<"actual-viewport", "layout-viewport"> | null;
+  }[] = [];
+
+  for (const [childFrameId, iframe] of iframeMap) {
+    if (!iframe.isConnected) continue;
+
+    const [contentRect] = getContentRects(
+      iframe,
+      clientRectsFetcher.get(iframe),
+      styleFetcher.get(iframe),
+    );
+    if (!contentRect) continue;
+
+    const borderRect = (clientRectsFetcher.get(iframe) ?? [])[0];
+    if (!borderRect) continue;
+
+    const visibleViewport = Rect.intersection(
+      "actual-viewport",
+      borderRect,
+      viewport,
+    );
+
+    result.push({
+      childFrameId,
+      contentOffsets: new Coordinates({
+        type: "element-content",
+        origin: "layout-viewport",
+        x: contentRect.x,
+        y: contentRect.y,
+      }),
+      visibleViewport: visibleViewport
+        ? new Rect({ ...visibleViewport, origin: "layout-viewport" })
+        : null,
+    });
+  }
+
+  return result;
+}
+
 function bondByActualTarget(
   elementProfiles: ElementProfile[],
 ): ElementProfile[] {

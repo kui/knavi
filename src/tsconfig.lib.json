@@ -2,6 +2,8 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "verbatimModuleSyntax": true,
+    // lib/ should only use APIs common to both DOM and WebWorker (e.g. DOMRectReadOnly).
+    // TypeScript has no "DOM ∩ WebWorker" lib, so we pick WebWorker as the smaller set.
     "lib": ["ESNext", "WebWorker"],
     "types": ["chrome"]
   },

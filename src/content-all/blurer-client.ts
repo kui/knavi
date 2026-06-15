@@ -1,15 +1,13 @@
-import { postMessageTo } from "../dom/dom-messages";
+import { sendToRuntime } from "../lib/chrome-messages";
 import { getBoundingClientRect } from "../dom/elements";
 
-// Just send a message to the parent frame to blur the active element on root frame.
-// This doesn't call `blur` method of the active element directly.
-export default class Blur {
+export default class BlurerClient {
   blur() {
     if (isDefaultActiveElement()) return false;
     if (!document.activeElement) return false;
-    postMessageTo(parent, "com.github.kui.knavi.Blur", {
+    sendToRuntime("BlurUp", {
       rect: getBoundingClientRect(document.activeElement),
-    });
+    }).catch(console.warn);
     return true;
   }
 }
