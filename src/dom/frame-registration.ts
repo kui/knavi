@@ -33,7 +33,9 @@ export function onChildFrameId(
   window.addEventListener("message", (e: MessageEvent) => {
     const data = e.data as FrameIdAnnouncement | null | undefined;
     if (data?.["@type"] !== ANNOUNCEMENT_TYPE) return;
-    if (!(e.source instanceof Window)) return;
+    // e.source instanceof Window fails cross-frame (different Window prototype per
+    // frame). Use a duck-type guard instead: any real frame window has "document".
+    if (!e.source || !("document" in e.source)) return;
     callback(data.frameId, e.source);
   });
 }
