@@ -17,6 +17,10 @@ export function announceFrameIdToParent(): void {
   if (parent === window) return;
   sendToRuntime("GetFrameId", undefined)
     .then((frameId) => {
+      // "*" is intentional: frameId is meaningless outside the extension, so
+      // there is no sensitive data to protect. Using ancestorOrigins[0] would
+      // risk a silent drop if the parent navigates between GetFrameId and the
+      // postMessage call (a race that "* " avoids with no real downside here).
       parent.postMessage(
         { "@type": ANNOUNCEMENT_TYPE, frameId } satisfies FrameIdAnnouncement,
         "*",
