@@ -58,27 +58,35 @@ export interface Messages {
     };
     response: void;
   };
-  // Root frame → background: fan out to all frames and return the composed,
-  // root-viewport rects in a single response.
-  InitAllRects: {
-    payload: void;
+  // Root frame → background: kick off recursive top-down rect aggregation.
+  // The payload carries the root frame's own viewport and the root-viewport
+  // origin (always (0,0) at the root, but passed through uniformly).
+  InitRects: {
+    payload: {
+      viewport: RectJSON<"actual-viewport", "layout-viewport">;
+      rootOrigin: CoordinatesJSON<"root-viewport", "layout-viewport">;
+    };
     response: ElementRects[];
   };
-  // Background → each frame: request local rects + child iframe geometry.
-  FetchFrameRects: {
-    payload: void;
-    response: {
-      elements: {
-        index: number;
-        rects: RectJSON<"element-border", "layout-viewport">[];
-        descriptions: ActionDescriptions;
-      }[];
-      childIframes: {
-        childFrameId: number;
-        contentOffsets: CoordinatesJSON<"element-content", "layout-viewport">;
-        visibleViewport: RectJSON<"actual-viewport", "layout-viewport">;
-      }[];
+  // Background → a frame: detect local rects within the (ancestor-cropped)
+  // viewport, recurse into visible child iframes, and return the composed
+  // subtree in root-viewport coordinates.
+  FetchRects: {
+    payload: {
+      viewport: RectJSON<"actual-viewport", "layout-viewport">;
+      rootOrigin: CoordinatesJSON<"root-viewport", "layout-viewport">;
     };
+    response: ElementRects[];
+  };
+  // Frame → background: relay a FetchRects down to a registered child frame.
+  // Background validates that childFrameId is a registered child of sender.frameId.
+  RelayFetchRects: {
+    payload: {
+      childFrameId: number;
+      viewport: RectJSON<"actual-viewport", "layout-viewport">;
+      rootOrigin: CoordinatesJSON<"root-viewport", "layout-viewport">;
+    };
+    response: ElementRects[];
   };
   ExecuteAction: {
     payload: { id: ElementId; options: ActionOptions };

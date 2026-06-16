@@ -20,10 +20,14 @@ export function getParentFrameId(
   return registry.get(tabId)?.get(childFrameId);
 }
 
-// Returns all known frameIds for a tab (root frame 0 + all registered children).
-export function getAllFrameIds(tabId: number): number[] {
-  const m = registry.get(tabId);
-  return m ? [0, ...m.keys()] : [0];
+// True iff childFrameId is registered as a direct child of parentFrameId in tabId.
+// Used to authenticate RelayFetchRects so a frame can only relay into its own children.
+export function isRegisteredChild(
+  tabId: number,
+  parentFrameId: number,
+  childFrameId: number,
+): boolean {
+  return registry.get(tabId)?.get(childFrameId) === parentFrameId;
 }
 
 export const router = Router.newInstance()

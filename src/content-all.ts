@@ -82,7 +82,7 @@ const router = ChromeMessageRouter.newInstance()
   .add("ExecuteAction", ({ id, options }) =>
     rectAggregator.handleExecuteAction(id.index, options),
   )
-  .add("FetchFrameRects", () => rectAggregator.handleFetchFrameRects());
+  .add("FetchRects", (payload) => rectAggregator.handleFetchRects(payload));
 if (parent !== window) {
   const blurer = new Blurer(iframeMap);
   router.add("BlurRelay", ({ childFrameId, rect }) =>
