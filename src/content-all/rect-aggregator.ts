@@ -29,12 +29,18 @@ interface AggregationContext {
   styleFetcher: CachedFetcher<Element, StylePropertyMapReadOnly>;
 }
 
+// Timeout (ms) to wait for a child iframe to register before skipping propagation.
+const IFRAME_REGISTRATION_TIMEOUT_MS = 5000;
+
 export class RectAggregatorContentAll {
   private elements: ElementProfile[] = [];
   private readonly frameIdPromise = sendToRuntime("GetFrameId", undefined);
 
   constructor(
-    private readonly iframeToFrameId: Map<HTMLIFrameElement, number>,
+    private readonly awaitIframeFrameId: (
+      iframe: HTMLIFrameElement,
+      timeoutMs: number,
+    ) => Promise<number | undefined>,
   ) {}
 
   async handleAllRectsRequest(
@@ -71,7 +77,7 @@ export class RectAggregatorContentAll {
 
     for (const { element, rects } of this.elements) {
       if (element instanceof HTMLIFrameElement)
-        this.propergateMessage(element, rects[0], context);
+        this.propergateMessage(element, rects[0], context).catch(printError);
     }
   }
 
@@ -121,7 +127,7 @@ export class RectAggregatorContentAll {
     return bondByActualTarget(elementProfiles);
   }
 
-  private propergateMessage(
+  private async propergateMessage(
     frame: HTMLIFrameElement,
     rect: Rect<"element-border", "root-viewport"> | null,
     {
@@ -133,9 +139,15 @@ export class RectAggregatorContentAll {
   ) {
     if (!rect) return;
 
-    const childFrameId = this.iframeToFrameId.get(frame);
+    const childFrameId = await this.awaitIframeFrameId(
+      frame,
+      IFRAME_REGISTRATION_TIMEOUT_MS,
+    );
     if (childFrameId == null) {
-      console.debug("No frameId for iframe, skipping propagation", frame);
+      console.debug(
+        "Timeout waiting for iframe frameId, skipping propagation",
+        frame,
+      );
       return;
     }
 

@@ -20,13 +20,35 @@ import { filter, first } from "./lib/iters";
 globalThis.KNAVI_FILE = "content-all";
 
 const iframeByFrameId = new Map<number, HTMLIFrameElement>();
-const iframeToFrameId = new Map<HTMLIFrameElement, number>();
+const iframeToFrameId = new Map<HTMLIFrameElement, number>(); // for BlurRelay fast lookup
 
-const blurerClient = new BlurerClient();
-const hinterClient = new HinterClient();
-const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
-const rectAggregator = new RectAggregator(iframeToFrameId);
-const blurer = new Blurer(iframeByFrameId);
+// Resolves (with frameId) only after background has confirmed RegisterChildFrame.
+// Created eagerly even before the child announces, so callers can await it.
+const iframeRegistration = new Map<HTMLIFrameElement, Promise<number>>();
+const iframeRegistrationResolve = new Map<
+  HTMLIFrameElement,
+  (id: number) => void
+>();
+
+// Returns a Promise<number | undefined> that resolves when background confirms
+// the child's registration, or undefined after timeoutMs.
+export function awaitIframeFrameId(
+  iframe: HTMLIFrameElement,
+  timeoutMs: number,
+): Promise<number | undefined> {
+  let p = iframeRegistration.get(iframe);
+  if (!p) {
+    // Child hasn't announced yet — create a deferred promise.
+    p = new Promise<number>((resolve) => {
+      iframeRegistrationResolve.set(iframe, resolve);
+    });
+    iframeRegistration.set(iframe, p);
+  }
+  return Promise.race([
+    p,
+    new Promise<undefined>((r) => setTimeout(() => r(undefined), timeoutMs)),
+  ]);
+}
 
 onChildFrameId((childFrameId, source) => {
   const iframe = first(
@@ -41,10 +63,28 @@ onChildFrameId((childFrameId, source) => {
   }
   iframeByFrameId.set(childFrameId, iframe);
   iframeToFrameId.set(iframe, childFrameId);
-  sendToRuntime("RegisterChildFrame", { childFrameId }).catch(printError);
+
+  sendToRuntime("RegisterChildFrame", { childFrameId })
+    .then(() => {
+      // Resolve the deferred promise (if any) or store the confirmed promise.
+      const existingResolve = iframeRegistrationResolve.get(iframe);
+      if (existingResolve) {
+        iframeRegistrationResolve.delete(iframe);
+        existingResolve(childFrameId);
+      } else {
+        iframeRegistration.set(iframe, Promise.resolve(childFrameId));
+      }
+    })
+    .catch(printError);
 });
 
 announceFrameIdToParent();
+
+const blurerClient = new BlurerClient();
+const hinterClient = new HinterClient();
+const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
+const rectAggregator = new RectAggregator(awaitIframeFrameId);
+const blurer = new Blurer(iframeByFrameId);
 
 async function setup() {
   const [setting, matchedBlacklist] = await Promise.all([
