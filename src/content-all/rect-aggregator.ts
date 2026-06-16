@@ -71,7 +71,7 @@ export class RectAggregatorContentAll {
 
     for (const { element, rects } of this.elements) {
       if (element instanceof HTMLIFrameElement)
-        this.propergateMessage(element, rects[0], context);
+        this.propagateMessage(element, rects[0], context);
     }
   }
 
@@ -121,7 +121,7 @@ export class RectAggregatorContentAll {
     return bondByActualTarget(elementProfiles);
   }
 
-  private propergateMessage(
+  private propagateMessage(
     frame: HTMLIFrameElement,
     rect: Rect<"element-border", "root-viewport"> | null,
     {
@@ -135,6 +135,9 @@ export class RectAggregatorContentAll {
 
     const childFrameId = this.iframeToFrameId.get(frame);
     if (childFrameId == null) {
+      // Intentional: hint positions are not updated after the hint phase begins,
+      // and iframes that haven't registered their frameId yet are treated the same
+      // way — their content is skipped rather than waited on.
       console.debug("iframe not yet registered, skipping propagation", frame);
       return;
     }

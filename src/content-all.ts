@@ -38,6 +38,18 @@ onChildFrameId((childFrameId, source) => {
   sendToRuntime("RegisterChildFrame", { childFrameId }).catch(printError);
 });
 
+new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    for (const node of mutation.removedNodes) {
+      if (!(node instanceof HTMLIFrameElement)) continue;
+      const frameId = iframeToFrameId.get(node);
+      if (frameId == null) continue;
+      iframeToFrameId.delete(node);
+      iframeByFrameId.delete(frameId);
+    }
+  }
+}).observe(document.documentElement, { childList: true, subtree: true });
+
 announceFrameIdToParent();
 
 const blurerClient = new BlurerClient();
