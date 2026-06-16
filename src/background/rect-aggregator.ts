@@ -1,7 +1,7 @@
 import { Router, sendToTab, type Messages } from "../lib/chrome-messages";
 import { requireTabId } from "./sender-guards";
 import { getAllFrameIds } from "./frame-registry";
-import { Rect } from "../lib/rects";
+import { Coordinates, Rect } from "../lib/rects";
 
 export const router = Router.newInstance()
   .add("InitAllRects", async (_payload, sender) => {
@@ -26,7 +26,13 @@ export const router = Router.newInstance()
       }
     }
 
-    return composeFrame(0, { x: 0, y: 0 }, null, frameData);
+    const rootOrigin = new Coordinates<"root-viewport", "layout-viewport">({
+      type: "root-viewport",
+      origin: "layout-viewport",
+      x: 0,
+      y: 0,
+    });
+    return composeFrame(0, rootOrigin, null, frameData);
   })
 
   .add("ExecuteAction", async (message, sender) => {
@@ -35,17 +41,17 @@ export const router = Router.newInstance()
     });
   });
 
-interface FrameOffset {
-  x: number;
-  y: number;
-}
-
 type FrameResponse = Messages["FetchFrameRects"]["response"];
 type ClipRect = RectJSON<"actual-viewport", "root-viewport">;
 
+// The root-viewport origin expressed in a frame's own layout-viewport
+// coordinates. Re-expressing any frame-local rect in root-viewport coordinates
+// is then just rect.offsets(frameOrigin). The root frame's value is (0, 0).
+type FrameOrigin = Coordinates<"root-viewport", "layout-viewport">;
+
 function composeFrame(
   frameId: number,
-  offset: FrameOffset,
+  frameOrigin: FrameOrigin,
   clip: ClipRect | null,
   frameData: Map<number, FrameResponse>,
 ): ElementRects[] {
@@ -63,12 +69,7 @@ function composeFrame(
 
   for (const elem of data.elements) {
     const translatedRects = elem.rects
-      .map((r) => ({
-        ...r,
-        x: r.x + offset.x,
-        y: r.y + offset.y,
-        origin: "root-viewport" as const,
-      }))
+      .map((r) => new Rect(r).offsets(frameOrigin))
       .filter(
         (r) =>
           clip === null ||
@@ -84,24 +85,24 @@ function composeFrame(
   }
 
   for (const child of data.childIframes) {
-    const childOffset: FrameOffset = {
-      x: offset.x + child.contentOffsets.x,
-      y: offset.y + child.contentOffsets.y,
-    };
+    // The child frame's layout-viewport origin coincides with its iframe
+    // content-box origin in this frame, so relabel the content origin as the
+    // child's layout-viewport origin.
+    const childOrigin = new Coordinates<"root-viewport", "layout-viewport">({
+      ...frameOrigin.offsets(new Coordinates(child.contentOffsets)),
+      origin: "layout-viewport",
+    });
 
-    const translatedVisible: ClipRect = {
-      ...child.visibleViewport,
-      x: child.visibleViewport.x + offset.x,
-      y: child.visibleViewport.y + offset.y,
-      origin: "root-viewport",
-    };
+    const translatedVisible: ClipRect = new Rect(child.visibleViewport).offsets(
+      frameOrigin,
+    );
     const childClip: ClipRect | null =
       clip === null
         ? translatedVisible
         : Rect.intersection(translatedVisible, clip);
 
     result.push(
-      ...composeFrame(child.childFrameId, childOffset, childClip, frameData),
+      ...composeFrame(child.childFrameId, childOrigin, childClip, frameData),
     );
   }
 
