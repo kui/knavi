@@ -1,61 +1,16 @@
-import { postMessageTo } from "../dom/dom-messages";
-import { getContentRects } from "../dom/elements";
-import { filter, first } from "../lib/iters";
-import { Rect } from "../dom/rects";
+import { sendToRuntime } from "../lib/chrome-messages";
+import { transformBlurRect } from "../dom/blur-rect";
+import { printWarn } from "../lib/errors";
 
 export class BlurerContentAll {
-  // Just propergate the message to the parent frame until root frame.
-  // See content-root/blurer.ts
-  handleBlurMessage(
-    source: MessageEventSource | null,
-    rectJson: RectJSON<"element-border", "layout-viewport"> | null,
+  constructor(private iframeMap: Map<number, HTMLIFrameElement>) {}
+
+  handleBlurRelay(
+    childFrameId: number,
+    rectJson: RectJSON<"element-border", "layout-viewport">,
   ) {
-    if (!source) {
-      console.warn("Unexpected event source: ", source);
-      return;
-    }
-
-    if (source === window)
-      // Do nothing if the message was sent from the root frame.
-      // See content-root/blurer.ts
-      return;
-
-    const rect = buildBlurRect(source, rectJson);
-    postMessageTo(parent, "com.github.kui.knavi.Blur", { rect });
+    const rect = transformBlurRect(this.iframeMap, childFrameId, rectJson);
+    if (!rect) return;
+    sendToRuntime("BlurUp", { rect }).catch(printWarn);
   }
-}
-
-function buildBlurRect(
-  source: MessageEventSource,
-  // This "Origin" is child frame's viewport.
-  originRectJson: RectJSON<"element-border", "layout-viewport"> | null,
-): Rect<"element-border", "layout-viewport"> | null {
-  if (!originRectJson) {
-    console.warn("Unexpected origin rect: ", originRectJson);
-    return null;
-  }
-
-  const sourceIframe = first(
-    filter(
-      document.getElementsByTagName("iframe"),
-      (i) => source === i.contentWindow,
-    ),
-  );
-  if (!sourceIframe) {
-    console.warn("Blur target is not an iframe", source);
-    return null;
-  }
-  const sourceViewport = getContentRects(sourceIframe)[0];
-  if (!sourceViewport) {
-    console.warn("No viewport: ", sourceIframe);
-    return null;
-  }
-
-  // We can treat the source frame viewport as its content area.
-  const originRect = new Rect({
-    ...originRectJson,
-    origin: "element-content",
-  });
-
-  return originRect.offsets(sourceViewport.reverse());
 }

@@ -2,21 +2,30 @@ import { RectAggregatorContentAll as RectAggregator } from "./content-all/rect-a
 import { KeyboardHandlerContentAll as KeyboardHandler } from "./content-all/keyboard-handler";
 import { BlurerContentAll as Blurer } from "./content-all/blurer";
 import settingsClient from "./lib/settings-client";
-import { printError } from "./lib/errors";
+import { printError, printWarn } from "./lib/errors";
 import { wait } from "./lib/promises";
 import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
-import { Router as DOMMessageRouter } from "./dom/dom-messages";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
+import {
+  listenForChildFramesAndRegister,
+  registerWithParent,
+} from "./dom/frame-registration";
 import { Coordinates, Rect } from "./dom/rects";
 
 globalThis.KNAVI_FILE = "content-all";
 
+const iframeMap = new Map<number, HTMLIFrameElement>();
+listenForChildFramesAndRegister(iframeMap);
+registerWithParent().catch(printWarn);
+
+// Keep a port open so background can detect when this frame unloads.
+chrome.runtime.connect({ name: "knavi-frame" });
+
 const blurerClient = new BlurerClient();
 const hinterClient = new HinterClient();
 const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
-const rectAggregator = new RectAggregator();
-const blurer = new Blurer();
+const rectAggregator = new RectAggregator(iframeMap);
 
 async function setup() {
   const [setting, matchedBlacklist] = await Promise.all([
@@ -70,13 +79,23 @@ window.navigation?.addEventListener("navigatesuccess", () => {
     .catch(printError);
 });
 
-chrome.runtime.onMessage.addListener(
-  ChromeMessageRouter.newInstance()
-    .add("ExecuteAction", ({ id, options }) =>
-      rectAggregator.handleExecuteAction(id.index, options),
-    )
-    .buildListener(),
-);
+const router = ChromeMessageRouter.newInstance()
+  .add("ExecuteAction", ({ id, options }) =>
+    rectAggregator.handleExecuteAction(id.index, options),
+  )
+  .add("FetchRects", ({ viewport, frameOffsets }) =>
+    rectAggregator.handleFetchRects(
+      new Rect(viewport),
+      new Coordinates(frameOffsets),
+    ),
+  );
+if (parent !== window) {
+  const blurer = new Blurer(iframeMap);
+  router.add("BlurRelay", ({ childFrameId, rect }) =>
+    blurer.handleBlurRelay(childFrameId, rect),
+  );
+}
+chrome.runtime.onMessage.addListener(router.buildListener());
 
 window.addEventListener(
   "keydown",
@@ -107,21 +126,4 @@ window.addEventListener(
     }
   },
   true,
-);
-
-window.addEventListener(
-  "message",
-  new DOMMessageRouter()
-    .add("com.github.kui.knavi.Blur", (e) =>
-      blurer.handleBlurMessage(e.source, e.data.rect),
-    )
-    .add("com.github.kui.knavi.AllRectsRequest", async (e) => {
-      const { id, viewport, offsets } = e.data;
-      await rectAggregator.handleAllRectsRequest(
-        id,
-        new Rect(viewport),
-        new Coordinates(offsets),
-      );
-    })
-    .buildListener(),
 );

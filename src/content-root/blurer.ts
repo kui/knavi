@@ -1,32 +1,28 @@
 import BlurView from "./blurer-view";
+import { transformBlurRect } from "../dom/blur-rect";
 import { Rect } from "../dom/rects";
 
 if (parent !== window)
   throw Error("This script must be loaded in the root frame.");
 
 export class BlurerContentRoot {
-  constructor(private view: BlurView) {}
+  constructor(
+    private view: BlurView,
+    private iframeMap: Map<number, HTMLIFrameElement>,
+  ) {}
 
-  handleBlurMessage(
-    source: MessageEventSource | null,
-    rect: RectJSON<"element-border", "layout-viewport"> | null,
+  handleBlurRelay(
+    childFrameId: number,
+    rectJson: RectJSON<"element-border", "layout-viewport">,
   ) {
-    if (source !== window) {
-      // Do nothing if the message was sent from the child frame.
-      // See also: src/content-all/blurer.ts
-      return;
-    }
-
-    if (!rect) {
-      console.warn("Unexpected rect: ", rect);
-      return;
-    }
-
     const activeElement = document.activeElement;
     if (!activeElement || !("blur" in activeElement)) return;
     (activeElement.blur as () => void)();
 
-    // We can treat layout viewport as root viewport in the root frame.
-    this.view.blur(new Rect({ ...rect, origin: "root-viewport" }));
+    const rect =
+      childFrameId === 0
+        ? rectJson
+        : transformBlurRect(this.iframeMap, childFrameId, rectJson);
+    if (rect) this.view.blur(new Rect({ ...rect, origin: "root-viewport" }));
   }
 }

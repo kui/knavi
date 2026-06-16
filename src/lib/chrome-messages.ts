@@ -37,16 +37,54 @@ interface Messages {
     payload: void;
     response: number;
   };
+  // Parent frame → background: register a child frame's frameId.
+  // sender.frameId is the parent; childFrameId is the child.
+  RegisterChildFrame: {
+    payload: { childFrameId: number };
+    response: void;
+  };
   ExecuteAction: {
     payload: { id: ElementId; options: ActionOptions };
     response: void;
   };
-  ResponseRectsFragment: {
+  // Child frame → background: relay blur upward through frame hierarchy.
+  BlurUp: {
+    payload: { rect: RectJSON<"element-border", "layout-viewport"> };
+    response: void;
+  };
+  // Background → parent/root frame: deliver blur from a child frame.
+  // childFrameId === 0 means the root frame is blurring itself (no iframe transform needed).
+  BlurRelay: {
     payload: {
-      requestId: number;
-      rects: ElementRects[];
+      childFrameId: number;
+      rect: RectJSON<"element-border", "layout-viewport">;
     };
     response: void;
+  };
+  // Root frame → background: initiate recursive rect collection.
+  InitRects: {
+    payload: {
+      viewport: RectJSON<"actual-viewport", "root-viewport">;
+      frameOffsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
+    };
+    response: ElementRects[];
+  };
+  // Background → frame: collect local rects and recurse into child iframes.
+  FetchRects: {
+    payload: {
+      viewport: RectJSON<"actual-viewport", "root-viewport">;
+      frameOffsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
+    };
+    response: ElementRects[];
+  };
+  // Frame → background: relay FetchRects to a registered child frame.
+  RelayFetchRects: {
+    payload: {
+      childFrameId: number;
+      viewport: RectJSON<"actual-viewport", "root-viewport">;
+      frameOffsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
+    };
+    response: ElementRects[];
   };
 }
 
@@ -172,13 +210,10 @@ function buildErrorArg<T extends keyof Messages>(
   }
 }
 
-export async function sendToRuntime<T extends keyof Messages>(
+function unwrapResponse<T extends keyof Messages>(
   type: T,
-  payload: MessagePayload<T>,
-): Promise<Response<T>> {
-  const r = await chrome.runtime.sendMessage<Message<T>, SendResponseArg<T>>(
-    message(type, payload),
-  );
+  r: SendResponseArg<T> | undefined | null,
+): Response<T> {
   if (r == null)
     throw Error(
       `No response for ${type}: receiver missing or handler not registered`,
@@ -187,21 +222,30 @@ export async function sendToRuntime<T extends keyof Messages>(
   return r.response;
 }
 
+export async function sendToRuntime<T extends keyof Messages>(
+  type: T,
+  ...args: MessagePayload<T> extends void ? [] : [payload: MessagePayload<T>]
+): Promise<Response<T>> {
+  const payload = args[0]! as MessagePayload<T>;
+  const r = await chrome.runtime.sendMessage<Message<T>, SendResponseArg<T>>(
+    message(type, payload),
+  );
+  return unwrapResponse(type, r);
+}
+
 export async function sendToTab<T extends keyof Messages>(
   tabId: number,
   type: T,
-  payload: MessagePayload<T>,
-  options: chrome.tabs.MessageSendOptions = {},
+  ...args: MessagePayload<T> extends void
+    ? [payload?: undefined, options?: chrome.tabs.MessageSendOptions]
+    : [payload: MessagePayload<T>, options?: chrome.tabs.MessageSendOptions]
 ): Promise<Response<T>> {
+  const payload = args[0]! as MessagePayload<T>;
+  const options = args[1] ?? {};
   const r = await chrome.tabs.sendMessage<Message<T>, SendResponseArg<T>>(
     tabId,
     message(type, payload),
     options,
   );
-  if (r == null)
-    throw Error(
-      `No response for ${type}: receiver missing or handler not registered`,
-    );
-  if ("error" in r) throw r.error;
-  return r.response;
+  return unwrapResponse(type, r);
 }

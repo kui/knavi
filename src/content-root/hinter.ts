@@ -36,11 +36,10 @@ export class HinterContentRoot {
 
     await waitUntil(() => Boolean(document.body));
 
-    const hintTextGenerator = this.generateHintTexts();
-    for await (const elementRects of this.rectAggregator.aggregate()) {
-      if (!this.view.isStarted()) this.view.start();
-      if (elementRects.length === 0) continue;
-      const hintTexts = take(hintTextGenerator, elementRects.length);
+    const elementRects = await this.rectAggregator.aggregate();
+    this.view.start();
+    if (elementRects.length > 0) {
+      const hintTexts = take(this.generateHintTexts(), elementRects.length);
       hintTexts.sort(this.compareByHintLettersOrder());
       const targets: HintedElement[] = [
         ...map(
@@ -121,10 +120,9 @@ export class HinterContentRoot {
     // throw "already started hinting".
     this.context = null;
     this.view.remove();
-    await this.rectAggregator.action(
-      execute ? context.hitTarget?.id : undefined,
-      options,
-    );
+    if (execute && context.hitTarget) {
+      await this.rectAggregator.action(context.hitTarget.id, options);
+    }
   }
 }
 
