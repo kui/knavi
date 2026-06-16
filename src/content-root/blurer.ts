@@ -7,18 +7,9 @@ if (parent !== window)
 export class BlurerContentRoot {
   constructor(private view: BlurView) {}
 
-  handleBlurMessage(
-    source: MessageEventSource | null,
-    rect: RectJSON<"element-border", "layout-viewport"> | null,
-  ) {
-    if (source !== window) {
-      // Do nothing if the message was sent from the child frame.
-      // See also: src/content-all/blurer.ts
-      return;
-    }
-
+  handleBlurRoot(rect: RectJSON<"element-border", "layout-viewport"> | null) {
     if (!rect) {
-      console.warn("Unexpected rect: ", rect);
+      console.warn("Unexpected rect:", rect);
       return;
     }
 
@@ -26,7 +17,7 @@ export class BlurerContentRoot {
     if (!activeElement || !("blur" in activeElement)) return;
     (activeElement.blur as () => void)();
 
-    // We can treat layout viewport as root viewport in the root frame.
+    // In the root frame, layout-viewport coordinates equal root-viewport coordinates.
     this.view.blur(new Rect({ ...rect, origin: "root-viewport" }));
   }
 }

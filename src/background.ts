@@ -3,6 +3,7 @@ import * as hinter from "./background/hinter";
 import * as settings from "./background/settings";
 import * as migration from "./background/migration";
 import * as actionIcon from "./background/action-icon";
+import * as frameRegistry from "./background/frame-registry";
 import libSettings from "./lib/settings";
 
 globalThis.KNAVI_FILE = "background";
@@ -14,5 +15,6 @@ chrome.runtime.onMessage.addListener(
   rectAggregator.router
     .merge(hinter.router)
     .merge(settings.router)
+    .merge(frameRegistry.router)
     .buildListener(),
 );

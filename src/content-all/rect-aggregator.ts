@@ -1,13 +1,13 @@
 import { ActionFinder } from "./action-handlers";
 import { CachedFetcher } from "../lib/cache";
 import { sendToRuntime } from "../lib/chrome-messages";
-import { postMessageTo } from "../dom/dom-messages";
 import { getClientRects, getContentRects, listAll } from "../dom/elements";
 import { flatMap } from "../lib/iters";
 import { Timers } from "../lib/metrics";
 import { RectDetector } from "./rect-detector";
 import { Coordinates, Rect } from "../dom/rects";
 import settingsClient from "../lib/settings-client";
+import { printError } from "../lib/errors";
 
 interface ElementProfile {
   id: ElementId;
@@ -31,16 +31,15 @@ interface AggregationContext {
 
 export class RectAggregatorContentAll {
   private elements: ElementProfile[] = [];
-  private readonly actionFinder: ActionFinder | null = null;
   private readonly frameIdPromise = sendToRuntime("GetFrameId", undefined);
+
+  constructor(
+    private readonly iframeToFrameId: Map<HTMLIFrameElement, number>,
+  ) {}
 
   async handleAllRectsRequest(
     requestId: number,
-    // Actual viewport of the current frame.
-    // This is cropped by the root frame.
     currentViewport: Rect<"actual-viewport", "root-viewport">,
-    // Coordinate of viewport of the current frame.
-    // This coordinates could be negative because it could be out of the root frame.
     frameOffsets: Coordinates<"layout-viewport", "root-viewport">,
   ) {
     console.debug(
@@ -132,11 +131,13 @@ export class RectAggregatorContentAll {
       styleFetcher,
     }: AggregationContext,
   ) {
-    if (!frame.contentWindow) {
-      console.debug("No contentWindow to post message", frame);
+    if (!rect) return;
+
+    const childFrameId = this.iframeToFrameId.get(frame);
+    if (childFrameId == null) {
+      console.debug("No frameId for iframe, skipping propagation", frame);
       return;
     }
-    if (!rect) return;
 
     const [contentRect] = getContentRects(
       frame,
@@ -144,7 +145,7 @@ export class RectAggregatorContentAll {
       styleFetcher.get(frame),
     ).map((r) => r.offsets(frameOffsets.reverse()));
     if (!contentRect) {
-      console.warn("No conent rects", frame);
+      console.warn("No content rects", frame);
       return;
     }
     const iframeViewport = Rect.intersection(
@@ -157,11 +158,12 @@ export class RectAggregatorContentAll {
       return;
     }
 
-    postMessageTo(frame.contentWindow, "com.github.kui.knavi.AllRectsRequest", {
+    sendToRuntime("AllRectsRequest", {
       id: requestId,
+      targetFrameId: childFrameId,
       viewport: iframeViewport,
-      offsets: { ...contentRect, type: "layout-viewport" },
-    });
+      offsets: { ...contentRect, type: "layout-viewport" as const },
+    }).catch(printError);
   }
 
   async handleExecuteAction(index: number, options: ActionOptions) {

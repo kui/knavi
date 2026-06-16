@@ -2,7 +2,6 @@ import settingsClient from "./lib/settings-client";
 import { HinterContentRoot } from "./content-root/hinter";
 import { BlurerContentRoot } from "./content-root/blurer";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
-import { Router as DomMessageRouter } from "./dom/dom-messages";
 import { RectAggregatorClient } from "./content-root/rect-aggregator-client";
 import { HintView } from "./content-root/hinter-view";
 import BlurView from "./content-root/blurer-view";
@@ -42,14 +41,6 @@ chrome.runtime.onMessage.addListener(
     .add("RemoveHints", ({ options, execute }) =>
       hinter.removeHints(options, execute),
     )
-    .buildListener(),
-);
-
-addEventListener(
-  "message",
-  new DomMessageRouter()
-    .add("com.github.kui.knavi.Blur", ({ source, data }) =>
-      blurer.handleBlurMessage(source, data.rect),
-    )
+    .add("BlurRoot", ({ rect }) => blurer.handleBlurRoot(rect))
     .buildListener(),
 );

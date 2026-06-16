@@ -1,7 +1,7 @@
 import { sendToRuntime } from "../lib/chrome-messages";
-import { postMessageTo } from "../dom/dom-messages";
 import { createQueue } from "../lib/generators";
 import * as vp from "./viewports";
+import { printError } from "../lib/errors";
 
 export class RectAggregatorClient {
   private requestIndex = 0;
@@ -15,13 +15,17 @@ export class RectAggregatorClient {
     }
   }
 
-  // Aggregate all rects include elements inside iframe.
-  // Requests are thrown by `postMessage` (frame message passing),
+  // Aggregate all rects including elements inside iframes.
+  // Requests route through the background service worker via chrome.runtime.
   async *aggregate(): AsyncGenerator<ElementRects[]> {
     if (this.callback) throw Error("Illegal state: already fetching");
 
-    postMessageTo(window, "com.github.kui.knavi.AllRectsRequest", {
+    const { enqueue, dequeue } = createQueue<ElementRects[] | "Complete">();
+    this.callback = (rects) => enqueue.next(rects);
+
+    sendToRuntime("AllRectsRequest", {
       id: ++this.requestIndex,
+      targetFrameId: 0,
       viewport: {
         type: "actual-viewport",
         origin: "root-viewport",
@@ -30,11 +34,8 @@ export class RectAggregatorClient {
         ...vp.layout.sizes(),
       },
       offsets: { type: "layout-viewport", origin: "root-viewport", x: 0, y: 0 },
-    });
+    }).catch(printError);
 
-    const { enqueue, dequeue } = createQueue<ElementRects[] | "Complete">();
-
-    this.callback = (rects) => enqueue.next(rects);
     for await (const rects of dequeue) {
       if (rects === "Complete") {
         return;
