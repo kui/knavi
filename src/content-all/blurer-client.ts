@@ -1,5 +1,6 @@
 import { sendToRuntime } from "../lib/chrome-messages";
 import { getBoundingClientRect } from "../dom/elements";
+import { printWarn } from "../lib/errors";
 
 export default class BlurerClient {
   blur() {
@@ -7,7 +8,7 @@ export default class BlurerClient {
     if (!document.activeElement) return false;
     sendToRuntime("BlurUp", {
       rect: getBoundingClientRect(document.activeElement),
-    }).catch(console.warn);
+    }).catch(printWarn);
     return true;
   }
 }

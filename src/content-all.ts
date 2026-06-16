@@ -2,7 +2,7 @@ import { RectAggregatorContentAll as RectAggregator } from "./content-all/rect-a
 import { KeyboardHandlerContentAll as KeyboardHandler } from "./content-all/keyboard-handler";
 import { BlurerContentAll as Blurer } from "./content-all/blurer";
 import settingsClient from "./lib/settings-client";
-import { printError } from "./lib/errors";
+import { printError, printWarn } from "./lib/errors";
 import { wait } from "./lib/promises";
 import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
@@ -16,7 +16,7 @@ globalThis.KNAVI_FILE = "content-all";
 
 const iframeMap = new Map<number, HTMLIFrameElement>();
 listenForChildFramesAndRegister(iframeMap);
-registerWithParent().catch(console.warn);
+registerWithParent().catch(printWarn);
 
 // Keep a port open so background can detect when this frame unloads.
 chrome.runtime.connect({ name: "knavi-frame" });
