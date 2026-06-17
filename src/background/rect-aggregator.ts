@@ -27,7 +27,12 @@ export const router = Router.newInstance()
         if (registeredParent !== senderFrameId) {
           console.warn(
             "Unauthorized AllRectsRequest: sender is not registered parent",
-            { senderFrameId, targetFrameId, registeredParent },
+            {
+              senderFrameId,
+              targetFrameId,
+              registeredParent,
+              senderUrl: sender.url,
+            },
           );
           return;
         }
