@@ -143,7 +143,22 @@ void describe("background AllRectsRequest routing", () => {
     assert.equal(sent.length, 0);
   });
 
-  void test("drops requests for unregistered targets", async () => {
+  void test("drops non-root self-target (only root may bypass authorization)", async () => {
+    await registerChild(TAB, 0, 5);
+
+    // Frame 5 self-targets; its registered parent is 0, not itself, so drop.
+    await call(
+      "AllRectsRequest",
+      { id: 10, targetFrameId: 5, viewport: VIEWPORT, offsets: OFFSETS },
+      { tab: { id: TAB }, frameId: 5 },
+    );
+
+    assert.equal(sent.length, 0);
+  });
+
+  void test("drops requests to unregistered targets (even from root)", async () => {
+    // Root addresses an unregistered frame 7 — no registered parent for 7,
+    // so the expected sender is undefined and the request drops.
     await call(
       "AllRectsRequest",
       { id: 4, targetFrameId: 7, viewport: VIEWPORT, offsets: OFFSETS },

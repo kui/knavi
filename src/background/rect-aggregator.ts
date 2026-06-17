@@ -22,20 +22,18 @@ export const router = Router.newInstance()
     async ({ id, targetFrameId, viewport, offsets }, sender) => {
       const tabId = requireTabId(sender);
       const senderFrameId = requireFrameId(sender);
-      if (senderFrameId !== targetFrameId) {
-        const registeredParent = getParentFrameId(tabId, targetFrameId);
-        if (registeredParent !== senderFrameId) {
-          console.warn(
-            "Unauthorized AllRectsRequest: sender is not registered parent",
-            {
-              senderFrameId,
-              targetFrameId,
-              registeredParent,
-              senderUrl: sender.url,
-            },
-          );
-          return;
-        }
+      // Expected sender: root bootstraps itself (target 0 ← sender 0);
+      // otherwise the registered parent of the target must be the sender.
+      const expectedSender =
+        targetFrameId === 0 ? 0 : getParentFrameId(tabId, targetFrameId);
+      if (senderFrameId !== expectedSender) {
+        console.warn("Unauthorized AllRectsRequest", {
+          senderFrameId,
+          targetFrameId,
+          expectedSender,
+          senderUrl: sender.url,
+        });
+        return;
       }
       await sendToTab(
         tabId,
