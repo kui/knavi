@@ -179,12 +179,18 @@ void describe("background BlurUp routing", () => {
     assert.deepEqual(sent[0].payload, { childFrameId: 11, rect: RECT });
   });
 
-  void test("unregistered sender (e.g. root frame) → BlurRoot to frame 0", async () => {
+  void test("root frame (frameId 0) → BlurRoot to frame 0", async () => {
     await call("BlurUp", { rect: RECT }, { tab: { id: TAB }, frameId: 0 });
 
     assert.equal(sent.length, 1);
     assert.equal(sent[0].type, "BlurRoot");
     assert.equal(sent[0].options?.frameId, 0);
     assert.deepEqual(sent[0].payload, { rect: RECT });
+  });
+
+  void test("unregistered non-root sender → dropped, no sendToTab", async () => {
+    await call("BlurUp", { rect: RECT }, { tab: { id: TAB }, frameId: 42 });
+
+    assert.equal(sent.length, 0);
   });
 });

@@ -48,17 +48,26 @@ export const router = Router.newInstance()
 
   .add("BlurUp", async ({ rect }, sender) => {
     const tabId = requireTabId(sender);
-    const childFrameId = requireFrameId(sender);
-    const parentFrameId = getParentFrameId(tabId, childFrameId);
-    if (parentFrameId == null) {
-      // No registered parent — treat as root frame, deliver BlurRoot to frameId=0.
+    const senderFrameId = requireFrameId(sender);
+    if (senderFrameId === 0) {
       await sendToTab(tabId, "BlurRoot", { rect }, { frameId: 0 });
-    } else {
+      return;
+    }
+
+    const parentFrameId = getParentFrameId(tabId, senderFrameId);
+    if (parentFrameId != null) {
       await sendToTab(
         tabId,
         "BlurRelay",
-        { childFrameId, rect },
+        { childFrameId: senderFrameId, rect },
         { frameId: parentFrameId },
       );
+      return;
     }
+
+    console.warn("BlurUp from unregistered non-root frame; dropping", {
+      tabId,
+      senderFrameId,
+      senderUrl: sender.url,
+    });
   });
