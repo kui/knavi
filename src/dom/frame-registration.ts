@@ -38,14 +38,12 @@ export function onChildFrameId(
     const data = e.data as FrameIdAnnouncement | null | undefined;
     if (data?.["@type"] !== ANNOUNCEMENT_TYPE) return;
     // MessageEventSource = Window | MessagePort | ServiceWorker.
-    // "document" in source throws SecurityError for cross-origin windows;
-    // checking what it is NOT avoids that.
-    if (
-      !e.source ||
-      e.source instanceof MessagePort ||
-      e.source instanceof ServiceWorker
-    )
-      return;
-    callback(data.frameId, e.source);
+    // Duck-type via `"window" in source`: `window` is on the cross-origin
+    // property allowlist (so `in` never throws SecurityError), and only Window
+    // has it — MessagePort and ServiceWorker do not. Avoids `instanceof
+    // ServiceWorker`, which throws ReferenceError in insecure contexts (http).
+    const source = e.source;
+    if (!source || !("window" in source)) return;
+    callback(data.frameId, source);
   });
 }
