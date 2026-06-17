@@ -133,6 +133,10 @@ export class RectAggregatorContentAll {
   ) {
     if (!rect) return;
 
+    if (!frame.isConnected) {
+      console.debug("iframe no longer connected, skipping propagation", frame);
+      return;
+    }
     const childFrameId = this.iframeToFrameId.get(frame);
     if (childFrameId == null) {
       // Intentional: hint positions are not updated after the hint phase begins,

@@ -1,12 +1,18 @@
-import { Router, sendToRuntime } from "../lib/chrome-messages";
+import { sendToRuntime } from "../lib/chrome-messages";
 import { printError } from "../lib/errors";
 import { filter, first } from "../lib/iters";
 
 const ANNOUNCEMENT_TYPE = "com.github.kui.knavi.FrameIdAnnouncement";
+const PARENT_RESPONSE_TYPE = "com.github.kui.knavi.ParentFrameIdResponse";
 
 interface FrameIdAnnouncement {
   "@type": typeof ANNOUNCEMENT_TYPE;
   frameId: number;
+}
+
+interface ParentFrameIdResponse {
+  "@type": typeof PARENT_RESPONSE_TYPE;
+  parentFrameId: number;
 }
 
 // Gets own frameId via chrome.runtime and announces it to the parent frame via postMessage.
@@ -18,7 +24,7 @@ export function announceFrameIdToParent(): void {
       // "*" is intentional: frameId is meaningless outside the extension, so
       // there is no sensitive data to protect. Using ancestorOrigins[0] would
       // risk a silent drop if the parent navigates between GetFrameId and the
-      // postMessage call (a race that "* " avoids with no real downside here).
+      // postMessage call (a race that "*" avoids with no real downside here).
       parent.postMessage(
         { "@type": ANNOUNCEMENT_TYPE, frameId } satisfies FrameIdAnnouncement,
         "*",
@@ -27,11 +33,21 @@ export function announceFrameIdToParent(): void {
     .catch(printError);
 }
 
-// Registers a listener that fires whenever a child iframe announces its frameId.
-// `source` is the child's window, usable to find the corresponding iframe element.
-export function onChildFrameId(
-  callback: (childFrameId: number, source: Window) => void,
-): void {
+// Sets up all frame-registration logic: builds the iframe Maps, registers the
+// onChildFrameId listener, and announces this frame's own frameId to its
+// parent (no-op in the root frame). The parent replies with its own frameId
+// via ParentFrameIdResponse so this frame can hold its parentFrameId without
+// any background-side registry.
+export function setupFrameRegistration(): {
+  iframeByFrameId: Map<number, HTMLIFrameElement>;
+  iframeToFrameId: Map<HTMLIFrameElement, number>;
+  parentFrameIdPromise: Promise<number | undefined>;
+} {
+  const myFrameIdPromise = sendToRuntime("GetFrameId", undefined);
+
+  const iframeByFrameId = new Map<number, HTMLIFrameElement>();
+  const iframeToFrameId = new Map<HTMLIFrameElement, number>();
+
   window.addEventListener("message", (e: MessageEvent) => {
     const data = e.data as FrameIdAnnouncement | null | undefined;
     if (data?.["@type"] !== ANNOUNCEMENT_TYPE) return;
@@ -42,30 +58,7 @@ export function onChildFrameId(
     // ServiceWorker`, which throws ReferenceError in insecure contexts (http).
     const source = e.source;
     if (!source || !("window" in source)) return;
-    callback(data.frameId, source);
-  });
-}
 
-// Sets up all frame-registration logic: builds the iframe Maps, registers the
-// onChildFrameId listener, and announces this frame's own frameId to its
-// parent (no-op in the root frame). Returns the two Maps plus a Router that
-// the caller (content-all) merges into its onMessage listener so that
-// background-issued UnregisterChildFrame messages can clear stale entries
-// when a child frame disconnects (subtree removal, navigation, tab close).
-export function setupFrameRegistration(): {
-  iframeByFrameId: Map<number, HTMLIFrameElement>;
-  iframeToFrameId: Map<HTMLIFrameElement, number>;
-  router: Router<"UnregisterChildFrame">;
-} {
-  // Opens a long-lived port so background can detect frame disconnect.
-  // Skipped in the root frame: it never sends RegisterChildFrame, and tab
-  // close is handled by chrome.tabs.onRemoved on the background side.
-  if (parent !== window) chrome.runtime.connect({ name: "frame-lifetime" });
-
-  const iframeByFrameId = new Map<number, HTMLIFrameElement>();
-  const iframeToFrameId = new Map<HTMLIFrameElement, number>();
-
-  onChildFrameId((childFrameId, source) => {
     const iframe = first(
       filter(
         document.getElementsByTagName("iframe"),
@@ -76,22 +69,38 @@ export function setupFrameRegistration(): {
       console.warn("FrameIdAnnouncement from unknown source:", source);
       return;
     }
-    iframeByFrameId.set(childFrameId, iframe);
-    iframeToFrameId.set(iframe, childFrameId);
-    sendToRuntime("RegisterChildFrame", { childFrameId }).catch(printError);
+    iframeByFrameId.set(data.frameId, iframe);
+    iframeToFrameId.set(iframe, data.frameId);
+
+    // Reply with our own frameId so the child can store its parentFrameId.
+    myFrameIdPromise
+      .then((parentFrameId) => {
+        source.postMessage(
+          {
+            "@type": PARENT_RESPONSE_TYPE,
+            parentFrameId,
+          } satisfies ParentFrameIdResponse,
+          "*",
+        );
+      })
+      .catch(printError);
   });
 
-  const router = Router.newInstance().add(
-    "UnregisterChildFrame",
-    ({ childFrameId }) => {
-      const iframe = iframeByFrameId.get(childFrameId);
-      if (iframe == null) return;
-      iframeByFrameId.delete(childFrameId);
-      iframeToFrameId.delete(iframe);
-    },
-  );
+  // Resolve parentFrameId from the parent's response in non-root frames.
+  const parentFrameIdPromise: Promise<number | undefined> =
+    parent === window
+      ? Promise.resolve(undefined)
+      : new Promise((resolve) => {
+          const handler = (e: MessageEvent) => {
+            const data = e.data as ParentFrameIdResponse | null | undefined;
+            if (data?.["@type"] !== PARENT_RESPONSE_TYPE) return;
+            window.removeEventListener("message", handler);
+            resolve(data.parentFrameId);
+          };
+          window.addEventListener("message", handler);
+        });
 
   announceFrameIdToParent();
 
-  return { iframeByFrameId, iframeToFrameId, router };
+  return { iframeByFrameId, iframeToFrameId, parentFrameIdPromise };
 }

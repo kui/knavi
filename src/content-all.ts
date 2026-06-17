@@ -12,17 +12,14 @@ import { setupFrameRegistration } from "./content-all/frame-registration";
 
 globalThis.KNAVI_FILE = "content-all";
 
-const {
-  iframeByFrameId,
-  iframeToFrameId,
-  router: frameRegistrationRouter,
-} = setupFrameRegistration();
+const { iframeByFrameId, iframeToFrameId, parentFrameIdPromise } =
+  setupFrameRegistration();
 
-const blurerClient = new BlurerClient();
+const blurerClient = new BlurerClient(parentFrameIdPromise);
 const hinterClient = new HinterClient();
 const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
 const rectAggregator = new RectAggregator(iframeToFrameId);
-const blurer = new Blurer(iframeByFrameId);
+const blurer = new Blurer(iframeByFrameId, parentFrameIdPromise);
 
 async function setup() {
   const [setting, matchedBlacklist] = await Promise.all([
@@ -91,7 +88,6 @@ chrome.runtime.onMessage.addListener(
     .add("BlurRelay", ({ childFrameId, rect }) => {
       blurer.handleBlurRelay(childFrameId, rect);
     })
-    .merge(frameRegistrationRouter)
     .buildListener(),
 );
 

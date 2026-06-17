@@ -48,14 +48,6 @@ interface Messages {
     };
     response: void;
   };
-  RegisterChildFrame: {
-    payload: { childFrameId: number };
-    response: void;
-  };
-  UnregisterChildFrame: {
-    payload: { childFrameId: number };
-    response: void;
-  };
   AllRectsRequest: {
     payload: {
       id: number;
@@ -66,7 +58,10 @@ interface Messages {
     response: void;
   };
   BlurUp: {
-    payload: { rect: RectJSON<"element-border", "layout-viewport"> | null };
+    payload: {
+      parentFrameId: number;
+      rect: RectJSON<"element-border", "layout-viewport"> | null;
+    };
     response: void;
   };
   BlurRelay: {

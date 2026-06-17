@@ -6,6 +6,7 @@ import { printError } from "../lib/errors";
 export class BlurerContentAll {
   constructor(
     private readonly iframeByFrameId: Map<number, HTMLIFrameElement>,
+    private readonly parentFrameIdPromise: Promise<number | undefined>,
   ) {}
 
   // Handles BlurRelay from background: transform rect to parent coords and send BlurUp.
@@ -18,8 +19,21 @@ export class BlurerContentAll {
       console.warn("Unknown childFrameId for BlurRelay:", childFrameId);
       return;
     }
+    if (!frame.isConnected) {
+      // The iframe was removed from DOM; its entry will be ignored next lookup.
+      console.debug("BlurRelay: iframe no longer connected, skipping", frame);
+      return;
+    }
     const rect = buildBlurRect(frame, rectJson);
-    sendToRuntime("BlurUp", { rect }).catch(printError);
+    this.parentFrameIdPromise
+      .then((parentFrameId) => {
+        if (parentFrameId == null) {
+          // Root frame: no parent to relay to; background will send BlurRoot instead.
+          return;
+        }
+        return sendToRuntime("BlurUp", { parentFrameId, rect });
+      })
+      .catch(printError);
   }
 }
 

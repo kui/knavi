@@ -4,12 +4,23 @@ import { printError } from "../lib/errors";
 
 // Sends BlurUp to background, which relays it toward the root frame.
 export default class Blur {
+  constructor(
+    private readonly parentFrameIdPromise: Promise<number | undefined>,
+  ) {}
+
   blur() {
     if (isDefaultActiveElement()) return false;
     if (!document.activeElement) return false;
-    sendToRuntime("BlurUp", {
-      rect: getBoundingClientRect(document.activeElement),
-    }).catch(printError);
+    const rect = getBoundingClientRect(document.activeElement);
+    this.parentFrameIdPromise
+      .then((parentFrameId) => {
+        if (parentFrameId == null) {
+          // Root frame: send directly to BlurRoot via parentFrameId 0.
+          return sendToRuntime("BlurUp", { parentFrameId: 0, rect });
+        }
+        return sendToRuntime("BlurUp", { parentFrameId, rect });
+      })
+      .catch(printError);
     return true;
   }
 }

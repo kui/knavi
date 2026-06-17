@@ -2,11 +2,12 @@ import { describe, test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 interface PostedMessage {
+  target: unknown;
   data: unknown;
   targetOrigin: string;
 }
 
-const postedToParent: PostedMessage[] = [];
+const postedMessages: PostedMessage[] = [];
 const messageListeners: ((e: MessageEvent) => void)[] = [];
 const sentToRuntime: { type: string; payload: unknown }[] = [];
 
@@ -14,13 +15,15 @@ const fakeWindow = {
   addEventListener: (type: string, l: (e: MessageEvent) => void) => {
     if (type === "message") messageListeners.push(l);
   },
+  removeEventListener: () => {
+    // no-op for tests — listeners stay registered
+  },
 };
 
 (globalThis as Record<string, unknown>).window = fakeWindow;
 
 (globalThis as Record<string, unknown>).chrome = {
   runtime: {
-    connect: () => ({}),
     sendMessage: (msg: { "@type": string }) => {
       sentToRuntime.push({ type: msg["@type"], payload: msg });
       if (msg["@type"] === "GetFrameId")
@@ -36,27 +39,32 @@ function setParent(p: unknown) {
 
 setParent({
   postMessage: (data: unknown, targetOrigin: string) =>
-    postedToParent.push({ data, targetOrigin }),
+    postedMessages.push({ target: "parent", data, targetOrigin }),
 });
 
-const { announceFrameIdToParent, onChildFrameId, setupFrameRegistration } =
+const { announceFrameIdToParent, setupFrameRegistration } =
   await import("../../src/content-all/frame-registration.js");
 
 function fireMessage(event: Partial<MessageEvent>) {
   for (const l of messageListeners) l(event as MessageEvent);
 }
 
-// onChildFrameId duck-types `"window" in source` to identify a Window source.
-// A real Window has a self-referential `window` property.
-function makeWindowSource(): Window {
+// Duck-type via `"window" in source` to identify a Window source.
+function makeWindowSource(
+  onPostMessage?: (data: unknown, origin: string) => void,
+): Window {
   const w: Record<string, unknown> = {};
   w.window = w;
+  w.postMessage = (data: unknown, targetOrigin: string) => {
+    postedMessages.push({ target: w, data, targetOrigin });
+    onPostMessage?.(data, targetOrigin);
+  };
   return w as unknown as Window;
 }
 
 void describe("announceFrameIdToParent", () => {
   beforeEach(() => {
-    postedToParent.length = 0;
+    postedMessages.length = 0;
     sentToRuntime.length = 0;
   });
 
@@ -65,22 +73,22 @@ void describe("announceFrameIdToParent", () => {
     announceFrameIdToParent();
     await Promise.resolve();
     await Promise.resolve();
-    assert.equal(postedToParent.length, 0);
+    assert.equal(postedMessages.length, 0);
     assert.equal(sentToRuntime.length, 0);
   });
 
   void test("posts {@type, frameId} to parent with targetOrigin '*'", async () => {
     const fakeParent = {
       postMessage: (data: unknown, targetOrigin: string) =>
-        postedToParent.push({ data, targetOrigin }),
+        postedMessages.push({ target: "parent", data, targetOrigin }),
     };
     setParent(fakeParent);
     announceFrameIdToParent();
-    // Let the GetFrameId promise resolve.
     await Promise.resolve();
     await Promise.resolve();
-    assert.equal(postedToParent.length, 1);
-    assert.deepEqual(postedToParent[0], {
+    assert.equal(postedMessages.length, 1);
+    assert.deepEqual(postedMessages[0], {
+      target: "parent",
       data: {
         "@type": "com.github.kui.knavi.FrameIdAnnouncement",
         frameId: 42,
@@ -90,94 +98,95 @@ void describe("announceFrameIdToParent", () => {
   });
 });
 
-void describe("onChildFrameId", () => {
-  void test("invokes callback with frameId and source window", () => {
-    const calls: { frameId: number; source: Window }[] = [];
-    onChildFrameId((frameId, source) => calls.push({ frameId, source }));
+void describe("setupFrameRegistration", () => {
+  beforeEach(() => {
+    postedMessages.length = 0;
+    sentToRuntime.length = 0;
+    messageListeners.length = 0;
+  });
+
+  void test("registers child iframe in Maps when FrameIdAnnouncement arrives", async () => {
+    setParent(fakeWindow);
+    const { iframeByFrameId, iframeToFrameId } = setupFrameRegistration();
 
     const fakeSource = makeWindowSource();
+    const fakeIframe = {
+      contentWindow: fakeSource,
+    } as unknown as HTMLIFrameElement;
+
+    // Simulate document.getElementsByTagName("iframe") returning [fakeIframe]
+    (globalThis as Record<string, unknown>).document = {
+      getElementsByTagName: () => [fakeIframe],
+    };
+
     fireMessage({
       data: { "@type": "com.github.kui.knavi.FrameIdAnnouncement", frameId: 7 },
       source: fakeSource,
     });
 
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].frameId, 7);
-    assert.equal(calls[0].source, fakeSource);
+    // Wait for myFrameIdPromise to resolve so the response postMessage fires
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.equal(iframeByFrameId.get(7), fakeIframe);
+    assert.equal(iframeToFrameId.get(fakeIframe), 7);
   });
 
-  void test("ignores messages with wrong @type", () => {
-    const calls: number[] = [];
-    onChildFrameId((frameId) => calls.push(frameId));
-
-    const src = makeWindowSource();
-    fireMessage({
-      data: { "@type": "something.else", frameId: 1 },
-      source: src,
-    });
-    fireMessage({ data: null, source: src });
-    fireMessage({ data: undefined, source: src });
-
-    assert.equal(calls.length, 0);
-  });
-
-  void test("ignores non-Window sources (no `window` property)", () => {
-    const calls: number[] = [];
-    onChildFrameId((frameId) => calls.push(frameId));
-
-    const announcement = {
-      "@type": "com.github.kui.knavi.FrameIdAnnouncement",
-      frameId: 9,
-    };
-    // MessagePort/ServiceWorker do not expose a `window` property.
-    fireMessage({
-      data: announcement,
-      source: {} as unknown as MessageEventSource,
-    });
-    fireMessage({ data: announcement, source: null });
-
-    assert.equal(calls.length, 0);
-  });
-});
-
-void describe("setupFrameRegistration UnregisterChildFrame handler", () => {
-  void test("clears both Maps when UnregisterChildFrame arrives", () => {
-    setParent(fakeWindow); // skip announce / connect side-effects
-    const { iframeByFrameId, iframeToFrameId, router } =
-      setupFrameRegistration();
-
-    const fakeIframe = {} as HTMLIFrameElement;
-    iframeByFrameId.set(7, fakeIframe);
-    iframeToFrameId.set(fakeIframe, 7);
-
-    const listener = router.buildListener();
-    listener(
-      { "@type": "UnregisterChildFrame", childFrameId: 7 },
-      {},
-      () => undefined,
-    );
-
-    assert.equal(iframeByFrameId.has(7), false);
-    assert.equal(iframeToFrameId.has(fakeIframe), false);
-  });
-
-  void test("is a no-op for an unknown childFrameId", () => {
+  void test("replies to child with ParentFrameIdResponse", async () => {
     setParent(fakeWindow);
-    const { iframeByFrameId, iframeToFrameId, router } =
-      setupFrameRegistration();
+    setupFrameRegistration();
 
-    const fakeIframe = {} as HTMLIFrameElement;
-    iframeByFrameId.set(1, fakeIframe);
-    iframeToFrameId.set(fakeIframe, 1);
+    const replies: unknown[] = [];
+    const fakeSource = makeWindowSource((data) => replies.push(data));
+    const fakeIframe = {
+      contentWindow: fakeSource,
+    } as unknown as HTMLIFrameElement;
 
-    const listener = router.buildListener();
-    listener(
-      { "@type": "UnregisterChildFrame", childFrameId: 999 },
-      {},
-      () => undefined,
-    );
+    (globalThis as Record<string, unknown>).document = {
+      getElementsByTagName: () => [fakeIframe],
+    };
 
-    assert.equal(iframeByFrameId.get(1), fakeIframe);
-    assert.equal(iframeToFrameId.get(fakeIframe), 1);
+    fireMessage({
+      data: { "@type": "com.github.kui.knavi.FrameIdAnnouncement", frameId: 9 },
+      source: fakeSource,
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.equal(replies.length, 1);
+    assert.deepEqual(replies[0], {
+      "@type": "com.github.kui.knavi.ParentFrameIdResponse",
+      parentFrameId: 42,
+    });
+  });
+
+  void test("parentFrameIdPromise resolves to undefined in root frame", async () => {
+    setParent(fakeWindow); // parent === window → root frame
+    const { parentFrameIdPromise } = setupFrameRegistration();
+    const result = await parentFrameIdPromise;
+    assert.equal(result, undefined);
+  });
+
+  void test("parentFrameIdPromise resolves to parentFrameId when response arrives", async () => {
+    const fakeParent = {
+      postMessage: (data: unknown, targetOrigin: string) =>
+        postedMessages.push({ target: "parent", data, targetOrigin }),
+    };
+    setParent(fakeParent); // non-root frame
+
+    const { parentFrameIdPromise } = setupFrameRegistration();
+
+    // Simulate the parent sending back a ParentFrameIdResponse
+    fireMessage({
+      data: {
+        "@type": "com.github.kui.knavi.ParentFrameIdResponse",
+        parentFrameId: 100,
+      },
+      source: null,
+    });
+
+    const result = await parentFrameIdPromise;
+    assert.equal(result, 100);
   });
 });
