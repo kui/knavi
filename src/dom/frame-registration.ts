@@ -37,9 +37,15 @@ export function onChildFrameId(
   window.addEventListener("message", (e: MessageEvent) => {
     const data = e.data as FrameIdAnnouncement | null | undefined;
     if (data?.["@type"] !== ANNOUNCEMENT_TYPE) return;
-    // e.source instanceof Window fails cross-frame (different Window prototype per
-    // frame). Use a duck-type guard instead: any real frame window has "document".
-    if (!e.source || !("document" in e.source)) return;
+    // MessageEventSource = Window | MessagePort | ServiceWorker.
+    // "document" in source throws SecurityError for cross-origin windows;
+    // checking what it is NOT avoids that.
+    if (
+      !e.source ||
+      e.source instanceof MessagePort ||
+      e.source instanceof ServiceWorker
+    )
+      return;
     callback(data.frameId, e.source);
   });
 }
