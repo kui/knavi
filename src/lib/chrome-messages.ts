@@ -52,6 +52,10 @@ interface Messages {
     payload: { childFrameId: number };
     response: void;
   };
+  UnregisterChildFrame: {
+    payload: { childFrameId: number };
+    response: void;
+  };
   AllRectsRequest: {
     payload: {
       id: number;

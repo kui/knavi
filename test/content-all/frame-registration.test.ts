@@ -39,7 +39,7 @@ setParent({
     postedToParent.push({ data, targetOrigin }),
 });
 
-const { announceFrameIdToParent, onChildFrameId } =
+const { announceFrameIdToParent, onChildFrameId, setupFrameRegistration } =
   await import("../../src/content-all/frame-registration.js");
 
 function fireMessage(event: Partial<MessageEvent>) {
@@ -137,5 +137,47 @@ void describe("onChildFrameId", () => {
     fireMessage({ data: announcement, source: null });
 
     assert.equal(calls.length, 0);
+  });
+});
+
+void describe("setupFrameRegistration UnregisterChildFrame handler", () => {
+  void test("clears both Maps when UnregisterChildFrame arrives", () => {
+    setParent(fakeWindow); // skip announce / connect side-effects
+    const { iframeByFrameId, iframeToFrameId, router } =
+      setupFrameRegistration();
+
+    const fakeIframe = {} as HTMLIFrameElement;
+    iframeByFrameId.set(7, fakeIframe);
+    iframeToFrameId.set(fakeIframe, 7);
+
+    const listener = router.buildListener();
+    listener(
+      { "@type": "UnregisterChildFrame", childFrameId: 7 },
+      {},
+      () => undefined,
+    );
+
+    assert.equal(iframeByFrameId.has(7), false);
+    assert.equal(iframeToFrameId.has(fakeIframe), false);
+  });
+
+  void test("is a no-op for an unknown childFrameId", () => {
+    setParent(fakeWindow);
+    const { iframeByFrameId, iframeToFrameId, router } =
+      setupFrameRegistration();
+
+    const fakeIframe = {} as HTMLIFrameElement;
+    iframeByFrameId.set(1, fakeIframe);
+    iframeToFrameId.set(fakeIframe, 1);
+
+    const listener = router.buildListener();
+    listener(
+      { "@type": "UnregisterChildFrame", childFrameId: 999 },
+      {},
+      () => undefined,
+    );
+
+    assert.equal(iframeByFrameId.get(1), fakeIframe);
+    assert.equal(iframeToFrameId.get(fakeIframe), 1);
   });
 });

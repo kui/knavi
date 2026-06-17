@@ -12,7 +12,11 @@ import { setupFrameRegistration } from "./content-all/frame-registration";
 
 globalThis.KNAVI_FILE = "content-all";
 
-const { iframeByFrameId, iframeToFrameId } = setupFrameRegistration();
+const {
+  iframeByFrameId,
+  iframeToFrameId,
+  router: frameRegistrationRouter,
+} = setupFrameRegistration();
 
 const blurerClient = new BlurerClient();
 const hinterClient = new HinterClient();
@@ -87,6 +91,7 @@ chrome.runtime.onMessage.addListener(
     .add("BlurRelay", ({ childFrameId, rect }) => {
       blurer.handleBlurRelay(childFrameId, rect);
     })
+    .merge(frameRegistrationRouter)
     .buildListener(),
 );
 

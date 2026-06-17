@@ -1,4 +1,4 @@
-import { sendToRuntime } from "../lib/chrome-messages";
+import { Router, sendToRuntime } from "../lib/chrome-messages";
 import { printError } from "../lib/errors";
 import { filter, first } from "../lib/iters";
 
@@ -47,12 +47,15 @@ export function onChildFrameId(
 }
 
 // Sets up all frame-registration logic: builds the iframe Maps, registers the
-// onChildFrameId listener, starts the MutationObserver for removed iframes, and
-// announces this frame's own frameId to its parent (no-op in the root frame).
-// Returns the two Maps so callers (content-all) can pass them to other modules.
+// onChildFrameId listener, and announces this frame's own frameId to its
+// parent (no-op in the root frame). Returns the two Maps plus a Router that
+// the caller (content-all) merges into its onMessage listener so that
+// background-issued UnregisterChildFrame messages can clear stale entries
+// when a child frame disconnects (subtree removal, navigation, tab close).
 export function setupFrameRegistration(): {
   iframeByFrameId: Map<number, HTMLIFrameElement>;
   iframeToFrameId: Map<HTMLIFrameElement, number>;
+  router: Router<"UnregisterChildFrame">;
 } {
   // Opens a long-lived port so background can detect frame disconnect.
   // Skipped in the root frame: it never sends RegisterChildFrame, and tab
@@ -78,19 +81,17 @@ export function setupFrameRegistration(): {
     sendToRuntime("RegisterChildFrame", { childFrameId }).catch(printError);
   });
 
-  new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.removedNodes) {
-        if (!(node instanceof HTMLIFrameElement)) continue;
-        const frameId = iframeToFrameId.get(node);
-        if (frameId == null) continue;
-        iframeToFrameId.delete(node);
-        iframeByFrameId.delete(frameId);
-      }
-    }
-  }).observe(document.documentElement, { childList: true, subtree: true });
+  const router = Router.newInstance().add(
+    "UnregisterChildFrame",
+    ({ childFrameId }) => {
+      const iframe = iframeByFrameId.get(childFrameId);
+      if (iframe == null) return;
+      iframeByFrameId.delete(childFrameId);
+      iframeToFrameId.delete(iframe);
+    },
+  );
 
   announceFrameIdToParent();
 
-  return { iframeByFrameId, iframeToFrameId };
+  return { iframeByFrameId, iframeToFrameId, router };
 }

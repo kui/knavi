@@ -10,8 +10,16 @@ interface FakePort {
   onDisconnect: { addListener: (l: () => void) => void };
 }
 
+interface SentTabMessage {
+  tabId: number;
+  type: string;
+  payload: unknown;
+  options: chrome.tabs.MessageSendOptions;
+}
+
 const connectListeners: ConnectListener[] = [];
 const removedListeners: RemovedListener[] = [];
+const sentTabMessages: SentTabMessage[] = [];
 const noop = (): void => undefined;
 
 (globalThis as Record<string, unknown>).chrome = {
@@ -23,6 +31,19 @@ const noop = (): void => undefined;
   tabs: {
     onRemoved: {
       addListener: (l: RemovedListener) => removedListeners.push(l),
+    },
+    sendMessage: (
+      tabId: number,
+      msg: { "@type": string },
+      options: chrome.tabs.MessageSendOptions,
+    ) => {
+      sentTabMessages.push({
+        tabId,
+        type: msg["@type"],
+        payload: msg,
+        options,
+      });
+      return Promise.resolve({ response: undefined });
     },
   },
 };
@@ -64,7 +85,8 @@ void describe("frame-registry", () => {
     assert.equal(getParentFrameId(999, 5), undefined);
   });
 
-  void test("port disconnect removes the disconnecting frame's entry", () => {
+  void test("port disconnect removes the disconnecting frame's entry and notifies the parent", () => {
+    sentTabMessages.length = 0;
     register(10, 0, 50);
     register(10, 50, 51);
 
@@ -78,6 +100,26 @@ void describe("frame-registry", () => {
     assert.equal(getParentFrameId(10, 50), undefined);
     // Sibling/descendant entries are not touched by a single disconnect.
     assert.equal(getParentFrameId(10, 51), 50);
+
+    assert.equal(sentTabMessages.length, 1);
+    assert.equal(sentTabMessages[0].tabId, 10);
+    assert.equal(sentTabMessages[0].type, "UnregisterChildFrame");
+    assert.deepEqual(sentTabMessages[0].payload, {
+      "@type": "UnregisterChildFrame",
+      childFrameId: 50,
+    });
+    assert.deepEqual(sentTabMessages[0].options, { frameId: 0 });
+  });
+
+  void test("port disconnect for an unknown frame does not send a message", () => {
+    sentTabMessages.length = 0;
+    const disconnect = connectAndDisconnect({
+      name: "frame-lifetime",
+      sender: { tab: { id: 100 }, frameId: 500 },
+      onDisconnect: { addListener: noop },
+    });
+    disconnect();
+    assert.equal(sentTabMessages.length, 0);
   });
 
   void test("ignores ports with other names", () => {

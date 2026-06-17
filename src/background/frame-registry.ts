@@ -1,4 +1,5 @@
-import { Router } from "../lib/chrome-messages";
+import { Router, sendToTab } from "../lib/chrome-messages";
+import { printDebug } from "../lib/errors";
 import { requireFrameId, requireTabId } from "./sender-guards";
 
 // tabId → (childFrameId → parentFrameId)
@@ -15,9 +16,20 @@ chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== "frame-lifetime") return;
   port.onDisconnect.addListener(() => {
     const tabId = port.sender?.tab?.id;
-    const frameId = port.sender?.frameId;
-    if (tabId == null || frameId == null) return;
-    registry.get(tabId)?.delete(frameId);
+    const childFrameId = port.sender?.frameId;
+    if (tabId == null || childFrameId == null) return;
+    const parentFrameId = getParentFrameId(tabId, childFrameId);
+    registry.get(tabId)?.delete(childFrameId);
+    if (parentFrameId == null) return;
+    // Failures here mean the parent frame/tab is already gone (tab close,
+    // ancestor frame destroyed). The message is a cleanup hint, so a missing
+    // receiver means "no cleanup needed" — log at debug level only.
+    sendToTab(
+      tabId,
+      "UnregisterChildFrame",
+      { childFrameId },
+      { frameId: parentFrameId },
+    ).catch(printDebug);
   });
 });
 
