@@ -40,7 +40,7 @@ setParent({
 });
 
 const { announceFrameIdToParent, onChildFrameId } =
-  await import("../../src/dom/frame-registration.js");
+  await import("../../src/content-all/frame-registration.js");
 
 function fireMessage(event: Partial<MessageEvent>) {
   for (const l of messageListeners) l(event as MessageEvent);

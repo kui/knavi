@@ -6,51 +6,13 @@ import { printError } from "./lib/errors";
 import { wait } from "./lib/promises";
 import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
-import {
-  Router as ChromeMessageRouter,
-  sendToRuntime,
-} from "./lib/chrome-messages";
+import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
 import { Coordinates, Rect } from "./dom/rects";
-import {
-  announceFrameIdToParent,
-  onChildFrameId,
-} from "./dom/frame-registration";
-import { filter, first } from "./lib/iters";
+import { setupFrameRegistration } from "./content-all/frame-registration";
 
 globalThis.KNAVI_FILE = "content-all";
 
-const iframeByFrameId = new Map<number, HTMLIFrameElement>();
-const iframeToFrameId = new Map<HTMLIFrameElement, number>();
-
-onChildFrameId((childFrameId, source) => {
-  const iframe = first(
-    filter(
-      document.getElementsByTagName("iframe"),
-      (i) => source === i.contentWindow,
-    ),
-  );
-  if (!iframe) {
-    console.warn("FrameIdAnnouncement from unknown source:", source);
-    return;
-  }
-  iframeByFrameId.set(childFrameId, iframe);
-  iframeToFrameId.set(iframe, childFrameId);
-  sendToRuntime("RegisterChildFrame", { childFrameId }).catch(printError);
-});
-
-new MutationObserver((mutations) => {
-  for (const mutation of mutations) {
-    for (const node of mutation.removedNodes) {
-      if (!(node instanceof HTMLIFrameElement)) continue;
-      const frameId = iframeToFrameId.get(node);
-      if (frameId == null) continue;
-      iframeToFrameId.delete(node);
-      iframeByFrameId.delete(frameId);
-    }
-  }
-}).observe(document.documentElement, { childList: true, subtree: true });
-
-announceFrameIdToParent();
+const { iframeByFrameId, iframeToFrameId } = setupFrameRegistration();
 
 const blurerClient = new BlurerClient();
 const hinterClient = new HinterClient();

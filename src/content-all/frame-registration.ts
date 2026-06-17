@@ -1,5 +1,6 @@
 import { sendToRuntime } from "../lib/chrome-messages";
 import { printError } from "../lib/errors";
+import { filter, first } from "../lib/iters";
 
 const ANNOUNCEMENT_TYPE = "com.github.kui.knavi.FrameIdAnnouncement";
 
@@ -7,9 +8,6 @@ interface FrameIdAnnouncement {
   "@type": typeof ANNOUNCEMENT_TYPE;
   frameId: number;
 }
-
-// Opens a long-lived port so background can detect frame disconnect.
-chrome.runtime.connect({ name: "frame-lifetime" });
 
 // Gets own frameId via chrome.runtime and announces it to the parent frame via postMessage.
 // Only called in non-root frames.
@@ -46,4 +44,53 @@ export function onChildFrameId(
     if (!source || !("window" in source)) return;
     callback(data.frameId, source);
   });
+}
+
+// Sets up all frame-registration logic: builds the iframe Maps, registers the
+// onChildFrameId listener, starts the MutationObserver for removed iframes, and
+// announces this frame's own frameId to its parent (no-op in the root frame).
+// Returns the two Maps so callers (content-all) can pass them to other modules.
+export function setupFrameRegistration(): {
+  iframeByFrameId: Map<number, HTMLIFrameElement>;
+  iframeToFrameId: Map<HTMLIFrameElement, number>;
+} {
+  // Opens a long-lived port so background can detect frame disconnect.
+  // Skipped in the root frame: it never sends RegisterChildFrame, and tab
+  // close is handled by chrome.tabs.onRemoved on the background side.
+  if (parent !== window) chrome.runtime.connect({ name: "frame-lifetime" });
+
+  const iframeByFrameId = new Map<number, HTMLIFrameElement>();
+  const iframeToFrameId = new Map<HTMLIFrameElement, number>();
+
+  onChildFrameId((childFrameId, source) => {
+    const iframe = first(
+      filter(
+        document.getElementsByTagName("iframe"),
+        (i) => source === i.contentWindow,
+      ),
+    );
+    if (!iframe) {
+      console.warn("FrameIdAnnouncement from unknown source:", source);
+      return;
+    }
+    iframeByFrameId.set(childFrameId, iframe);
+    iframeToFrameId.set(iframe, childFrameId);
+    sendToRuntime("RegisterChildFrame", { childFrameId }).catch(printError);
+  });
+
+  new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.removedNodes) {
+        if (!(node instanceof HTMLIFrameElement)) continue;
+        const frameId = iframeToFrameId.get(node);
+        if (frameId == null) continue;
+        iframeToFrameId.delete(node);
+        iframeByFrameId.delete(frameId);
+      }
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+
+  announceFrameIdToParent();
+
+  return { iframeByFrameId, iframeToFrameId };
 }
