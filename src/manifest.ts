@@ -47,5 +47,12 @@ export default function manifest(pkg: Pkg): chrome.runtime.ManifestV3 {
     },
     permissions: ["storage"],
     host_permissions: ["<all_urls>"],
+    web_accessible_resources: [
+      {
+        matches: ["<all_urls>"],
+        resources: ["*.js.map"],
+        use_dynamic_url: true,
+      },
+    ],
   };
 }
