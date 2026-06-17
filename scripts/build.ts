@@ -76,7 +76,7 @@ export async function build({
     entryPoints: JS_ENTRIES.map((e) => path.join(SRC, e)),
     outdir: BUILD,
     bundle: true,
-    sourcemap: true,
+    sourcemap: minify ? false : "inline",
     minify,
     target: "chrome114",
     tsconfig: path.join(SRC, "tsconfig.content-all.json"),
