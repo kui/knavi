@@ -12,8 +12,13 @@ import { setupFrameRegistration } from "./content-all/frame-registration";
 
 globalThis.KNAVI_FILE = "content-all";
 
-const { iframeByFrameId, iframeToFrameId, parentFrameIdPromise } =
-  setupFrameRegistration();
+const {
+  iframeByFrameId,
+  iframeToFrameId,
+  parentFrameIdPromise,
+  handleMessage,
+} = setupFrameRegistration();
+window.addEventListener("message", handleMessage);
 
 const blurerClient = new BlurerClient(parentFrameIdPromise);
 const hinterClient = new HinterClient();
@@ -21,7 +26,7 @@ const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
 const rectAggregator = new RectAggregator(iframeToFrameId);
 const blurer = new Blurer(iframeByFrameId, parentFrameIdPromise);
 
-async function setup() {
+async function setupKeyboardHandler() {
   const [setting, matchedBlacklist] = await Promise.all([
     settingsClient.get([
       "magicKey",
@@ -36,7 +41,7 @@ async function setup() {
   keyboardHandler.setup(setting, matchedBlacklist);
   console.debug("settings loaded");
 }
-setup().catch(printError);
+setupKeyboardHandler().catch(printError);
 
 const RELEVANT_KEYS: (keyof Settings)[] = [
   "magicKey",
@@ -59,7 +64,7 @@ chrome.storage.onChanged.addListener((changes) => {
     do {
       await wait(200, signal);
     } while (hinterClient.isHinting);
-    await setup();
+    await setupKeyboardHandler();
   })().catch((e) => {
     if (e instanceof DOMException && e.name === "AbortError") return;
     printError(e);
