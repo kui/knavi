@@ -46,7 +46,7 @@ export function setupFrameRegistration(): {
       .catch(printError);
   }
 
-  function onMessage(e: MessageEvent) {
+  function handleMessage(e: MessageEvent) {
     const data = e.data as
       | FrameIdAnnouncement
       | ParentFrameIdResponse
@@ -72,6 +72,12 @@ export function setupFrameRegistration(): {
         console.warn("FrameIdAnnouncement from unknown source:", source);
         return;
       }
+      for (const [id, el] of iframeByFrameId) {
+        if (!el.isConnected) {
+          iframeByFrameId.delete(id);
+          iframeToFrameId.delete(el);
+        }
+      }
       iframeByFrameId.set(data.frameId, iframe);
       iframeToFrameId.set(iframe, data.frameId);
 
@@ -96,6 +102,6 @@ export function setupFrameRegistration(): {
     iframeByFrameId,
     iframeToFrameId,
     parentFrameIdPromise,
-    handleMessage: onMessage,
+    handleMessage,
   };
 }
