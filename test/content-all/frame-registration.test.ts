@@ -42,7 +42,7 @@ setParent({
     postedMessages.push({ target: "parent", data, targetOrigin }),
 });
 
-const { announceFrameIdToParent, setupFrameRegistration } =
+const { setupFrameRegistration } =
   await import("../../src/content-all/frame-registration.js");
 
 function fireMessage(event: Partial<MessageEvent>) {
@@ -62,19 +62,19 @@ function makeWindowSource(
   return w as unknown as Window;
 }
 
-void describe("announceFrameIdToParent", () => {
+void describe("announceFrameIdToParent (via setupFrameRegistration)", () => {
   beforeEach(() => {
     postedMessages.length = 0;
     sentToRuntime.length = 0;
+    messageListeners.length = 0;
   });
 
   void test("no-ops when running in the root frame", async () => {
     setParent(fakeWindow); // parent === window
-    announceFrameIdToParent();
+    setupFrameRegistration();
     await Promise.resolve();
     await Promise.resolve();
     assert.equal(postedMessages.length, 0);
-    assert.equal(sentToRuntime.length, 0);
   });
 
   void test("posts {@type, frameId} to parent with targetOrigin '*'", async () => {
@@ -83,7 +83,7 @@ void describe("announceFrameIdToParent", () => {
         postedMessages.push({ target: "parent", data, targetOrigin }),
     };
     setParent(fakeParent);
-    announceFrameIdToParent();
+    setupFrameRegistration();
     await Promise.resolve();
     await Promise.resolve();
     assert.equal(postedMessages.length, 1);

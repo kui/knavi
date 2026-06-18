@@ -15,24 +15,6 @@ interface ParentFrameIdResponse {
   parentFrameId: number;
 }
 
-// Gets own frameId via chrome.runtime and announces it to the parent frame via postMessage.
-// Only called in non-root frames.
-export function announceFrameIdToParent(): void {
-  if (parent === window) return;
-  sendToRuntime("GetFrameId", undefined)
-    .then((frameId) => {
-      // "*" is intentional: frameId is meaningless outside the extension, so
-      // there is no sensitive data to protect. Using ancestorOrigins[0] would
-      // risk a silent drop if the parent navigates between GetFrameId and the
-      // postMessage call (a race that "*" avoids with no real downside here).
-      parent.postMessage(
-        { "@type": ANNOUNCEMENT_TYPE, frameId } satisfies FrameIdAnnouncement,
-        "*",
-      );
-    })
-    .catch(printError);
-}
-
 // Sets up all frame-registration logic: builds the iframe Maps, registers the
 // onChildFrameId listener, and announces this frame's own frameId to its
 // parent (no-op in the root frame). The parent replies with its own frameId
@@ -100,7 +82,17 @@ export function setupFrameRegistration(): {
           window.addEventListener("message", handler);
         });
 
-  announceFrameIdToParent();
+  if (parent !== window) {
+    myFrameIdPromise
+      .then((frameId) => {
+        // TODO: obtain parentFrameId without postMessage (frameId fingerprinting risk).
+        parent.postMessage(
+          { "@type": ANNOUNCEMENT_TYPE, frameId } satisfies FrameIdAnnouncement,
+          "*", // intentional: avoids silent drop if the parent navigates mid-flight.
+        );
+      })
+      .catch(printError);
+  }
 
   return { iframeByFrameId, iframeToFrameId, parentFrameIdPromise };
 }
