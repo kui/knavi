@@ -55,8 +55,7 @@ void describe("announceFrameIdToParent (via setupFrameRegistration)", () => {
   void test("no-ops when running in the root frame", async () => {
     setParent(fakeWindow); // parent === window
     setupFrameRegistration();
-    await Promise.resolve();
-    await Promise.resolve();
+    await new Promise<void>((resolve) => setImmediate(resolve));
     assert.equal(postedMessages.length, 0);
   });
 
@@ -67,8 +66,7 @@ void describe("announceFrameIdToParent (via setupFrameRegistration)", () => {
     };
     setParent(fakeParent);
     setupFrameRegistration();
-    await Promise.resolve();
-    await Promise.resolve();
+    await new Promise<void>((resolve) => setImmediate(resolve));
     assert.equal(postedMessages.length, 1);
     assert.deepEqual(postedMessages[0], {
       target: "parent",
@@ -110,8 +108,7 @@ void describe("setupFrameRegistration", () => {
       source: fakeSource,
     } as MessageEvent);
 
-    await Promise.resolve();
-    await Promise.resolve();
+    await new Promise<void>((resolve) => setImmediate(resolve));
 
     assert.equal(iframeByFrameId.get(7), fakeIframe);
     assert.equal(iframeToFrameId.get(fakeIframe), 7);
@@ -136,8 +133,7 @@ void describe("setupFrameRegistration", () => {
       source: fakeSource,
     } as MessageEvent);
 
-    await Promise.resolve();
-    await Promise.resolve();
+    await new Promise<void>((resolve) => setImmediate(resolve));
 
     assert.equal(replies.length, 1);
     assert.deepEqual(replies[0], {
