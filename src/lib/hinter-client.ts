@@ -12,6 +12,13 @@ export default class HinterClient {
     return this.hinting;
   }
 
+  // Called by content-all.ts when it observes AttachHints or RemoveHints
+  // arriving at the root frame. Keeps the root frame's keyboard handler in
+  // sync with sessions initiated by child frames.
+  syncHinting(active: boolean) {
+    this.hinting = active;
+  }
+
   async attachHints() {
     if (this.hinting) throw Error("Illegal state");
     this.hinting = true;

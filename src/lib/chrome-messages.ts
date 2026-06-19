@@ -87,6 +87,14 @@ type Handler<T extends keyof Messages> = (
   sender: chrome.runtime.MessageSender,
 ) => Response<T> | Promise<Response<T>>;
 
+// A passive handler observes a message without sending a response.
+// Use addPassive() when another listener in a different script owns the
+// sendResponse for the same message type.
+type PassiveHandler<T extends keyof Messages> = (
+  data: MessagePayload<T>,
+  sender: chrome.runtime.MessageSender,
+) => void | Promise<void>;
+
 type SendResponseArg<T extends keyof Messages> =
   | { response: Response<T> }
   | { error: Error };
@@ -111,6 +119,10 @@ export class Router<
     keyof Messages,
     Handler<keyof Messages>
   >();
+  private readonly passiveHandlers = new Map<
+    keyof Messages,
+    PassiveHandler<keyof Messages>
+  >();
 
   // Use `newInstance` instead of `new Router`, because of managing the T.
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -120,13 +132,33 @@ export class Router<
     return new Router();
   }
 
+  private isRegistered(type: keyof Messages): boolean {
+    return this.handlers.has(type) || this.passiveHandlers.has(type);
+  }
+
   add<T extends Exclude<keyof Messages, RegisteredTypes>>(
     type: T,
     handler: Handler<T>,
   ): Router<Exclude<RegisteredTypes | T, void>> {
-    if (this.handlers.has(type))
+    if (this.isRegistered(type))
       throw Error(`Already registered: type=${type}`);
     this.handlers.set(type, handler as unknown as Handler<keyof Messages>);
+    return this;
+  }
+
+  // Register a passive handler: observes the message without sending a
+  // response. Use when another listener in a different script (e.g.
+  // content-root.ts) owns the sendResponse for this message type.
+  addPassive<T extends Exclude<keyof Messages, RegisteredTypes>>(
+    type: T,
+    handler: PassiveHandler<T>,
+  ): Router<Exclude<RegisteredTypes | T, void>> {
+    if (this.isRegistered(type))
+      throw Error(`Already registered: type=${type}`);
+    this.passiveHandlers.set(
+      type,
+      handler as unknown as PassiveHandler<keyof Messages>,
+    );
     return this;
   }
 
@@ -144,6 +176,9 @@ export class Router<
     for (const [type, handler] of router.handlers) {
       this.handlers.set(type, handler);
     }
+    for (const [type, handler] of router.passiveHandlers) {
+      this.passiveHandlers.set(type, handler);
+    }
     return this;
   }
 
@@ -154,6 +189,20 @@ export class Router<
     sender: chrome.runtime.MessageSender,
     sendResponse: (arg: SendResponseArg<T>) => void,
   ): boolean | void {
+    const passiveHandler = this.passiveHandlers.get(type(message));
+    if (passiveHandler) {
+      console.debug("Recieve (passive): ", message);
+      try {
+        const result = passiveHandler(message, sender);
+        if (result instanceof Promise) {
+          result.catch((e) => console.warn("Passive handler error:", e));
+        }
+      } catch (e) {
+        console.warn("Passive handler error:", e);
+      }
+      return; // Do not call sendResponse; the active listener owns the response.
+    }
+
     const handler = this.handlers.get(type(message));
     if (!handler) return;
 
