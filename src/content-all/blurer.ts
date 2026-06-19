@@ -26,13 +26,9 @@ export class BlurerContentAll {
     }
     const rect = buildBlurRect(frame, rectJson);
     this.parentFrameIdPromise
-      .then((parentFrameId) => {
-        if (parentFrameId == null) {
-          // Root frame: no parent to relay to; background will send BlurRoot instead.
-          return;
-        }
-        return sendToRuntime("BlurUp", { parentFrameId, rect });
-      })
+      .then((parentFrameId) =>
+        sendToRuntime("BlurUp", { parentFrameId: parentFrameId ?? 0, rect }),
+      )
       .catch(printError);
   }
 }

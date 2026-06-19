@@ -32,7 +32,7 @@ export const router = Router.newInstance()
   .add("BlurUp", async ({ parentFrameId, rect }, sender) => {
     const tabId = requireTabId(sender);
     const senderFrameId = requireFrameId(sender);
-    if (parentFrameId === 0) {
+    if (parentFrameId === 0 && senderFrameId === 0) {
       await sendToTab(tabId, "BlurRoot", { rect }, { frameId: 0 });
       return;
     }

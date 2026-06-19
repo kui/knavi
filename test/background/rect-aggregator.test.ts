@@ -129,7 +129,20 @@ void describe("background BlurUp routing", () => {
     height: 40,
   };
 
-  void test("parentFrameId === 0 → BlurRoot to frame 0", async () => {
+  void test("parentFrameId === 0 and senderFrameId === 0 → BlurRoot to frame 0", async () => {
+    await call(
+      "BlurUp",
+      { parentFrameId: 0, rect: RECT },
+      { tab: { id: TAB }, frameId: 0 },
+    );
+
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].type, "BlurRoot");
+    assert.equal(sent[0].options?.frameId, 0);
+    assert.deepEqual(sent[0].payload, { rect: RECT });
+  });
+
+  void test("parentFrameId === 0 and senderFrameId !== 0 → BlurRelay to frame 0", async () => {
     await call(
       "BlurUp",
       { parentFrameId: 0, rect: RECT },
@@ -137,9 +150,9 @@ void describe("background BlurUp routing", () => {
     );
 
     assert.equal(sent.length, 1);
-    assert.equal(sent[0].type, "BlurRoot");
+    assert.equal(sent[0].type, "BlurRelay");
     assert.equal(sent[0].options?.frameId, 0);
-    assert.deepEqual(sent[0].payload, { rect: RECT });
+    assert.deepEqual(sent[0].payload, { childFrameId: 11, rect: RECT });
   });
 
   void test("non-zero parentFrameId → BlurRelay to that frame", async () => {
