@@ -83,7 +83,7 @@ export async function setSettings(
 /**
  * Navigate to a test page and wait until the root frame's content script is
  * ready.  "Ready" means the keyboard handler has finished loading settings
- * (signalled by globalThis.KNAVI_READY).  Waiting here eliminates the race
+ * (signalled by dataset.knaviReady on the root &lt;html&gt; element).  Waiting here eliminates the race
  * between Space and async content-script setup that caused flakiness in the
  * iframe-hint test.  Child frames do not need their keyboard handlers ready —
  * hint detection only requires them to respond to AllRectsRequest, which does
