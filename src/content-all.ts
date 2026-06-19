@@ -74,7 +74,7 @@ window.navigation?.addEventListener("navigatesuccess", () => {
 });
 
 chrome.runtime.onMessage.addListener(
-  ChromeMessageRouter.newInstance()
+  ChromeMessageRouter.newTabInstance()
     .add("ExecuteActionInFrame", ({ id, options }) =>
       rectAggregator.handleExecuteAction(id.index, options),
     )

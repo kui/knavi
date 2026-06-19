@@ -1,6 +1,6 @@
 import type { SingleLetter } from "./strings";
 
-interface RuntimeMessages {
+export interface RuntimeMessages {
   // Settings — received by background
   GetSettings: {
     payload: { names: (keyof Settings)[] };
@@ -67,7 +67,7 @@ interface RuntimeMessages {
   };
 }
 
-interface TabMessages {
+export interface TabMessages {
   // Hint session — tab hop (background → content-root)
   AttachHintsInTab: {
     payload: void;
@@ -116,104 +116,94 @@ interface TabMessages {
   };
 }
 
-type AllMessages = RuntimeMessages & TabMessages;
+// Use conditional inference so M can be a concrete interface (no index signature needed).
+type MPayload<M, T extends keyof M> = M[T] extends { payload: infer P }
+  ? P
+  : never;
+type MResponse<M, T extends keyof M> = M[T] extends { response: infer R }
+  ? R
+  : never;
+type MMessage<M, T extends keyof M> = { readonly "@type": T } & MPayload<M, T>;
 
-type Message<T extends keyof AllMessages> = {
-  readonly "@type": T;
-} & MessagePayload<T>;
-type MessagePayload<T extends keyof AllMessages> = AllMessages[T]["payload"];
-type Response<T extends keyof AllMessages> = AllMessages[T]["response"];
-type Handler<T extends keyof AllMessages> = (
-  data: MessagePayload<T>,
+type MHandler<M, T extends keyof M> = (
+  data: MPayload<M, T>,
   sender: chrome.runtime.MessageSender,
-) => Response<T> | Promise<Response<T>>;
+) => MResponse<M, T> | Promise<MResponse<M, T>>;
 
 // A passive handler observes a message without sending a response.
 // Use addPassive() when another listener in a different script owns the
 // sendResponse for the same message type.
-type PassiveHandler<T extends keyof AllMessages> = (
-  data: MessagePayload<T>,
+type MPassiveHandler<M, T extends keyof M> = (
+  data: MPayload<M, T>,
   sender: chrome.runtime.MessageSender,
 ) => void | Promise<void>;
 
-type SendResponseArg<T extends keyof AllMessages> =
-  | { response: Response<T> }
+type MSendResponseArg<M, T extends keyof M> =
+  | { response: MResponse<M, T> }
   | { error: Error };
 
-function type<T extends keyof AllMessages>(m: Message<T>): T {
-  return m["@type"];
-}
-
-function message<T extends keyof AllMessages>(
+// Object.assign avoids TypeScript's spread-of-void complaint.
+function makeMessage<M, T extends keyof M>(
   type: T,
-  payload: MessagePayload<T>,
-): Message<T> {
-  return { "@type": type, ...payload };
+  payload: MPayload<M, T>,
+): MMessage<M, T> {
+  return Object.assign({ "@type": type }, payload);
 }
 
 export class Router<
-  // Message types which are already registered to reject duplicate type registration.
-  // If T is void, it means no message types are registered.
-  RegisteredTypes extends keyof AllMessages | void,
+  M,
+  // Message types already registered; void means none registered yet.
+  RegisteredTypes extends keyof M | void,
 > {
-  private readonly handlers = new Map<
-    keyof AllMessages,
-    Handler<keyof AllMessages>
-  >();
+  private readonly handlers = new Map<keyof M, MHandler<M, keyof M>>();
   private readonly passiveHandlers = new Map<
-    keyof AllMessages,
-    PassiveHandler<keyof AllMessages>
+    keyof M,
+    MPassiveHandler<M, keyof M>
   >();
 
-  // Use `newInstance` instead of `new Router`, because of managing the T.
+  // Use the static factories instead of `new Router`.
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
 
-  static newInstance(): Router<void> {
+  static newRuntimeInstance(): Router<RuntimeMessages, void> {
     return new Router();
   }
 
-  private isRegistered(type: keyof AllMessages): boolean {
+  static newTabInstance(): Router<TabMessages, void> {
+    return new Router();
+  }
+
+  private isRegistered(type: keyof M): boolean {
     return this.handlers.has(type) || this.passiveHandlers.has(type);
   }
 
-  add<T extends Exclude<keyof AllMessages, RegisteredTypes>>(
+  add<T extends Exclude<keyof M, RegisteredTypes>>(
     type: T,
-    handler: Handler<T>,
-  ): Router<Exclude<RegisteredTypes | T, void>> {
+    handler: MHandler<M, T>,
+  ): Router<M, Exclude<RegisteredTypes | T, void>> {
     if (this.isRegistered(type))
-      throw Error(`Already registered: type=${type}`);
-    this.handlers.set(type, handler as unknown as Handler<keyof AllMessages>);
+      throw Error(`Already registered: type=${String(type)}`);
+    this.handlers.set(type, handler);
     return this;
   }
 
   // Register a passive handler: observes the message without sending a
   // response. Use when another listener in a different script (e.g.
   // content-root.ts) owns the sendResponse for this message type.
-  addPassive<T extends Exclude<keyof AllMessages, RegisteredTypes>>(
+  addPassive<T extends Exclude<keyof M, RegisteredTypes>>(
     type: T,
-    handler: PassiveHandler<T>,
-  ): Router<Exclude<RegisteredTypes | T, void>> {
+    handler: MPassiveHandler<M, T>,
+  ): Router<M, Exclude<RegisteredTypes | T, void>> {
     if (this.isRegistered(type))
-      throw Error(`Already registered: type=${type}`);
-    this.passiveHandlers.set(
-      type,
-      handler as unknown as PassiveHandler<keyof AllMessages>,
-    );
+      throw Error(`Already registered: type=${String(type)}`);
+    this.passiveHandlers.set(type, handler);
     return this;
   }
 
-  addAll<T extends Exclude<keyof AllMessages, RegisteredTypes>>(
-    types: T[],
-    buildHandler: (type: T) => Handler<T>,
-  ): Router<Exclude<RegisteredTypes | T, void>> {
-    types.forEach((type) => this.add(type, buildHandler(type)));
-    return this;
-  }
-
-  merge<T extends Exclude<keyof AllMessages, RegisteredTypes>>(
-    router: Router<T>,
-  ): Router<Exclude<RegisteredTypes | T, void>> {
+  // M is fixed on the router, so merge only accepts routers of the same channel.
+  merge<T extends Exclude<keyof M, RegisteredTypes>>(
+    router: Router<M, T>,
+  ): Router<M, Exclude<RegisteredTypes | T, void>> {
     for (const [type, handler] of router.handlers) {
       this.handlers.set(type, handler);
     }
@@ -225,12 +215,14 @@ export class Router<
 
   // Returns true if the message is handled asynchronously.
   // See https://developer.chrome.com/docs/extensions/mv3/messaging/#simple.
-  private route<T extends keyof AllMessages>(
-    message: Message<T>,
+  private route<T extends keyof M>(
+    message: MMessage<M, T>,
     sender: chrome.runtime.MessageSender,
-    sendResponse: (arg: SendResponseArg<T>) => void,
+    sendResponse: (arg: MSendResponseArg<M, T>) => void,
   ): boolean | void {
-    const passiveHandler = this.passiveHandlers.get(type(message));
+    const msgType = (message as { "@type": keyof M })["@type"];
+
+    const passiveHandler = this.passiveHandlers.get(msgType);
     if (passiveHandler) {
       console.debug("Recieve (passive): ", message);
       try {
@@ -244,13 +236,13 @@ export class Router<
       return; // Do not call sendResponse; the active listener owns the response.
     }
 
-    const handler = this.handlers.get(type(message));
+    const handler = this.handlers.get(msgType);
     if (!handler) return;
 
     console.debug("Recieve: ", message);
     console.debug("Handle: ", handler);
 
-    let response: Response<T> | Promise<Response<T>> | undefined;
+    let response: MResponse<M, T> | Promise<MResponse<M, T>> | undefined;
     let error;
     try {
       response = handler(message, sender);
@@ -266,7 +258,7 @@ export class Router<
     } else if (error) {
       sendResponse(buildErrorArg(error));
     } else {
-      sendResponse({ response });
+      sendResponse({ response: response! });
     }
   }
 
@@ -275,9 +267,7 @@ export class Router<
   }
 }
 
-function buildErrorArg<T extends keyof AllMessages>(
-  error: unknown,
-): SendResponseArg<T> {
+function buildErrorArg(error: unknown): { error: Error } {
   if (error instanceof Error) {
     return { error };
   } else if (typeof error === "string") {
@@ -289,11 +279,13 @@ function buildErrorArg<T extends keyof AllMessages>(
 
 export async function sendToRuntime<T extends keyof RuntimeMessages>(
   type: T,
-  payload: RuntimeMessages[T]["payload"],
-): Promise<RuntimeMessages[T]["response"]> {
-  const r = await chrome.runtime.sendMessage<Message<T>, SendResponseArg<T>>(
-    message(type, payload),
-  );
+  payload: MPayload<RuntimeMessages, T>,
+): Promise<MResponse<RuntimeMessages, T>> {
+  const msg = makeMessage<RuntimeMessages, T>(type, payload);
+  const r = await chrome.runtime.sendMessage<
+    typeof msg,
+    { response: MResponse<RuntimeMessages, T> } | { error: Error }
+  >(msg);
   if (r == null)
     throw Error(
       `No response for ${type}: receiver missing or handler not registered`,
@@ -305,14 +297,14 @@ export async function sendToRuntime<T extends keyof RuntimeMessages>(
 export async function sendToTab<T extends keyof TabMessages>(
   tabId: number,
   type: T,
-  payload: TabMessages[T]["payload"],
+  payload: MPayload<TabMessages, T>,
   options: chrome.tabs.MessageSendOptions = {},
-): Promise<TabMessages[T]["response"]> {
-  const r = await chrome.tabs.sendMessage<Message<T>, SendResponseArg<T>>(
-    tabId,
-    message(type, payload),
-    options,
-  );
+): Promise<MResponse<TabMessages, T>> {
+  const msg = makeMessage<TabMessages, T>(type, payload);
+  const r = await chrome.tabs.sendMessage<
+    typeof msg,
+    { response: MResponse<TabMessages, T> } | { error: Error }
+  >(tabId, msg, options);
   if (r == null)
     throw Error(
       `No response for ${type}: receiver missing or handler not registered`,

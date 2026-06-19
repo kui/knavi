@@ -32,7 +32,7 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 chrome.runtime.onMessage.addListener(
-  ChromeMessageRouter.newInstance()
+  ChromeMessageRouter.newTabInstance()
     .add("ResponseRectsFragment", (m) =>
       rectAggregator.handleRects(m.requestId, m.rects),
     )

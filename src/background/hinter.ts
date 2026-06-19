@@ -1,7 +1,7 @@
 import { Router, sendToTab } from "../lib/chrome-messages";
 import { requireTabId } from "./sender-guards";
 
-export const router = Router.newInstance()
+export const router = Router.newRuntimeInstance()
   .add("AttachHints", async (_msg, sender) => {
     return await sendToTab(
       requireTabId(sender),

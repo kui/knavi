@@ -22,7 +22,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     .catch(printError);
 });
 
-export const router = Router.newInstance()
+export const router = Router.newRuntimeInstance()
   .add("GetSettings", async (message) => {
     const storage = await settings.getStorage();
     return storage.get(message.names);
