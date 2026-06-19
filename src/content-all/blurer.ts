@@ -2,19 +2,17 @@ import { sendToRuntime } from "../lib/chrome-messages";
 import { getContentRects } from "../dom/elements";
 import { Rect } from "../dom/rects";
 import { printError } from "../lib/errors";
+import { FrameRegistry } from "./frame-registration";
 
 export class BlurerContentAll {
-  constructor(
-    private readonly iframeByFrameId: Map<number, HTMLIFrameElement>,
-    private readonly parentFrameIdPromise: Promise<number | undefined>,
-  ) {}
+  constructor(private readonly frameRegistry: FrameRegistry) {}
 
   // Handles BlurRelay from background: transform rect to parent coords and send BlurUp.
   handleBlurRelay(
     childFrameId: number,
     rectJson: RectJSON<"element-border", "layout-viewport"> | null,
   ) {
-    const frame = this.iframeByFrameId.get(childFrameId);
+    const frame = this.frameRegistry.getIframe(childFrameId);
     if (!frame) {
       console.warn("Unknown childFrameId for BlurRelay:", childFrameId);
       return;
@@ -25,7 +23,7 @@ export class BlurerContentAll {
       return;
     }
     const rect = buildBlurRect(frame, rectJson);
-    this.parentFrameIdPromise
+    this.frameRegistry.parentFrameId
       .then((parentFrameId) =>
         sendToRuntime("BlurUp", { parentFrameId: parentFrameId ?? 0, rect }),
       )

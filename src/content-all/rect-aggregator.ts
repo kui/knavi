@@ -8,6 +8,7 @@ import { RectDetector } from "./rect-detector";
 import { Coordinates, Rect } from "../dom/rects";
 import settingsClient from "../lib/settings-client";
 import { printError } from "../lib/errors";
+import { FrameRegistry } from "./frame-registration";
 
 interface ElementProfile {
   id: ElementId;
@@ -33,9 +34,7 @@ export class RectAggregatorContentAll {
   private elements: ElementProfile[] = [];
   private readonly frameIdPromise = sendToRuntime("GetFrameId", undefined);
 
-  constructor(
-    private readonly iframeToFrameId: Map<HTMLIFrameElement, number>,
-  ) {}
+  constructor(private readonly frameRegistry: FrameRegistry) {}
 
   async handleAllRectsRequest(
     requestId: number,
@@ -137,7 +136,7 @@ export class RectAggregatorContentAll {
       console.debug("iframe no longer connected, skipping propagation", frame);
       return;
     }
-    const childFrameId = this.iframeToFrameId.get(frame);
+    const childFrameId = this.frameRegistry.getFrameId(frame);
     if (childFrameId == null) {
       // Intentional: hint positions are not updated after the hint phase begins,
       // and iframes that haven't registered their frameId yet are treated the same

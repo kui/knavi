@@ -8,23 +8,18 @@ import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
 import { Coordinates, Rect } from "./dom/rects";
-import { setupFrameRegistration } from "./content-all/frame-registration";
+import { FrameRegistry } from "./content-all/frame-registration";
 
 globalThis.KNAVI_FILE = "content-all";
 
-const {
-  iframeByFrameId,
-  iframeToFrameId,
-  parentFrameIdPromise,
-  handleMessage,
-} = setupFrameRegistration();
-window.addEventListener("message", handleMessage);
+const frameRegistry = new FrameRegistry();
+window.addEventListener("message", frameRegistry.handleMessage);
 
-const blurerClient = new BlurerClient(parentFrameIdPromise);
+const blurerClient = new BlurerClient(frameRegistry);
 const hinterClient = new HinterClient();
 const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
-const rectAggregator = new RectAggregator(iframeToFrameId);
-const blurer = new Blurer(iframeByFrameId, parentFrameIdPromise);
+const rectAggregator = new RectAggregator(frameRegistry);
+const blurer = new Blurer(frameRegistry);
 
 async function setupKeyboardHandler() {
   const [setting, matchedBlacklist] = await Promise.all([

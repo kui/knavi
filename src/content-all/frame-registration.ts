@@ -15,38 +15,49 @@ interface ParentFrameIdResponse {
   parentFrameId: number;
 }
 
-// Sets up all frame-registration logic: builds the iframe Maps and announces
-// this frame's own frameId to its parent (no-op in the root frame). Returns
-// an onMessage handler to be registered by the caller, keeping event-hook
-// wiring in the entry-point (content-all.ts) consistent with other modules.
-export function setupFrameRegistration(): {
-  iframeByFrameId: Map<number, HTMLIFrameElement>;
-  iframeToFrameId: Map<HTMLIFrameElement, number>;
-  parentFrameIdPromise: Promise<number | undefined>;
-  handleMessage: (e: MessageEvent) => void;
-} {
-  const myFrameIdPromise = sendToRuntime("GetFrameId", undefined);
+// Tracks child iframe ↔ frameId mappings via postMessage handshake and resolves
+// this frame's parentFrameId. The only place in the codebase that still uses
+// window.postMessage cross-frame, because frameId is needed before any
+// chrome.runtime relay can address the parent/child by frameId.
+export class FrameRegistry {
+  private readonly iframeByFrameId = new Map<number, HTMLIFrameElement>();
+  private readonly iframeToFrameId = new Map<HTMLIFrameElement, number>();
+  private readonly myFrameIdPromise = sendToRuntime("GetFrameId", undefined);
+  private readonly parentFrameIdResolvers = Promise.withResolvers<
+    number | undefined
+  >();
 
-  const iframeByFrameId = new Map<number, HTMLIFrameElement>();
-  const iframeToFrameId = new Map<HTMLIFrameElement, number>();
-
-  // Resolve parentFrameId from the parent's response in non-root frames.
-  const { promise: parentFrameIdPromise, resolve: resolveParentFrameId } =
-    Promise.withResolvers<number | undefined>();
-  if (parent === window) {
-    resolveParentFrameId(undefined);
-  } else {
-    myFrameIdPromise
-      .then((frameId) => {
-        parent.postMessage(
-          { "@type": ANNOUNCEMENT_TYPE, frameId } satisfies FrameIdAnnouncement,
-          "*", // intentional: avoids silent drop if the parent navigates mid-flight.
-        );
-      })
-      .catch(printError);
+  constructor() {
+    if (parent === window) {
+      this.parentFrameIdResolvers.resolve(undefined);
+    } else {
+      this.myFrameIdPromise
+        .then((frameId) => {
+          parent.postMessage(
+            {
+              "@type": ANNOUNCEMENT_TYPE,
+              frameId,
+            } satisfies FrameIdAnnouncement,
+            "*", // intentional: avoids silent drop if the parent navigates mid-flight.
+          );
+        })
+        .catch(printError);
+    }
   }
 
-  function handleMessage(e: MessageEvent) {
+  get parentFrameId(): Promise<number | undefined> {
+    return this.parentFrameIdResolvers.promise;
+  }
+
+  getIframe(frameId: number): HTMLIFrameElement | undefined {
+    return this.iframeByFrameId.get(frameId);
+  }
+
+  getFrameId(iframe: HTMLIFrameElement): number | undefined {
+    return this.iframeToFrameId.get(iframe);
+  }
+
+  readonly handleMessage = (e: MessageEvent): void => {
     const data = e.data as
       | FrameIdAnnouncement
       | ParentFrameIdResponse
@@ -72,17 +83,17 @@ export function setupFrameRegistration(): {
         console.warn("FrameIdAnnouncement from unknown source:", source);
         return;
       }
-      for (const [id, el] of iframeByFrameId) {
+      for (const [id, el] of this.iframeByFrameId) {
         if (!el.isConnected) {
-          iframeByFrameId.delete(id);
-          iframeToFrameId.delete(el);
+          this.iframeByFrameId.delete(id);
+          this.iframeToFrameId.delete(el);
         }
       }
-      iframeByFrameId.set(data.frameId, iframe);
-      iframeToFrameId.set(iframe, data.frameId);
+      this.iframeByFrameId.set(data.frameId, iframe);
+      this.iframeToFrameId.set(iframe, data.frameId);
 
       // Reply with our own frameId so the child can store its parentFrameId.
-      myFrameIdPromise
+      this.myFrameIdPromise
         .then((parentFrameId) => {
           source.postMessage(
             {
@@ -95,14 +106,7 @@ export function setupFrameRegistration(): {
         .catch(printError);
     } else if (data?.["@type"] === PARENT_RESPONSE_TYPE) {
       if (e.source !== parent) return;
-      resolveParentFrameId(data.parentFrameId);
+      this.parentFrameIdResolvers.resolve(data.parentFrameId);
     }
-  }
-
-  return {
-    iframeByFrameId,
-    iframeToFrameId,
-    parentFrameIdPromise,
-    handleMessage,
   };
 }
