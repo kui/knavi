@@ -95,6 +95,53 @@ void describe("isEditable", () => {
       assert.equal(isEditable(textarea({ readOnly: true })), false));
   });
 
+  void describe("custom element with selectionStart", () => {
+    function customEl(
+      overrides: {
+        disabled?: boolean;
+        readOnly?: boolean;
+        "aria-disabled"?: string;
+        "aria-readonly"?: string;
+      } = {},
+    ): EventTarget {
+      const attrs = new Map<string, string>();
+      if (overrides["aria-disabled"])
+        attrs.set("aria-disabled", overrides["aria-disabled"]);
+      if (overrides["aria-readonly"])
+        attrs.set("aria-readonly", overrides["aria-readonly"]);
+      return {
+        selectionStart: 0,
+        disabled: overrides.disabled,
+        readOnly: overrides.readOnly,
+        getAttribute(name: string) {
+          return attrs.get(name) ?? null;
+        },
+        /* eslint-disable @typescript-eslint/no-empty-function */
+        addEventListener() {},
+        dispatchEvent() {
+          return true;
+        },
+        removeEventListener() {},
+        /* eslint-enable @typescript-eslint/no-empty-function */
+      } as unknown as EventTarget;
+    }
+
+    void test("custom element with selectionStart is editable", () =>
+      assert.equal(isEditable(customEl()), true));
+
+    void test("custom element with disabled=true is not editable", () =>
+      assert.equal(isEditable(customEl({ disabled: true })), false));
+
+    void test("custom element with readOnly=true is not editable", () =>
+      assert.equal(isEditable(customEl({ readOnly: true })), false));
+
+    void test('custom element with aria-disabled="true" is not editable', () =>
+      assert.equal(isEditable(customEl({ "aria-disabled": "true" })), false));
+
+    void test('custom element with aria-readonly="true" is not editable', () =>
+      assert.equal(isEditable(customEl({ "aria-readonly": "true" })), false));
+  });
+
   void describe("contenteditable", () => {
     void test("contenteditable element is editable", () =>
       assert.equal(

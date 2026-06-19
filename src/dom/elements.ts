@@ -43,8 +43,21 @@ export function isEditable(element: EventTarget) {
     );
   if (element instanceof HTMLTextAreaElement)
     return !element.disabled && !element.readOnly;
-  if ("selectionStart" in element && element.selectionStart != null)
-    return true; // custom elements exposing the selection API
+  if ("selectionStart" in element && element.selectionStart != null) {
+    // custom elements exposing the selection API
+    const el = element as unknown as {
+      disabled?: boolean;
+      readOnly?: boolean;
+      getAttribute?: (name: string) => string | null;
+    };
+    if (el.disabled || el.readOnly) return false;
+    if (
+      el.getAttribute?.("aria-disabled") === "true" ||
+      el.getAttribute?.("aria-readonly") === "true"
+    )
+      return false;
+    return true;
+  }
   return "isContentEditable" in element && Boolean(element.isContentEditable);
 }
 
