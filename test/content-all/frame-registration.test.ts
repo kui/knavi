@@ -159,15 +159,13 @@ void describe("setupFrameRegistration", () => {
     const { parentFrameIdPromise, handleMessage: onMessage } =
       setupFrameRegistration();
 
-    onMessage(
-      new MessageEvent("message", {
-        data: {
-          "@type": "com.github.kui.knavi.ParentFrameIdResponse",
-          parentFrameId: 100,
-        },
-        source: null,
-      }),
-    );
+    onMessage({
+      data: {
+        "@type": "com.github.kui.knavi.ParentFrameIdResponse",
+        parentFrameId: 100,
+      },
+      source: fakeParent,
+    } as unknown as MessageEvent);
 
     const result = await parentFrameIdPromise;
     assert.equal(result, 100);
@@ -183,13 +181,13 @@ void describe("setupFrameRegistration", () => {
     const { parentFrameIdPromise, handleMessage: onMessage } =
       setupFrameRegistration();
 
-    const responseMsg = new MessageEvent("message", {
+    const responseMsg = {
       data: {
         "@type": "com.github.kui.knavi.ParentFrameIdResponse",
         parentFrameId: 100,
       },
-      source: null,
-    });
+      source: fakeParent,
+    } as unknown as MessageEvent;
     onMessage(responseMsg);
     onMessage(responseMsg); // second call must be ignored
 

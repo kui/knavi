@@ -94,6 +94,7 @@ export function setupFrameRegistration(): {
         })
         .catch(printError);
     } else if (data?.["@type"] === PARENT_RESPONSE_TYPE) {
+      if (e.source !== parent) return;
       resolveParentFrameId(data.parentFrameId);
     }
   }
