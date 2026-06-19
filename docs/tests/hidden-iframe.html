@@ -1,0 +1,19 @@
+<style>
+  iframe {
+    display: none;
+  }
+</style>
+
+<p>Root frame — the child iframe is hidden (display:none).</p>
+<p id="status">not blurred</p>
+
+<iframe id="hidden-iframe" src="hidden-iframe-child.html"></iframe>
+
+<script>
+  document.addEventListener("focusin", () => {
+    document.getElementById("status").textContent = "focused";
+  });
+  document.addEventListener("focusout", () => {
+    document.getElementById("status").textContent = "blurred";
+  });
+</script>
