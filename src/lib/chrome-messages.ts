@@ -188,8 +188,6 @@ export class Router<
 function buildErrorArg<T extends keyof Messages>(
   error: unknown,
 ): SendResponseArg<T> {
-  console.warn(error);
-
   if (error instanceof Error) {
     return { error };
   } else if (typeof error === "string") {
