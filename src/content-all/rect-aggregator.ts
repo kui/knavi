@@ -68,10 +68,80 @@ export class RectAggregatorContentAll {
       rects: this.elements,
     });
 
-    for (const { element, rects } of this.elements) {
-      if (element instanceof HTMLIFrameElement)
-        this.propagateMessage(element, rects[0], context);
+    await Promise.all(
+      this.elements
+        .filter(({ element }) => element instanceof HTMLIFrameElement)
+        .map(({ element, rects }) =>
+          this.propagateMessage(
+            element as HTMLIFrameElement,
+            rects[0],
+            context,
+          ),
+        ),
+    );
+  }
+
+  private async propagateMessage(
+    frame: HTMLIFrameElement,
+    rect: Rect<"element-border", "root-viewport"> | null,
+    {
+      requestId,
+      frameOffsets,
+      clientRectsFetcher,
+      styleFetcher,
+    }: AggregationContext,
+  ) {
+    if (!rect) return;
+
+    if (!frame.isConnected) {
+      console.debug("iframe no longer connected, skipping propagation", frame);
+      return;
     }
+
+    // Poll until the child frame has completed its FrameIdAnnouncement handshake.
+    // Under CI load the postMessage round-trip can arrive after AllRectsRequest
+    // fan-out, so wait up to 300 ms before giving up.
+    let childFrameId = this.frameRegistry.getFrameId(frame);
+    if (childFrameId == null) {
+      for (let i = 0; i < 30; i++) {
+        await new Promise<void>((r) => setTimeout(r, 10));
+        childFrameId = this.frameRegistry.getFrameId(frame);
+        if (childFrameId != null) break;
+      }
+    }
+    if (childFrameId == null) {
+      console.debug(
+        "iframe not registered after retries, skipping propagation",
+        frame,
+      );
+      return;
+    }
+
+    const [contentRect] = getContentRects(
+      frame,
+      clientRectsFetcher.get(frame),
+      styleFetcher.get(frame),
+    ).map((r) => r.offsets(frameOffsets.reverse()));
+    if (!contentRect) {
+      console.warn("No content rects", frame);
+      return;
+    }
+    const iframeViewport = Rect.intersection(
+      "actual-viewport",
+      rect,
+      contentRect,
+    );
+    if (!iframeViewport) {
+      console.debug("No viewport", rect, contentRect);
+      return;
+    }
+
+    sendToRuntime("AllRectsRequest", {
+      id: requestId,
+      targetFrameId: childFrameId,
+      viewport: iframeViewport,
+      offsets: { ...contentRect, type: "layout-viewport" as const },
+    }).catch(printError);
   }
 
   private async aggregateRects({
@@ -118,58 +188,6 @@ export class RectAggregatorContentAll {
     timers.print();
     detector.printMetrics();
     return bondByActualTarget(elementProfiles);
-  }
-
-  private propagateMessage(
-    frame: HTMLIFrameElement,
-    rect: Rect<"element-border", "root-viewport"> | null,
-    {
-      requestId,
-      frameOffsets,
-      clientRectsFetcher,
-      styleFetcher,
-    }: AggregationContext,
-  ) {
-    if (!rect) return;
-
-    if (!frame.isConnected) {
-      console.debug("iframe no longer connected, skipping propagation", frame);
-      return;
-    }
-    const childFrameId = this.frameRegistry.getFrameId(frame);
-    if (childFrameId == null) {
-      // Intentional: hint positions are not updated after the hint phase begins,
-      // and iframes that haven't registered their frameId yet are treated the same
-      // way — their content is skipped rather than waited on.
-      console.debug("iframe not yet registered, skipping propagation", frame);
-      return;
-    }
-
-    const [contentRect] = getContentRects(
-      frame,
-      clientRectsFetcher.get(frame),
-      styleFetcher.get(frame),
-    ).map((r) => r.offsets(frameOffsets.reverse()));
-    if (!contentRect) {
-      console.warn("No content rects", frame);
-      return;
-    }
-    const iframeViewport = Rect.intersection(
-      "actual-viewport",
-      rect,
-      contentRect,
-    );
-    if (!iframeViewport) {
-      console.debug("No viewport", rect, contentRect);
-      return;
-    }
-
-    sendToRuntime("AllRectsRequest", {
-      id: requestId,
-      targetFrameId: childFrameId,
-      viewport: iframeViewport,
-      offsets: { ...contentRect, type: "layout-viewport" as const },
-    }).catch(printError);
   }
 
   async handleExecuteAction(index: number, options: ActionOptions) {
