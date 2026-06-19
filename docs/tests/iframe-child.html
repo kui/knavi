@@ -1,4 +1,25 @@
-<p>This is a child</p>
+<p><strong>Child frame</strong></p>
 
+<input id="child-input" type="text" placeholder="child input" />
 <button onmousedown="alert('mousedown!')">detect mousedown</button>
+
 <iframe src="iframe-grandchild.html"></iframe>
+
+<script>
+  function forward(msg, kind) {
+    window.top.postMessage({ type: "frame-focus-event", msg, kind }, "*");
+  }
+
+  document.addEventListener("focusin", (e) =>
+    forward(
+      `[child] focus  → ${e.target.tagName.toLowerCase()}${e.target.id ? "#" + e.target.id : ""}`,
+      "focus",
+    ),
+  );
+  document.addEventListener("focusout", (e) =>
+    forward(
+      `[child] blur   ← ${e.target.tagName.toLowerCase()}${e.target.id ? "#" + e.target.id : ""}`,
+      "blur",
+    ),
+  );
+</script>

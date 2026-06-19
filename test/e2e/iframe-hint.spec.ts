@@ -18,7 +18,7 @@ test.describe("iframe hint placement", () => {
     expect(childButtonBox).toBeTruthy();
 
     const hints = page.locator(".hint");
-    await expect(hints).toHaveCount(4, { timeout: 5_000 });
+    await expect(hints).toHaveCount(8, { timeout: 5_000 });
 
     let found = false;
     const count = await hints.count();
@@ -49,7 +49,7 @@ test.describe("iframe hint placement", () => {
     expect(grandchildButtonBox).toBeTruthy();
 
     const hints = page.locator(".hint");
-    await expect(hints).toHaveCount(4, { timeout: 5_000 });
+    await expect(hints).toHaveCount(8, { timeout: 5_000 });
 
     let found = false;
     const count = await hints.count();

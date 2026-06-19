@@ -1,13 +1,14 @@
 import { ActionFinder } from "./action-handlers";
 import { CachedFetcher } from "../lib/cache";
 import { sendToRuntime } from "../lib/chrome-messages";
-import { postMessageTo } from "../dom/dom-messages";
 import { getClientRects, getContentRects, listAll } from "../dom/elements";
 import { flatMap } from "../lib/iters";
 import { Timers } from "../lib/metrics";
 import { RectDetector } from "./rect-detector";
 import { Coordinates, Rect } from "../dom/rects";
 import settingsClient from "../lib/settings-client";
+import { printError } from "../lib/errors";
+import { FrameRegistry } from "./frame-registration";
 
 interface ElementProfile {
   id: ElementId;
@@ -31,16 +32,13 @@ interface AggregationContext {
 
 export class RectAggregatorContentAll {
   private elements: ElementProfile[] = [];
-  private readonly actionFinder: ActionFinder | null = null;
   private readonly frameIdPromise = sendToRuntime("GetFrameId", undefined);
+
+  constructor(private readonly frameRegistry: FrameRegistry) {}
 
   async handleAllRectsRequest(
     requestId: number,
-    // Actual viewport of the current frame.
-    // This is cropped by the root frame.
     currentViewport: Rect<"actual-viewport", "root-viewport">,
-    // Coordinate of viewport of the current frame.
-    // This coordinates could be negative because it could be out of the root frame.
     frameOffsets: Coordinates<"layout-viewport", "root-viewport">,
   ) {
     console.debug(
@@ -72,7 +70,7 @@ export class RectAggregatorContentAll {
 
     for (const { element, rects } of this.elements) {
       if (element instanceof HTMLIFrameElement)
-        this.propergateMessage(element, rects[0], context);
+        this.propagateMessage(element, rects[0], context);
     }
   }
 
@@ -122,7 +120,7 @@ export class RectAggregatorContentAll {
     return bondByActualTarget(elementProfiles);
   }
 
-  private propergateMessage(
+  private propagateMessage(
     frame: HTMLIFrameElement,
     rect: Rect<"element-border", "root-viewport"> | null,
     {
@@ -132,11 +130,20 @@ export class RectAggregatorContentAll {
       styleFetcher,
     }: AggregationContext,
   ) {
-    if (!frame.contentWindow) {
-      console.debug("No contentWindow to post message", frame);
+    if (!rect) return;
+
+    if (!frame.isConnected) {
+      console.debug("iframe no longer connected, skipping propagation", frame);
       return;
     }
-    if (!rect) return;
+    const childFrameId = this.frameRegistry.getFrameId(frame);
+    if (childFrameId == null) {
+      // Intentional: hint positions are not updated after the hint phase begins,
+      // and iframes that haven't registered their frameId yet are treated the same
+      // way — their content is skipped rather than waited on.
+      console.debug("iframe not yet registered, skipping propagation", frame);
+      return;
+    }
 
     const [contentRect] = getContentRects(
       frame,
@@ -144,7 +151,7 @@ export class RectAggregatorContentAll {
       styleFetcher.get(frame),
     ).map((r) => r.offsets(frameOffsets.reverse()));
     if (!contentRect) {
-      console.warn("No conent rects", frame);
+      console.warn("No content rects", frame);
       return;
     }
     const iframeViewport = Rect.intersection(
@@ -157,11 +164,12 @@ export class RectAggregatorContentAll {
       return;
     }
 
-    postMessageTo(frame.contentWindow, "com.github.kui.knavi.AllRectsRequest", {
+    sendToRuntime("AllRectsRequest", {
       id: requestId,
+      targetFrameId: childFrameId,
       viewport: iframeViewport,
-      offsets: { ...contentRect, type: "layout-viewport" },
-    });
+      offsets: { ...contentRect, type: "layout-viewport" as const },
+    }).catch(printError);
   }
 
   async handleExecuteAction(index: number, options: ActionOptions) {

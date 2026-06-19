@@ -48,6 +48,33 @@ interface Messages {
     };
     response: void;
   };
+  AllRectsRequest: {
+    payload: {
+      id: number;
+      targetFrameId: number;
+      viewport: RectJSON<"actual-viewport", "root-viewport">;
+      offsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
+    };
+    response: void;
+  };
+  BlurUp: {
+    payload: {
+      parentFrameId: number;
+      rect: RectJSON<"element-border", "layout-viewport"> | null;
+    };
+    response: void;
+  };
+  BlurRelay: {
+    payload: {
+      childFrameId: number;
+      rect: RectJSON<"element-border", "layout-viewport"> | null;
+    };
+    response: void;
+  };
+  BlurRoot: {
+    payload: { rect: RectJSON<"element-border", "layout-viewport"> | null };
+    response: void;
+  };
 }
 
 type Message<T extends keyof Messages> = {
@@ -161,8 +188,6 @@ export class Router<
 function buildErrorArg<T extends keyof Messages>(
   error: unknown,
 ): SendResponseArg<T> {
-  console.warn(error);
-
   if (error instanceof Error) {
     return { error };
   } else if (typeof error === "string") {

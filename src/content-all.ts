@@ -6,19 +6,22 @@ import { printError } from "./lib/errors";
 import { wait } from "./lib/promises";
 import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
-import { Router as DOMMessageRouter } from "./dom/dom-messages";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
 import { Coordinates, Rect } from "./dom/rects";
+import { FrameRegistry } from "./content-all/frame-registration";
 
 globalThis.KNAVI_FILE = "content-all";
 
-const blurerClient = new BlurerClient();
+const frameRegistry = new FrameRegistry();
+window.addEventListener("message", frameRegistry.handleMessage);
+
+const blurerClient = new BlurerClient(frameRegistry);
 const hinterClient = new HinterClient();
 const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
-const rectAggregator = new RectAggregator();
-const blurer = new Blurer();
+const rectAggregator = new RectAggregator(frameRegistry);
+const blurer = new Blurer(frameRegistry);
 
-async function setup() {
+async function setupKeyboardHandler() {
   const [setting, matchedBlacklist] = await Promise.all([
     settingsClient.get([
       "magicKey",
@@ -33,7 +36,7 @@ async function setup() {
   keyboardHandler.setup(setting, matchedBlacklist);
   console.debug("settings loaded");
 }
-setup().catch(printError);
+setupKeyboardHandler().catch(printError);
 
 const RELEVANT_KEYS: (keyof Settings)[] = [
   "magicKey",
@@ -56,7 +59,7 @@ chrome.storage.onChanged.addListener((changes) => {
     do {
       await wait(200, signal);
     } while (hinterClient.isHinting);
-    await setup();
+    await setupKeyboardHandler();
   })().catch((e) => {
     if (e instanceof DOMException && e.name === "AbortError") return;
     printError(e);
@@ -75,6 +78,16 @@ chrome.runtime.onMessage.addListener(
     .add("ExecuteAction", ({ id, options }) =>
       rectAggregator.handleExecuteAction(id.index, options),
     )
+    .add("AllRectsRequest", async ({ id, viewport, offsets }) => {
+      await rectAggregator.handleAllRectsRequest(
+        id,
+        new Rect(viewport),
+        new Coordinates(offsets),
+      );
+    })
+    .add("BlurRelay", ({ childFrameId, rect }) => {
+      blurer.handleBlurRelay(childFrameId, rect);
+    })
     .buildListener(),
 );
 
@@ -107,21 +120,4 @@ window.addEventListener(
     }
   },
   true,
-);
-
-window.addEventListener(
-  "message",
-  new DOMMessageRouter()
-    .add("com.github.kui.knavi.Blur", (e) =>
-      blurer.handleBlurMessage(e.source, e.data.rect),
-    )
-    .add("com.github.kui.knavi.AllRectsRequest", async (e) => {
-      const { id, viewport, offsets } = e.data;
-      await rectAggregator.handleAllRectsRequest(
-        id,
-        new Rect(viewport),
-        new Coordinates(offsets),
-      );
-    })
-    .buildListener(),
 );

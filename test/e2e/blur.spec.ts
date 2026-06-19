@@ -27,4 +27,43 @@ test.describe("blur", () => {
     await childFrame.locator("body").press("Escape");
     await expect(button).not.toBeFocused({ timeout: 3_000 });
   });
+
+  test("root frame (iframe.html): blur key blurs the focused input", async ({
+    page,
+  }) => {
+    await gotoTest(page, "iframe.html");
+
+    const input = page.locator("#root-input");
+    await input.click();
+    await expect(input).toBeFocused();
+
+    await page.keyboard.press("Escape");
+    await expect(input).not.toBeFocused({ timeout: 3_000 });
+  });
+
+  test("child iframe: blur key blurs the focused input", async ({ page }) => {
+    await gotoTest(page, "iframe.html");
+
+    const childFrame = page.frameLocator("iframe");
+    const input = childFrame.locator("#child-input");
+    await input.click();
+    await expect(input).toBeFocused();
+
+    await childFrame.locator("body").press("Escape");
+    await expect(input).not.toBeFocused({ timeout: 3_000 });
+  });
+
+  test("grandchild iframe: blur key blurs the focused input", async ({
+    page,
+  }) => {
+    await gotoTest(page, "iframe.html");
+
+    const grandchildFrame = page.frameLocator("iframe").frameLocator("iframe");
+    const input = grandchildFrame.locator("#grandchild-input");
+    await input.click();
+    await expect(input).toBeFocused();
+
+    await grandchildFrame.locator("body").press("Escape");
+    await expect(input).not.toBeFocused({ timeout: 3_000 });
+  });
 });

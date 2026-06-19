@@ -14,4 +14,32 @@ export const router = Router.newInstance()
     await sendToTab(requireTabId(sender), "ExecuteAction", message, {
       frameId: message.id.frameId,
     });
+  })
+
+  .add(
+    "AllRectsRequest",
+    async ({ id, targetFrameId, viewport, offsets }, sender) => {
+      const tabId = requireTabId(sender);
+      await sendToTab(
+        tabId,
+        "AllRectsRequest",
+        { id, targetFrameId, viewport, offsets },
+        { frameId: targetFrameId },
+      );
+    },
+  )
+
+  .add("BlurUp", async ({ parentFrameId, rect }, sender) => {
+    const tabId = requireTabId(sender);
+    const senderFrameId = requireFrameId(sender);
+    if (parentFrameId === 0 && senderFrameId === 0) {
+      await sendToTab(tabId, "BlurRoot", { rect }, { frameId: 0 });
+      return;
+    }
+    await sendToTab(
+      tabId,
+      "BlurRelay",
+      { childFrameId: senderFrameId, rect },
+      { frameId: parentFrameId },
+    );
   });

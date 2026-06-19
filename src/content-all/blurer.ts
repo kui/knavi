@@ -1,61 +1,51 @@
-import { postMessageTo } from "../dom/dom-messages";
+import { sendToRuntime } from "../lib/chrome-messages";
 import { getContentRects } from "../dom/elements";
-import { filter, first } from "../lib/iters";
 import { Rect } from "../dom/rects";
+import { printError } from "../lib/errors";
+import { FrameRegistry } from "./frame-registration";
 
 export class BlurerContentAll {
-  // Just propergate the message to the parent frame until root frame.
-  // See content-root/blurer.ts
-  handleBlurMessage(
-    source: MessageEventSource | null,
+  constructor(private readonly frameRegistry: FrameRegistry) {}
+
+  // Handles BlurRelay from background: transform rect to parent coords and send BlurUp.
+  handleBlurRelay(
+    childFrameId: number,
     rectJson: RectJSON<"element-border", "layout-viewport"> | null,
   ) {
-    if (!source) {
-      console.warn("Unexpected event source: ", source);
+    const frame = this.frameRegistry.getIframe(childFrameId);
+    if (!frame) {
+      console.warn("Unknown childFrameId for BlurRelay:", childFrameId);
       return;
     }
-
-    if (source === window)
-      // Do nothing if the message was sent from the root frame.
-      // See content-root/blurer.ts
+    if (!frame.isConnected) {
+      // The iframe was removed from DOM; its entry will be ignored next lookup.
+      console.debug("BlurRelay: iframe no longer connected, skipping", frame);
       return;
-
-    const rect = buildBlurRect(source, rectJson);
-    postMessageTo(parent, "com.github.kui.knavi.Blur", { rect });
+    }
+    const rect = buildBlurRect(frame, rectJson);
+    this.frameRegistry.parentFrameId
+      .then((parentFrameId) =>
+        sendToRuntime("BlurUp", { parentFrameId: parentFrameId ?? 0, rect }),
+      )
+      .catch(printError);
   }
 }
 
 function buildBlurRect(
-  source: MessageEventSource,
-  // This "Origin" is child frame's viewport.
+  sourceIframe: HTMLIFrameElement,
   originRectJson: RectJSON<"element-border", "layout-viewport"> | null,
 ): Rect<"element-border", "layout-viewport"> | null {
   if (!originRectJson) {
-    console.warn("Unexpected origin rect: ", originRectJson);
+    console.warn("Unexpected origin rect:", originRectJson);
     return null;
   }
 
-  const sourceIframe = first(
-    filter(
-      document.getElementsByTagName("iframe"),
-      (i) => source === i.contentWindow,
-    ),
-  );
-  if (!sourceIframe) {
-    console.warn("Blur target is not an iframe", source);
-    return null;
-  }
   const sourceViewport = getContentRects(sourceIframe)[0];
   if (!sourceViewport) {
-    console.warn("No viewport: ", sourceIframe);
+    console.warn("No viewport:", sourceIframe);
     return null;
   }
 
-  // We can treat the source frame viewport as its content area.
-  const originRect = new Rect({
-    ...originRectJson,
-    origin: "element-content",
-  });
-
+  const originRect = new Rect({ ...originRectJson, origin: "element-content" });
   return originRect.offsets(sourceViewport.reverse());
 }
