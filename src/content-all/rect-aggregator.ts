@@ -69,15 +69,11 @@ export class RectAggregatorContentAll {
     });
 
     await Promise.all(
-      this.elements
-        .filter(({ element }) => element instanceof HTMLIFrameElement)
-        .map(({ element, rects }) =>
-          this.propagateMessage(
-            element as HTMLIFrameElement,
-            rects[0],
-            context,
-          ),
-        ),
+      flatMap(this.elements, ({ element, rects }) =>
+        element instanceof HTMLIFrameElement
+          ? [this.propagateMessage(element, rects[0], context)]
+          : [],
+      ),
     );
   }
 
