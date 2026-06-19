@@ -66,4 +66,43 @@ test.describe("blur", () => {
     await grandchildFrame.locator("body").press("Escape");
     await expect(input).not.toBeFocused({ timeout: 3_000 });
   });
+
+  test("hidden iframe: blur key blurs the focused input even when iframe is display:none", async ({
+    page,
+  }) => {
+    await gotoTest(page, "hidden-iframe.html");
+
+    // The iframe starts visible. Click the input to focus it.
+    const childFrame = page.frameLocator("#child-iframe");
+    const input = childFrame.locator("#hidden-input");
+    await input.click();
+    await expect(input).toBeFocused();
+
+    // Now hide the iframe so its content rect disappears (simulates an
+    // invisible iframe whose focused element can still intercept keys).
+    await page.evaluate(() => {
+      document.getElementById("child-iframe")?.classList.add("hidden");
+    });
+
+    // Press blur key from the root frame.
+    await page.keyboard.press("Escape");
+
+    // The input must lose focus even though the iframe has no visible rect.
+    const rawFrame = page
+      .frames()
+      .find((f) => f.url().includes("hidden-iframe-child"));
+    if (!rawFrame) throw new Error("hidden-iframe-child frame not found");
+
+    await expect
+      .poll(
+        () =>
+          rawFrame.evaluate(
+            () =>
+              document.activeElement === document.body ||
+              document.activeElement == null,
+          ),
+        { timeout: 3_000 },
+      )
+      .toBe(true);
+  });
 });

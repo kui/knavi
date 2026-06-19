@@ -1,0 +1,28 @@
+<style>
+  iframe {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    width: 400px;
+    height: 200px;
+    border: none;
+  }
+  iframe.hidden {
+    display: none;
+  }
+  #root-section {
+    margin-top: 260px;
+  }
+  #status {
+    font-family: monospace;
+  }
+</style>
+
+<!-- The iframe starts visible so the child element can receive focus,
+     then the test hides it to simulate a zero-rect scenario. -->
+<iframe id="child-iframe" src="hidden-iframe-child.html"></iframe>
+
+<div id="root-section">
+  <p>Root frame</p>
+  <p id="status">idle</p>
+</div>

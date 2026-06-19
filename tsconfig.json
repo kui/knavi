@@ -12,6 +12,7 @@
     { "path": "test/dom/tsconfig.json" },
     { "path": "test/background/tsconfig.json" },
     { "path": "test/content-all/tsconfig.json" },
+    { "path": "test/content-root/tsconfig.json" },
     { "path": "test/e2e/tsconfig.json" },
     { "path": "scripts/tsconfig.json" }
   ]

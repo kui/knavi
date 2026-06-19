@@ -35,16 +35,10 @@ function buildBlurRect(
   sourceIframe: HTMLIFrameElement,
   originRectJson: RectJSON<"element-border", "layout-viewport"> | null,
 ): Rect<"element-border", "layout-viewport"> | null {
-  if (!originRectJson) {
-    console.warn("Unexpected origin rect:", originRectJson);
-    return null;
-  }
+  if (!originRectJson) return null;
 
   const sourceViewport = getContentRects(sourceIframe)[0];
-  if (!sourceViewport) {
-    console.warn("No viewport:", sourceIframe);
-    return null;
-  }
+  if (!sourceViewport) return null;
 
   const originRect = new Rect({ ...originRectJson, origin: "element-content" });
   return originRect.offsets(sourceViewport.reverse());
