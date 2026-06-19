@@ -1,7 +1,7 @@
 import { Router, sendToTab } from "../lib/chrome-messages";
 import { requireFrameId, requireTabId } from "./sender-guards";
 
-export const router = Router.newInstance()
+export const router = Router.newRuntimeInstance()
   .add("GetFrameId", (_, sender) => requireFrameId(sender))
 
   .add("ResponseRectsFragment", async (message, sender) => {
@@ -10,10 +10,13 @@ export const router = Router.newInstance()
     });
   })
 
-  .add("ExecuteAction", async (message, sender) => {
-    await sendToTab(requireTabId(sender), "ExecuteAction", message, {
-      frameId: message.id.frameId,
-    });
+  .add("ExecuteAction", async ({ id, options }, sender) => {
+    await sendToTab(
+      requireTabId(sender),
+      "ExecuteActionInFrame",
+      { id, options },
+      { frameId: id.frameId },
+    );
   })
 
   .add(
