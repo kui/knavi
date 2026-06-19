@@ -8,5 +8,61 @@
     border: 8px solid #ccc;
     padding: 16px;
   }
+  #root-section {
+    margin-top: 580px;
+  }
+  #log {
+    width: 600px;
+    height: 160px;
+    overflow-y: auto;
+    border: 1px solid #999;
+    font-family: monospace;
+    font-size: 12px;
+  }
+  .log-focus {
+    color: green;
+  }
+  .log-blur {
+    color: darkred;
+  }
 </style>
+
 <iframe src="iframe-child.html"></iframe>
+
+<div id="root-section">
+  <p><strong>Root frame</strong></p>
+  <input id="root-input" type="text" placeholder="root input" />
+  <button>root button</button>
+  <div id="log"><em>focus/blur log</em></div>
+</div>
+
+<script>
+  const log = document.getElementById("log");
+
+  function addLog(msg, kind) {
+    const p = document.createElement("p");
+    p.textContent = `${new Date().toISOString().slice(11, 23)} ${msg}`;
+    p.className = kind === "focus" ? "log-focus" : "log-blur";
+    log.appendChild(p);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  document.addEventListener("focusin", (e) =>
+    addLog(
+      `[root]  focus  → ${e.target.tagName.toLowerCase()}${e.target.id ? "#" + e.target.id : ""}`,
+      "focus",
+    ),
+  );
+  document.addEventListener("focusout", (e) =>
+    addLog(
+      `[root]  blur   ← ${e.target.tagName.toLowerCase()}${e.target.id ? "#" + e.target.id : ""}`,
+      "blur",
+    ),
+  );
+
+  window.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "frame-focus-event") {
+      addLog(e.data.msg, e.data.kind);
+    }
+  });
+</script>

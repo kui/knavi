@@ -1,3 +1,23 @@
-<p>This is a grandchild</p>
+<p><strong>Grandchild frame</strong></p>
 
+<input id="grandchild-input" type="text" placeholder="grandchild input" />
 <button onmouseup="alert('mouseup!')">detect mouseup</button>
+
+<script>
+  function forward(msg, kind) {
+    window.top.postMessage({ type: "frame-focus-event", msg, kind }, "*");
+  }
+
+  document.addEventListener("focusin", (e) =>
+    forward(
+      `[grandchild] focus  → ${e.target.tagName.toLowerCase()}${e.target.id ? "#" + e.target.id : ""}`,
+      "focus",
+    ),
+  );
+  document.addEventListener("focusout", (e) =>
+    forward(
+      `[grandchild] blur   ← ${e.target.tagName.toLowerCase()}${e.target.id ? "#" + e.target.id : ""}`,
+      "blur",
+    ),
+  );
+</script>
