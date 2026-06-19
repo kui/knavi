@@ -81,12 +81,22 @@ export async function setSettings(
 }
 
 /**
- * Navigate to a test page and wait until the content script is ready
- * (the document has finished loading).
+ * Navigate to a test page and wait until the root frame's content script is
+ * ready.  "Ready" means the keyboard handler has finished loading settings
+ * (signalled by dataset.knaviReady on the root &lt;html&gt; element).  Waiting here eliminates the race
+ * between Space and async content-script setup that caused flakiness in the
+ * iframe-hint test.  Child frames do not need their keyboard handlers ready —
+ * hint detection only requires them to respond to AllRectsRequest, which does
+ * not depend on setupKeyboardHandler completing.
  */
 export async function gotoTest(page: Page, name: string): Promise<void> {
   await page.goto(name);
   await page.waitForLoadState("load");
+  // Wait for the root frame's content-all script to finish setting up.
+  await page.waitForFunction(
+    () => document.documentElement.dataset.knaviReady === "1",
+    { timeout: 10_000 },
+  );
   // Click the body to ensure keyboard focus is on the page.
   await page.locator("body").click({ position: { x: 1, y: 1 } });
 }

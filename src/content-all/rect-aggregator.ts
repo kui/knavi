@@ -68,10 +68,13 @@ export class RectAggregatorContentAll {
       rects: this.elements,
     });
 
-    for (const { element, rects } of this.elements) {
-      if (element instanceof HTMLIFrameElement)
-        this.propagateMessage(element, rects[0], context);
-    }
+    await Promise.all(
+      flatMap(this.elements, ({ element, rects }) =>
+        element instanceof HTMLIFrameElement
+          ? [this.propagateMessage(element, rects[0], context)]
+          : [],
+      ),
+    );
   }
 
   private async aggregateRects({
@@ -120,7 +123,7 @@ export class RectAggregatorContentAll {
     return bondByActualTarget(elementProfiles);
   }
 
-  private propagateMessage(
+  private async propagateMessage(
     frame: HTMLIFrameElement,
     rect: Rect<"element-border", "root-viewport"> | null,
     {
@@ -136,12 +139,23 @@ export class RectAggregatorContentAll {
       console.debug("iframe no longer connected, skipping propagation", frame);
       return;
     }
-    const childFrameId = this.frameRegistry.getFrameId(frame);
+
+    // Poll until the child frame has completed its FrameIdAnnouncement handshake.
+    // Under CI load the postMessage round-trip can arrive after AllRectsRequest
+    // fan-out, so wait up to 300 ms before giving up.
+    let childFrameId = this.frameRegistry.getFrameId(frame);
     if (childFrameId == null) {
-      // Intentional: hint positions are not updated after the hint phase begins,
-      // and iframes that haven't registered their frameId yet are treated the same
-      // way — their content is skipped rather than waited on.
-      console.debug("iframe not yet registered, skipping propagation", frame);
+      for (let i = 0; i < 30; i++) {
+        await new Promise<void>((r) => setTimeout(r, 10));
+        childFrameId = this.frameRegistry.getFrameId(frame);
+        if (childFrameId != null) break;
+      }
+    }
+    if (childFrameId == null) {
+      console.debug(
+        "iframe not registered after retries, skipping propagation",
+        frame,
+      );
       return;
     }
 

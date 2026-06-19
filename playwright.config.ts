@@ -8,6 +8,13 @@ export default defineConfig({
   testDir: path.join(__dirname, "test/e2e"),
   fullyParallel: false,
   timeout: 30_000,
+  // Two known CI-only races remain after the gotoTest readiness fix (#95):
+  // 1. iframe-hint: the knaviReady wait in gotoTest now covers this.
+  // 2. iframe-blur-cycle: BLUR_KEY dispatches key events only; the async
+  //    blur chain (BlurUp→BlurRoot→activeElement.blur) can complete while
+  //    hint letters are being typed, splitting input across frames (#110).
+  // Retries absorb both without weakening assertions.
+  retries: process.env.CI ? 2 : 0,
   use: {
     baseURL: "http://127.0.0.1:8787/tests/",
     // Extension tests require a persistent context, set up per fixture.
