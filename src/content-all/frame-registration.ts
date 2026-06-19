@@ -83,12 +83,7 @@ export class FrameRegistry {
         console.warn("FrameIdAnnouncement from unknown source:", source);
         return;
       }
-      for (const [id, el] of this.iframeByFrameId) {
-        if (!el.isConnected) {
-          this.iframeByFrameId.delete(id);
-          this.iframeToFrameId.delete(el);
-        }
-      }
+      this.purgeDisconnectedIframes();
       this.iframeByFrameId.set(data.frameId, iframe);
       this.iframeToFrameId.set(iframe, data.frameId);
 
@@ -109,4 +104,21 @@ export class FrameRegistry {
       this.parentFrameIdResolvers.resolve(data.parentFrameId);
     }
   };
+
+  /**
+   * Remove disconnected iframes from the registry.
+   *
+   * Called on every FrameIdAnnouncement. This is sufficient because child
+   * frames are *only* ever registered through this handler; every new
+   * announcement triggers cleanup of previously detached ones. A
+   * MutationObserver is unnecessary overhead for this use case.
+   */
+  private purgeDisconnectedIframes(): void {
+    for (const [id, el] of this.iframeByFrameId) {
+      if (!el.isConnected) {
+        this.iframeByFrameId.delete(id);
+        this.iframeToFrameId.delete(el);
+      }
+    }
+  }
 }
