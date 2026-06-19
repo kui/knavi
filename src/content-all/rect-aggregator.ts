@@ -81,6 +81,52 @@ export class RectAggregatorContentAll {
     );
   }
 
+  private async aggregateRects({
+    currentViewport,
+    frameOffsets,
+    clientRectsFetcher,
+    styleFetcher,
+  }: AggregationContext): Promise<ElementProfile[]> {
+    const actualViewport: Rect<"actual-viewport", "layout-viewport"> =
+      currentViewport.offsets(frameOffsets);
+    const additionalSelectors = await settingsClient.matchAdditionalSelectors(
+      location.href,
+    );
+    const actionFinder = new ActionFinder(additionalSelectors);
+    const detector = new RectDetector(
+      actualViewport,
+      clientRectsFetcher,
+      styleFetcher,
+    );
+    const frameId = await this.frameIdPromise;
+    const timers = new Timers("aggregateRects");
+    const elementProfiles = [
+      ...flatMap(listAll(), (element, index): ElementProfile[] => {
+        let timerEnd = timers.start("detect");
+        const rects = detector.detect(element);
+        timerEnd();
+        if (rects.length === 0) return [];
+
+        timerEnd = timers.start("findAction");
+        const action = actionFinder.find(element);
+        timerEnd();
+        if (!action) return [];
+
+        return [
+          {
+            id: { index, frameId },
+            element,
+            rects: rects.map((r) => r.offsets(currentViewport.reverse())),
+            ...action,
+          },
+        ];
+      }),
+    ];
+    timers.print();
+    detector.printMetrics();
+    return bondByActualTarget(elementProfiles);
+  }
+
   private async propagateMessage(
     frame: HTMLIFrameElement,
     rect: Rect<"element-border", "root-viewport"> | null,
@@ -142,52 +188,6 @@ export class RectAggregatorContentAll {
       viewport: iframeViewport,
       offsets: { ...contentRect, type: "layout-viewport" as const },
     }).catch(printError);
-  }
-
-  private async aggregateRects({
-    currentViewport,
-    frameOffsets,
-    clientRectsFetcher,
-    styleFetcher,
-  }: AggregationContext): Promise<ElementProfile[]> {
-    const actualViewport: Rect<"actual-viewport", "layout-viewport"> =
-      currentViewport.offsets(frameOffsets);
-    const additionalSelectors = await settingsClient.matchAdditionalSelectors(
-      location.href,
-    );
-    const actionFinder = new ActionFinder(additionalSelectors);
-    const detector = new RectDetector(
-      actualViewport,
-      clientRectsFetcher,
-      styleFetcher,
-    );
-    const frameId = await this.frameIdPromise;
-    const timers = new Timers("aggregateRects");
-    const elementProfiles = [
-      ...flatMap(listAll(), (element, index): ElementProfile[] => {
-        let timerEnd = timers.start("detect");
-        const rects = detector.detect(element);
-        timerEnd();
-        if (rects.length === 0) return [];
-
-        timerEnd = timers.start("findAction");
-        const action = actionFinder.find(element);
-        timerEnd();
-        if (!action) return [];
-
-        return [
-          {
-            id: { index, frameId },
-            element,
-            rects: rects.map((r) => r.offsets(currentViewport.reverse())),
-            ...action,
-          },
-        ];
-      }),
-    ];
-    timers.print();
-    detector.printMetrics();
-    return bondByActualTarget(elementProfiles);
   }
 
   async handleExecuteAction(index: number, options: ActionOptions) {
