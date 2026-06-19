@@ -35,7 +35,7 @@ async function setupKeyboardHandler() {
   ]);
   keyboardHandler.setup(setting, matchedBlacklist);
   console.debug("settings loaded");
-  document.documentElement.dataset.knaviReady = "1";
+  globalThis.KNAVI_READY = true;
 }
 setupKeyboardHandler().catch(printError);
 

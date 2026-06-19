@@ -94,7 +94,7 @@ export async function gotoTest(page: Page, name: string): Promise<void> {
   for (const frame of page.frames()) {
     await frame
       .waitForFunction(
-        () => document.documentElement.dataset.knaviReady === "1",
+        () => (globalThis as unknown as { KNAVI_READY: boolean }).KNAVI_READY,
         { timeout: 10_000 },
       )
       .catch(() => {
