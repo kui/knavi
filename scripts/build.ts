@@ -78,7 +78,7 @@ export async function build({
     bundle: true,
     sourcemap: minify ? false : "inline",
     minify,
-    target: "chrome114",
+    target: "chrome119",
     tsconfig: path.join(SRC, "tsconfig.content-all.json"),
     pure: [
       "console.debug",

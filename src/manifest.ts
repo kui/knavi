@@ -6,7 +6,7 @@ export default function manifest(pkg: Pkg): chrome.runtime.ManifestV3 {
     name: pkg.name,
     version: pkg.version,
     description: pkg.description,
-    minimum_chrome_version: "114",
+    minimum_chrome_version: "119",
     icons: {
       16: "icon16.png",
       48: "icon48.png",
