@@ -1,13 +1,5 @@
 export function printError(error: unknown) {
-  printWith(console.error, error);
-}
-
-export function printDebug(error: unknown) {
-  printWith(console.debug, error);
-}
-
-function printWith(log: (...args: unknown[]) => void, error: unknown) {
-  log(error);
+  console.error(error);
 
   let cause = error;
   while (cause instanceof Object) {
@@ -16,6 +8,6 @@ function printWith(log: (...args: unknown[]) => void, error: unknown) {
     } else {
       break;
     }
-    log("  Caused by", cause);
+    console.error("  Caused by", cause);
   }
 }
