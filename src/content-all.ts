@@ -75,7 +75,7 @@ window.navigation?.addEventListener("navigatesuccess", () => {
 
 chrome.runtime.onMessage.addListener(
   ChromeMessageRouter.newInstance()
-    .add("ExecuteAction", ({ id, options }) =>
+    .add("ExecuteActionInFrame", ({ id, options }) =>
       rectAggregator.handleExecuteAction(id.index, options),
     )
     .add("AllRectsRequest", async ({ id, viewport, offsets }) => {
@@ -88,11 +88,11 @@ chrome.runtime.onMessage.addListener(
     .add("BlurRelay", ({ childFrameId, rect }) => {
       blurer.handleBlurRelay(childFrameId, rect);
     })
-    // Passively observe AttachHints/RemoveHints forwarded to the root frame
+    // Passively observe AttachHintsInTab/RemoveHintsInTab forwarded to the root frame
     // (frameId:0). Keeps the root frame's keyboard handler in sync when a
     // child frame initiated the hint session. content-root.ts owns sendResponse.
-    .addPassive("AttachHints", () => hinterClient.syncHinting(true))
-    .addPassive("RemoveHints", () => hinterClient.syncHinting(false))
+    .addPassive("AttachHintsInTab", () => hinterClient.syncHinting(true))
+    .addPassive("RemoveHintsInTab", () => hinterClient.syncHinting(false))
     .buildListener(),
 );
 

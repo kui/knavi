@@ -1,8 +1,7 @@
 import type { SingleLetter } from "./strings";
 
-// TODO separate by the handler (background, content, popup, etc)
-interface Messages {
-  // Settings
+interface RuntimeMessages {
+  // Settings — received by background
   GetSettings: {
     payload: { names: (keyof Settings)[] };
     response: Pick<Settings, keyof Settings>;
@@ -20,7 +19,7 @@ interface Messages {
     response: { added: boolean };
   };
 
-  // Hint
+  // Hint session — runtime hop (content → background)
   AttachHints: {
     payload: void;
     response: void;
@@ -33,6 +32,8 @@ interface Messages {
     payload: { options: ActionOptions; execute: boolean };
     response: void;
   };
+
+  // Rect / frame — received by background
   GetFrameId: {
     payload: void;
     response: number;
@@ -64,6 +65,44 @@ interface Messages {
     };
     response: void;
   };
+}
+
+interface TabMessages {
+  // Hint session — tab hop (background → content-root)
+  AttachHintsInTab: {
+    payload: void;
+    response: void;
+  };
+  HitHintInTab: {
+    payload: { key: SingleLetter };
+    response: void;
+  };
+  RemoveHintsInTab: {
+    payload: { options: ActionOptions; execute: boolean };
+    response: void;
+  };
+
+  // Rect / frame — received by content
+  ExecuteActionInFrame: {
+    payload: { id: ElementId; options: ActionOptions };
+    response: void;
+  };
+  ResponseRectsFragment: {
+    payload: {
+      requestId: number;
+      rects: ElementRects[];
+    };
+    response: void;
+  };
+  AllRectsRequest: {
+    payload: {
+      id: number;
+      targetFrameId: number;
+      viewport: RectJSON<"actual-viewport", "root-viewport">;
+      offsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
+    };
+    response: void;
+  };
   BlurRelay: {
     payload: {
       childFrameId: number;
@@ -77,12 +116,14 @@ interface Messages {
   };
 }
 
-type Message<T extends keyof Messages> = {
+type AllMessages = RuntimeMessages & TabMessages;
+
+type Message<T extends keyof AllMessages> = {
   readonly "@type": T;
 } & MessagePayload<T>;
-type MessagePayload<T extends keyof Messages> = Messages[T]["payload"];
-type Response<T extends keyof Messages> = Messages[T]["response"];
-type Handler<T extends keyof Messages> = (
+type MessagePayload<T extends keyof AllMessages> = AllMessages[T]["payload"];
+type Response<T extends keyof AllMessages> = AllMessages[T]["response"];
+type Handler<T extends keyof AllMessages> = (
   data: MessagePayload<T>,
   sender: chrome.runtime.MessageSender,
 ) => Response<T> | Promise<Response<T>>;
@@ -90,20 +131,20 @@ type Handler<T extends keyof Messages> = (
 // A passive handler observes a message without sending a response.
 // Use addPassive() when another listener in a different script owns the
 // sendResponse for the same message type.
-type PassiveHandler<T extends keyof Messages> = (
+type PassiveHandler<T extends keyof AllMessages> = (
   data: MessagePayload<T>,
   sender: chrome.runtime.MessageSender,
 ) => void | Promise<void>;
 
-type SendResponseArg<T extends keyof Messages> =
+type SendResponseArg<T extends keyof AllMessages> =
   | { response: Response<T> }
   | { error: Error };
 
-function type<T extends keyof Messages>(m: Message<T>): T {
+function type<T extends keyof AllMessages>(m: Message<T>): T {
   return m["@type"];
 }
 
-function message<T extends keyof Messages>(
+function message<T extends keyof AllMessages>(
   type: T,
   payload: MessagePayload<T>,
 ): Message<T> {
@@ -113,15 +154,15 @@ function message<T extends keyof Messages>(
 export class Router<
   // Message types which are already registered to reject duplicate type registration.
   // If T is void, it means no message types are registered.
-  RegisteredTypes extends keyof Messages | void,
+  RegisteredTypes extends keyof AllMessages | void,
 > {
   private readonly handlers = new Map<
-    keyof Messages,
-    Handler<keyof Messages>
+    keyof AllMessages,
+    Handler<keyof AllMessages>
   >();
   private readonly passiveHandlers = new Map<
-    keyof Messages,
-    PassiveHandler<keyof Messages>
+    keyof AllMessages,
+    PassiveHandler<keyof AllMessages>
   >();
 
   // Use `newInstance` instead of `new Router`, because of managing the T.
@@ -132,24 +173,24 @@ export class Router<
     return new Router();
   }
 
-  private isRegistered(type: keyof Messages): boolean {
+  private isRegistered(type: keyof AllMessages): boolean {
     return this.handlers.has(type) || this.passiveHandlers.has(type);
   }
 
-  add<T extends Exclude<keyof Messages, RegisteredTypes>>(
+  add<T extends Exclude<keyof AllMessages, RegisteredTypes>>(
     type: T,
     handler: Handler<T>,
   ): Router<Exclude<RegisteredTypes | T, void>> {
     if (this.isRegistered(type))
       throw Error(`Already registered: type=${type}`);
-    this.handlers.set(type, handler as unknown as Handler<keyof Messages>);
+    this.handlers.set(type, handler as unknown as Handler<keyof AllMessages>);
     return this;
   }
 
   // Register a passive handler: observes the message without sending a
   // response. Use when another listener in a different script (e.g.
   // content-root.ts) owns the sendResponse for this message type.
-  addPassive<T extends Exclude<keyof Messages, RegisteredTypes>>(
+  addPassive<T extends Exclude<keyof AllMessages, RegisteredTypes>>(
     type: T,
     handler: PassiveHandler<T>,
   ): Router<Exclude<RegisteredTypes | T, void>> {
@@ -157,12 +198,12 @@ export class Router<
       throw Error(`Already registered: type=${type}`);
     this.passiveHandlers.set(
       type,
-      handler as unknown as PassiveHandler<keyof Messages>,
+      handler as unknown as PassiveHandler<keyof AllMessages>,
     );
     return this;
   }
 
-  addAll<T extends Exclude<keyof Messages, RegisteredTypes>>(
+  addAll<T extends Exclude<keyof AllMessages, RegisteredTypes>>(
     types: T[],
     buildHandler: (type: T) => Handler<T>,
   ): Router<Exclude<RegisteredTypes | T, void>> {
@@ -170,7 +211,7 @@ export class Router<
     return this;
   }
 
-  merge<T extends Exclude<keyof Messages, RegisteredTypes>>(
+  merge<T extends Exclude<keyof AllMessages, RegisteredTypes>>(
     router: Router<T>,
   ): Router<Exclude<RegisteredTypes | T, void>> {
     for (const [type, handler] of router.handlers) {
@@ -184,7 +225,7 @@ export class Router<
 
   // Returns true if the message is handled asynchronously.
   // See https://developer.chrome.com/docs/extensions/mv3/messaging/#simple.
-  private route<T extends keyof Messages>(
+  private route<T extends keyof AllMessages>(
     message: Message<T>,
     sender: chrome.runtime.MessageSender,
     sendResponse: (arg: SendResponseArg<T>) => void,
@@ -234,7 +275,7 @@ export class Router<
   }
 }
 
-function buildErrorArg<T extends keyof Messages>(
+function buildErrorArg<T extends keyof AllMessages>(
   error: unknown,
 ): SendResponseArg<T> {
   if (error instanceof Error) {
@@ -246,10 +287,10 @@ function buildErrorArg<T extends keyof Messages>(
   }
 }
 
-export async function sendToRuntime<T extends keyof Messages>(
+export async function sendToRuntime<T extends keyof RuntimeMessages>(
   type: T,
-  payload: MessagePayload<T>,
-): Promise<Response<T>> {
+  payload: RuntimeMessages[T]["payload"],
+): Promise<RuntimeMessages[T]["response"]> {
   const r = await chrome.runtime.sendMessage<Message<T>, SendResponseArg<T>>(
     message(type, payload),
   );
@@ -261,12 +302,12 @@ export async function sendToRuntime<T extends keyof Messages>(
   return r.response;
 }
 
-export async function sendToTab<T extends keyof Messages>(
+export async function sendToTab<T extends keyof TabMessages>(
   tabId: number,
   type: T,
-  payload: MessagePayload<T>,
+  payload: TabMessages[T]["payload"],
   options: chrome.tabs.MessageSendOptions = {},
-): Promise<Response<T>> {
+): Promise<TabMessages[T]["response"]> {
   const r = await chrome.tabs.sendMessage<Message<T>, SendResponseArg<T>>(
     tabId,
     message(type, payload),

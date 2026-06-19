@@ -36,9 +36,9 @@ chrome.runtime.onMessage.addListener(
     .add("ResponseRectsFragment", (m) =>
       rectAggregator.handleRects(m.requestId, m.rects),
     )
-    .add("AttachHints", () => hinter.attachHints())
-    .add("HitHint", ({ key }) => hinter.hitHint(key))
-    .add("RemoveHints", ({ options, execute }) =>
+    .add("AttachHintsInTab", () => hinter.attachHints())
+    .add("HitHintInTab", ({ key }) => hinter.hitHint(key))
+    .add("RemoveHintsInTab", ({ options, execute }) =>
       hinter.removeHints(options, execute),
     )
     .add("BlurRoot", ({ rect }) => blurer.handleBlurRoot(rect))
