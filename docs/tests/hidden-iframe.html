@@ -1,19 +1,28 @@
 <style>
   iframe {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    width: 400px;
+    height: 200px;
+    border: none;
+  }
+  iframe.hidden {
     display: none;
+  }
+  #root-section {
+    margin-top: 260px;
+  }
+  #status {
+    font-family: monospace;
   }
 </style>
 
-<p>Root frame — the child iframe is hidden (display:none).</p>
-<p id="status">not blurred</p>
+<!-- The iframe starts visible so the child element can receive focus,
+     then the test hides it to simulate a zero-rect scenario. -->
+<iframe id="child-iframe" src="hidden-iframe-child.html"></iframe>
 
-<iframe id="hidden-iframe" src="hidden-iframe-child.html"></iframe>
-
-<script>
-  document.addEventListener("focusin", () => {
-    document.getElementById("status").textContent = "focused";
-  });
-  document.addEventListener("focusout", () => {
-    document.getElementById("status").textContent = "blurred";
-  });
-</script>
+<div id="root-section">
+  <p>Root frame</p>
+  <p id="status">idle</p>
+</div>

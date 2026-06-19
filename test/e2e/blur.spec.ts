@@ -72,32 +72,31 @@ test.describe("blur", () => {
   }) => {
     await gotoTest(page, "hidden-iframe.html");
 
-    // Programmatically focus the input inside the hidden (display:none) iframe.
-    // Playwright cannot click into a hidden iframe, so we use JS.
-    const childFrame = page
-      .frames()
-      .find((f) => f.url().includes("hidden-iframe-child"));
-    if (!childFrame) throw new Error("hidden-iframe-child frame not found");
+    // The iframe starts visible. Click the input to focus it.
+    const childFrame = page.frameLocator("#child-iframe");
+    const input = childFrame.locator("#hidden-input");
+    await input.click();
+    await expect(input).toBeFocused();
 
-    await childFrame.evaluate(() => {
-      const el = document.querySelector<HTMLInputElement>("#hidden-input");
-      el?.focus();
+    // Now hide the iframe so its content rect disappears (simulates an
+    // invisible iframe whose focused element can still intercept keys).
+    await page.evaluate(() => {
+      document.getElementById("child-iframe")?.classList.add("hidden");
     });
-
-    // Confirm focus reached the child frame's document.
-    const isFocused = await childFrame.evaluate(
-      () => document.activeElement?.id === "hidden-input",
-    );
-    if (!isFocused) throw new Error("focus did not land on #hidden-input");
 
     // Press blur key from the root frame.
     await page.keyboard.press("Escape");
 
-    // The input must lose focus.
+    // The input must lose focus even though the iframe has no visible rect.
+    const rawFrame = page
+      .frames()
+      .find((f) => f.url().includes("hidden-iframe-child"));
+    if (!rawFrame) throw new Error("hidden-iframe-child frame not found");
+
     await expect
       .poll(
         () =>
-          childFrame.evaluate(
+          rawFrame.evaluate(
             () =>
               document.activeElement === document.body ||
               document.activeElement == null,
