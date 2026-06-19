@@ -31,7 +31,7 @@ test.describe("iframe blur cycle (sticky mode)", () => {
     });
   });
 
-  test.fixme("hint action works after focus-blur-focus cycle on iframe element", async ({
+  test("hint action works after focus-blur-focus cycle on iframe element", async ({
     page,
   }) => {
     await gotoTest(page, "iframe.html");

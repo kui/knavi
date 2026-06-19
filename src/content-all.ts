@@ -88,6 +88,11 @@ chrome.runtime.onMessage.addListener(
     .add("BlurRelay", ({ childFrameId, rect }) => {
       blurer.handleBlurRelay(childFrameId, rect);
     })
+    // Passively observe AttachHints/RemoveHints forwarded to the root frame
+    // (frameId:0). Keeps the root frame's keyboard handler in sync when a
+    // child frame initiated the hint session. content-root.ts owns sendResponse.
+    .addPassive("AttachHints", () => hinterClient.syncHinting(true))
+    .addPassive("RemoveHints", () => hinterClient.syncHinting(false))
     .buildListener(),
 );
 
