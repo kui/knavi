@@ -93,6 +93,7 @@ void describe("FrameRegistry — child iframe registration", () => {
     const fakeSource = makeWindowSource();
     const fakeIframe = {
       contentWindow: fakeSource,
+      isConnected: true,
     } as unknown as HTMLIFrameElement;
 
     (globalThis as Record<string, unknown>).document = {
@@ -108,6 +109,45 @@ void describe("FrameRegistry — child iframe registration", () => {
 
     assert.equal(registry.getIframe(7), fakeIframe);
     assert.equal(registry.getFrameId(fakeIframe), 7);
+  });
+
+  void test("purges disconnected iframes on new announcement", () => {
+    setParent(fakeWindow);
+    const registry = new FrameRegistry();
+
+    const oldSource = makeWindowSource();
+    const oldIframe = {
+      contentWindow: oldSource,
+      isConnected: true,
+    } as unknown as HTMLIFrameElement & { isConnected: boolean };
+
+    (globalThis as Record<string, unknown>).document = {
+      getElementsByTagName: () => [oldIframe],
+    };
+    registry.handleMessage({
+      data: { "@type": "com.github.kui.knavi.FrameIdAnnouncement", frameId: 1 },
+      source: oldSource,
+    } as MessageEvent);
+    assert.equal(registry.getFrameId(oldIframe), 1);
+
+    oldIframe.isConnected = false;
+
+    const newSource = makeWindowSource();
+    const newIframe = {
+      contentWindow: newSource,
+      isConnected: true,
+    } as unknown as HTMLIFrameElement;
+    (globalThis as Record<string, unknown>).document = {
+      getElementsByTagName: () => [newIframe],
+    };
+    registry.handleMessage({
+      data: { "@type": "com.github.kui.knavi.FrameIdAnnouncement", frameId: 2 },
+      source: newSource,
+    } as MessageEvent);
+
+    assert.equal(registry.getFrameId(oldIframe), undefined);
+    assert.equal(registry.getIframe(1), undefined);
+    assert.equal(registry.getFrameId(newIframe), 2);
   });
 
   void test("replies to child with ParentFrameIdResponse", async () => {
