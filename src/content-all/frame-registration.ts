@@ -7,7 +7,9 @@ import { printError } from "../lib/errors";
 //   0. `source.closed` — skip everything for dead windows (stale messages from
 //      removed iframes / bfcache); no point scanning the DOM for a corpse.
 //   1. `source.frameElement` — O(1), reaches through shadow boundaries when
-//      same-origin. Returns null for cross-origin (per HTML spec, no throw).
+//      same-origin. `frameElement` is NOT on the cross-origin property
+//      allowlist, so reading it on a cross-origin Window throws SecurityError;
+//      swallow and fall through to the DOM-side lookup.
 //   2. Live light-DOM HTMLCollection — covers cross-origin iframes that live
 //      in the light DOM (the typical ad/embed case).
 //   3. Shadow-root walk — last resort for the rare cross-origin iframe that
@@ -15,8 +17,12 @@ import { printError } from "../lib/errors";
 function findIframeBySource(source: Window): HTMLIFrameElement | undefined {
   if (source.closed) return undefined;
 
-  const direct = source.frameElement;
-  if (direct?.tagName === "IFRAME") return direct as HTMLIFrameElement;
+  try {
+    const direct = source.frameElement;
+    if (direct?.tagName === "IFRAME") return direct as HTMLIFrameElement;
+  } catch {
+    // cross-origin source: frameElement access throws; fall through.
+  }
 
   for (const iframe of document.getElementsByTagName("iframe")) {
     if (iframe.contentWindow === source) return iframe;
