@@ -2,4 +2,5 @@
 - Write all PR, code, and commit comments in English.
 - Use mise to manage tool versions. Ensure `mise install` is run before building.
 - After `gh pr create` or any `git push` to a PR branch, check CI with `gh pr checks <number>` and fix + re-push until all jobs pass.
+- When adding an entry to a `changelog/*.md` file, consider whether the digest line on line 3 of that file should be updated to reflect the new entry.
 - Event-hook wiring (`window.addEventListener`, `chrome.runtime.onMessage.addListener`, `chrome.storage.onChanged.addListener`, etc.) belongs in the entry-point files (`src/background.ts`, `src/content-all.ts`, `src/content-root.ts`). Logic implementation belongs in the corresponding `src/{name}/*.ts` modules, which export handler functions or objects to be wired up by the entry-point.
