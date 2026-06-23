@@ -50,12 +50,14 @@ void describe("BlurerContentAll.handleBlurRelay", () => {
 
     const fakeSource = { window: {} } as unknown as Window;
     const fakeIframe = {
+      tagName: "IFRAME",
       contentWindow: fakeSource,
       isConnected: true,
     } as unknown as HTMLIFrameElement;
 
     (globalThis as Record<string, unknown>).document = {
       getElementsByTagName: () => [fakeIframe],
+      querySelectorAll: () => [],
     };
 
     registry.handleMessage({
@@ -88,6 +90,7 @@ void describe("BlurerContentAll.handleBlurRelay", () => {
     const fakeSource = { window: {} } as unknown as Window;
     // getClientRects returns an empty iterable (zero-size / display:none iframe).
     const fakeIframe = {
+      tagName: "IFRAME",
       contentWindow: fakeSource,
       isConnected: true,
       getClientRects: () => [] as DOMRect[],
@@ -96,6 +99,7 @@ void describe("BlurerContentAll.handleBlurRelay", () => {
 
     (globalThis as Record<string, unknown>).document = {
       getElementsByTagName: () => [fakeIframe],
+      querySelectorAll: () => [],
     };
 
     registry.handleMessage({

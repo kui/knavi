@@ -1,6 +1,33 @@
+import { listIframesInShadowRoots } from "../dom/elements";
 import { sendToRuntime } from "../lib/chrome-messages";
 import { printError } from "../lib/errors";
-import { filter, first } from "../lib/iters";
+
+// Locate the iframe element whose contentWindow is `source`.
+// Tiered to avoid a full DOM walk in the common case:
+//   0. `source.closed` — skip everything for dead windows (stale messages from
+//      removed iframes / bfcache); no point scanning the DOM for a corpse.
+//   1. `source.frameElement` — O(1), reaches through shadow boundaries when
+//      same-origin. Returns null for cross-origin (per HTML spec, no throw).
+//   2. Live light-DOM HTMLCollection — covers cross-origin iframes that live
+//      in the light DOM (the typical ad/embed case).
+//   3. Shadow-root walk — last resort for the rare cross-origin iframe that
+//      is hosted inside a shadow tree.
+function findIframeBySource(source: Window): HTMLIFrameElement | undefined {
+  if (source.closed) return undefined;
+
+  const direct = source.frameElement;
+  if (direct?.tagName === "IFRAME") return direct as HTMLIFrameElement;
+
+  for (const iframe of document.getElementsByTagName("iframe")) {
+    if (iframe.contentWindow === source) return iframe;
+  }
+
+  for (const iframe of listIframesInShadowRoots()) {
+    if (iframe.contentWindow === source) return iframe;
+  }
+
+  return undefined;
+}
 
 const ANNOUNCEMENT_TYPE = "com.github.kui.knavi.FrameIdAnnouncement";
 const PARENT_RESPONSE_TYPE = "com.github.kui.knavi.ParentFrameIdResponse";
@@ -73,14 +100,19 @@ export class FrameRegistry {
       const source = e.source;
       if (!source || !("window" in source)) return;
 
-      const iframe = first(
-        filter(
-          document.getElementsByTagName("iframe"),
-          (i) => source === i.contentWindow,
-        ),
-      );
+      const iframe = findIframeBySource(source);
       if (!iframe) {
-        console.warn("FrameIdAnnouncement from unknown source:", source);
+        // Reachable in benign cases (iframe removed mid-handshake, src swap,
+        // bfcache revival). Only warn when the source still claims us as its
+        // direct parent — that combination suggests a real lookup miss rather
+        // than a stale/cross-origin spoof. `parent` is on the cross-origin
+        // allowlist so the comparison never throws. (`closed` sources are
+        // already filtered out inside findIframeBySource.)
+        if (source.parent === window) {
+          console.warn("FrameIdAnnouncement from unknown source:", source);
+        } else {
+          console.debug("FrameIdAnnouncement from unknown source:", source);
+        }
         return;
       }
       this.purgeDisconnectedIframes();

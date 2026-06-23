@@ -294,3 +294,21 @@ export function* listAll(d: ParentNode = document): Generator<Element> {
     if (e.shadowRoot) yield* listAll(e.shadowRoot);
   }
 }
+
+/**
+ * Yields iframes that live inside open shadow roots reachable from `d`.
+ * Skips light-DOM iframes — callers should combine this with
+ * `document.getElementsByTagName("iframe")` for the cheap light-DOM pass.
+ * Walking every element is unavoidable here: there is no DOM API to
+ * enumerate shadow roots directly.
+ */
+export function* listIframesInShadowRoots(
+  d: ParentNode = document,
+): Generator<HTMLIFrameElement> {
+  for (const host of d.querySelectorAll("*")) {
+    const root = host.shadowRoot;
+    if (!root) continue;
+    for (const iframe of root.querySelectorAll("iframe")) yield iframe;
+    yield* listIframesInShadowRoots(root);
+  }
+}

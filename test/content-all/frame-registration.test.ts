@@ -92,12 +92,14 @@ void describe("FrameRegistry — child iframe registration", () => {
 
     const fakeSource = makeWindowSource();
     const fakeIframe = {
+      tagName: "IFRAME",
       contentWindow: fakeSource,
       isConnected: true,
     } as unknown as HTMLIFrameElement;
 
     (globalThis as Record<string, unknown>).document = {
       getElementsByTagName: () => [fakeIframe],
+      querySelectorAll: () => [],
     };
 
     registry.handleMessage({
@@ -117,12 +119,14 @@ void describe("FrameRegistry — child iframe registration", () => {
 
     const oldSource = makeWindowSource();
     const oldIframe = {
+      tagName: "IFRAME",
       contentWindow: oldSource,
       isConnected: true,
     } as unknown as HTMLIFrameElement & { isConnected: boolean };
 
     (globalThis as Record<string, unknown>).document = {
       getElementsByTagName: () => [oldIframe],
+      querySelectorAll: () => [],
     };
     registry.handleMessage({
       data: { "@type": "com.github.kui.knavi.FrameIdAnnouncement", frameId: 1 },
@@ -134,11 +138,13 @@ void describe("FrameRegistry — child iframe registration", () => {
 
     const newSource = makeWindowSource();
     const newIframe = {
+      tagName: "IFRAME",
       contentWindow: newSource,
       isConnected: true,
     } as unknown as HTMLIFrameElement;
     (globalThis as Record<string, unknown>).document = {
       getElementsByTagName: () => [newIframe],
+      querySelectorAll: () => [],
     };
     registry.handleMessage({
       data: { "@type": "com.github.kui.knavi.FrameIdAnnouncement", frameId: 2 },
@@ -157,11 +163,13 @@ void describe("FrameRegistry — child iframe registration", () => {
     const replies: unknown[] = [];
     const fakeSource = makeWindowSource((data) => replies.push(data));
     const fakeIframe = {
+      tagName: "IFRAME",
       contentWindow: fakeSource,
     } as unknown as HTMLIFrameElement;
 
     (globalThis as Record<string, unknown>).document = {
       getElementsByTagName: () => [fakeIframe],
+      querySelectorAll: () => [],
     };
 
     registry.handleMessage({
