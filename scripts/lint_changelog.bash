@@ -14,7 +14,8 @@ main() {
 has_current_version_chengelog() {
   local v="$(scripts/version.ts)"
   if ! [[ -f "changelog/$v.md" ]]; then
-    echo "changelog/$v.md does not exist"
+    echo "# Version $v" > "changelog/$v.md"
+    echo "changelog/$v.md did not exist; created it"
     exit 1
   fi
 }
