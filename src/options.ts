@@ -20,6 +20,8 @@ async function init() {
   initKeyConflictValidation(body);
 }
 
+// "magicKey" is the legacy storage key; see src/types/settings.d.ts for why
+// the UI label diverges from it.
 const KEY_LABELS: Record<string, string> = {
   magicKey: "Peek Key",
   stickyKey: "Sticky Key",
@@ -32,9 +34,9 @@ const KEY_LABELS: Record<string, string> = {
 // Key-pattern pairs that must not be bound to the same key.
 //
 // Keys are split by the phase in which they fire:
-//   - while NOT hinting: Magic Key, Sticky Key, Blur Key
+//   - while NOT hinting: Peek Key, Sticky Key, Blur Key
 //   - while hinting:     Action Key, Cancel Key, hint letters
-//     (the Magic Key is also held throughout a hold session, so it overlaps
+//     (the Peek Key is also held throughout a hold session, so it overlaps
 //      the hinting phase too)
 // Keys that only ever fire in different phases can safely share a binding.
 // Hence Blur Key may share with Action/Cancel/hints, and Sticky Key may share
