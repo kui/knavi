@@ -21,7 +21,7 @@ async function init() {
 }
 
 const KEY_LABELS: Record<string, string> = {
-  magicKey: "Magic Key",
+  magicKey: "Peek Key",
   stickyKey: "Sticky Key",
   blurKey: "Blur Key",
   actionKey: "Action Key",

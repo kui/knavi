@@ -1,6 +1,6 @@
 # knavi
 
-A Hit-a-Hint Chrome extension. Press the space key plus a hint key to click links and buttons without a mouse.
+A Hit-a-Hint Chrome extension. Hold Space, type a hint key, and release to click links and buttons without a mouse.
 
 <a target="_blank" href="https://chrome.google.com/webstore/detail/knavi/pfcgnkljgjobpkbgcifmpnhglafhkifg">![Try it now in Chrome Web Store](docs/tryitnowbutton.png)</a>
 
@@ -16,11 +16,11 @@ Hit confirmed:
 
 ## Description
 
-This extension allows you to click links and buttons using only the keyboard. Pressing the space key and a hint key simulates clicking on links and buttons.
+Click links and buttons with the keyboard only. Hold the Peek Key (Space by default), type the hint key shown on each target, then release to click. Hold `Ctrl`, `Shift`, or `Alt` on release to open links in a new tab or window.
 
-Holding modifier keys such as `Ctrl` or `Alt` when you release the space key lets you open links in a new tab or window.
+Prefer not to hold a key down? Bind a Sticky Key in options to show hints with a single press, and an Action Key to click.
 
-The default magic key is the space key, but you can change it in the options.
+The Peek Key, Sticky Key, hint letters, and per-site selectors are all configurable in options.
 
 ## Build
 

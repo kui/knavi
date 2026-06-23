@@ -25,17 +25,18 @@
       <div id="key-conflicts" role="alert" hidden></div>
       <h2>Basic Settings</h2>
       <p>
-        Hold down the Magic Key to show the hints, type a hint's letters to
-        select its element, then release the Magic Key to run the action on it.
-        The Hint Letters are the characters used to label the hints.
+        Hold the Peek Key to show hints, type a hint's letters to select an
+        element, then release the Peek Key to click it. Hold Ctrl, Shift, or Alt
+        on release to open links in a new tab or window. Hint Letters are the
+        characters used to label hints.
       </p>
       <p>
-        The Magic Key is optional. Press [Unbind] to turn it off if you prefer
-        to use Sticky Mode (below) instead.
+        The Peek Key is optional &mdash; press [Unbind] to disable it and use
+        Sticky Mode (below) instead.
       </p>
       <table class="config-table">
         <tr>
-          <th><label for="magic-key">Magic Key</label></th>
+          <th><label for="magic-key">Peek Key</label></th>
           <td>
             <input
               is="key-input"
@@ -95,11 +96,15 @@
 
       <h2>Sticky Mode</h2>
       <p>
-        An alternative to holding down the Magic Key: press the Sticky Key to
-        show the hints and keep them visible without holding a key down, then
-        press the Action Key to run the action or the Cancel Key to dismiss
-        them. Press [Unbind] on a field to disable it. The Action Key and Cancel
-        Key also work during Magic Key sessions.
+        An alternative to holding the Peek Key: press the Sticky Key to show
+        hints and keep them visible without holding a key down, then press the
+        Action Key to click the selected element or the Cancel Key to dismiss.
+        Modifiers (Ctrl/Shift/Alt) on the Action Key open links in a new tab or
+        window.
+      </p>
+      <p>
+        The Action and Cancel Keys also work during Peek Key sessions. Press
+        [Unbind] on any field to disable it.
       </p>
       <table class="config-table">
         <tr>
@@ -174,10 +179,9 @@
       <h2>Black List</h2>
 
       <p>
-        Disable knavi on the listed pages. You can use wildcard pattern
-        matching. See
+        Disable knavi on the listed pages. Supports
         <a href="https://github.com/rbranson/glob-trie.js#expression-support"
-          >the glob-trie.js docs</a
+          >wildcard patterns (glob-trie.js)</a
         >.
       </p>
 
@@ -190,12 +194,10 @@
       <h2>Additional Selectors</h2>
 
       <p>
-        Extra selectors for hintable elements on specific pages. Each key is a
-        URL pattern matched with wildcards (<a
-          href="https://github.com/rbranson/glob-trie.js#expression-support"
-          >glob-trie.js</a
-        >), and each value is a CSS selector or an array of selectors. The
-        config is parsed as
+        Extra CSS selectors for hintable elements on specific pages. Keys are
+        <a href="https://github.com/rbranson/glob-trie.js#expression-support"
+          >wildcard URL patterns (glob-trie.js)</a
+        >; values are selectors or arrays of selectors. Parsed as
         <a href="https://github.com/json5/json5#example">JSON5</a>.
       </p>
       <textarea
