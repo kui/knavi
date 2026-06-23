@@ -78,6 +78,19 @@ body {
   border-color: #c4d8fc;
 }
 
+.options-link {
+  display: block;
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: #1967d2;
+  text-decoration: none;
+}
+
+.options-link:hover {
+  text-decoration: underline;
+}
+
 .pattern {
   display: block;
   font-family: Consolas, Menlo, Monaco, monospace;
