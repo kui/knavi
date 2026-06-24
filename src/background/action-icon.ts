@@ -1,6 +1,6 @@
 import settings from "../lib/settings";
 import { BlackList } from "../lib/blacklist";
-import { printError } from "../lib/errors";
+import { printError, printErrorUnlessTargetGone } from "../lib/errors";
 
 const ENABLED_ICON = {
   16: "icon16.png",
@@ -54,7 +54,9 @@ async function updateActiveTabs() {
   await Promise.all(
     tabs
       .filter((t) => t.id != null)
-      .map((t) => updateTab(t.id!, t.url, list).catch(printError)),
+      .map((t) =>
+        updateTab(t.id!, t.url, list).catch(printErrorUnlessTargetGone),
+      ),
   );
 }
 
@@ -62,7 +64,7 @@ export function init() {
   chrome.tabs.onActivated.addListener(({ tabId }) => {
     Promise.all([chrome.tabs.get(tabId), loadBlackList()])
       .then(([t, list]) => updateTab(tabId, t.url, list))
-      .catch(printError);
+      .catch(printErrorUnlessTargetGone);
   });
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     // The exact onUpdated firing behavior (e.g. for history.pushState/
@@ -71,7 +73,7 @@ export function init() {
     if (changeInfo.url == null && changeInfo.status == null) return;
     loadBlackList()
       .then((list) => updateTab(tabId, tab.url, list))
-      .catch(printError);
+      .catch(printErrorUnlessTargetGone);
   });
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "sync" && area !== "local") return;
