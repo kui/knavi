@@ -108,17 +108,13 @@ export class FrameRegistry {
 
       const iframe = findIframeBySource(source);
       if (!iframe) {
-        // Reachable in benign cases (iframe removed mid-handshake, src swap,
-        // bfcache revival). Only warn when the source still claims us as its
-        // direct parent — that combination suggests a real lookup miss rather
-        // than a stale/cross-origin spoof. `parent` is on the cross-origin
-        // allowlist so the comparison never throws. (`closed` sources are
-        // already filtered out inside findIframeBySource.)
-        if (source.parent === window) {
-          console.warn("FrameIdAnnouncement from unknown source:", source);
-        } else {
-          console.debug("FrameIdAnnouncement from unknown source:", source);
-        }
+        // Reachable in benign cases that we can't disambiguate from real misses:
+        // iframes inside closed shadow roots (unreachable via DOM walk), React
+        // remount races where `contentWindow` identity is lost mid-handshake,
+        // iframe removed mid-flight, src swap, bfcache revival. `source.parent
+        // === window` doesn't reliably indicate a real miss either, since the
+        // first two cases also satisfy it. Log at debug only.
+        console.debug("FrameIdAnnouncement from unknown source:", source);
         return;
       }
       this.purgeDisconnectedIframes();
