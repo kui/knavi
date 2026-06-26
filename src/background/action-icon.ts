@@ -37,12 +37,39 @@ function isDisabled(url: string | undefined, list: BlackList): boolean {
   return list.match(url).length > 0;
 }
 
+// Callback-form wrappers that synchronously consume `chrome.runtime.lastError`.
+// The Promise-form variants of these APIs do NOT propagate "No tab with id"
+// races to the returned Promise on every Chrome version — `chrome.action.setIcon`
+// in particular resolves successfully while still setting `lastError`, so a
+// `.catch()` cannot observe it and Chromium logs an "Unchecked
+// runtime.lastError" warning. Reading `lastError` inside the callback marks it
+// as checked and silences the warning. See https://issues.chromium.org/issues/40826436
+// for the parallel sendMessage discussion.
+function setIconChecked(details: chrome.action.TabIconDetails): Promise<void> {
+  return new Promise((resolve) => {
+    chrome.action.setIcon(details, () => {
+      void chrome.runtime.lastError;
+      resolve();
+    });
+  });
+}
+
+function getTabChecked(tabId: number): Promise<chrome.tabs.Tab> {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.get(tabId, (tab) => {
+      const err = chrome.runtime.lastError;
+      if (err) reject(new Error(err.message));
+      else resolve(tab);
+    });
+  });
+}
+
 async function updateTab(
   tabId: number,
   url: string | undefined,
   list: BlackList,
 ) {
-  await chrome.action.setIcon({
+  await setIconChecked({
     tabId,
     path: isDisabled(url, list) ? DISABLED_ICON : ENABLED_ICON,
   });
@@ -62,7 +89,7 @@ async function updateActiveTabs() {
 
 export function init() {
   chrome.tabs.onActivated.addListener(({ tabId }) => {
-    Promise.all([chrome.tabs.get(tabId), loadBlackList()])
+    Promise.all([getTabChecked(tabId), loadBlackList()])
       .then(([t, list]) => updateTab(tabId, t.url, list))
       .catch(printErrorUnlessTargetGone);
   });
