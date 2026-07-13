@@ -7,7 +7,7 @@ import { FrameRegistry } from "./frame-registration";
 export class BlurerContentAll {
   constructor(private readonly frameRegistry: FrameRegistry) {}
 
-  // Handles BlurRelay from background: transform rect to parent coords and send BlurUp.
+  // WHY: handles BlurRelay from background: transform rect to parent coords and send BlurUp.
   handleBlurRelay(
     childFrameId: number,
     rectJson: RectJSON<"element-border", "layout-viewport"> | null,
@@ -18,7 +18,7 @@ export class BlurerContentAll {
       return;
     }
     if (!frame.isConnected) {
-      // The iframe was removed from DOM; its entry will be ignored next lookup.
+      // WHY: the iframe was removed from DOM; its entry will be ignored next lookup.
       console.debug("BlurRelay: iframe no longer connected, skipping", frame);
       return;
     }

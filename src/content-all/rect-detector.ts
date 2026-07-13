@@ -7,9 +7,11 @@ import { Rect } from "../dom/rects";
 
 interface ElementRect {
   rect: Rect<"element-border", "layout-viewport">;
-  // Phantom rect is not originally in the DOM tree.
-  // For example, the clickable area of <area> is not in the DOM tree.
-  // phantom rect should be skipped that is pointable by pointer.
+  /**
+   * WHY: a phantom rect is not originally in the DOM tree (e.g. the clickable
+   * area of an <area> element), so it should skip the isPointable check that
+   * a real element would need.
+   */
   isPhantom?: boolean;
 }
 
@@ -55,25 +57,21 @@ export class RectDetector {
       ...flatMap(
         this.getClientRects(element),
         ({ rect, isPhantom }): Rect<"element-border", "actual-viewport">[] => {
-          // Too small
           if (isSmallRect(rect)) return [];
 
           timerEnd = this.timers.start("viewport intersection");
-          // out of viewport
           let croppedRect: Rect<"element-border", "layout-viewport"> | null =
             Rect.intersection("element-border", rect, this.viewport);
           timerEnd();
           if (!croppedRect || isSmallRect(croppedRect)) return [];
 
           timerEnd = this.timers.start("cropByParent");
-          // hidden by parent element overflow
           croppedRect = this.cropByParent(element, croppedRect);
           timerEnd();
           if (!croppedRect || isSmallRect(croppedRect)) return [];
 
           timerEnd = this.timers.start("isPointable");
-          // pointer can't reach to the element
-          // Phantom rect should be skipped that is pointable by pointer.
+          // WHY: a phantom rect is skipped from the real isPointable check.
           const isPointable =
             Boolean(isPhantom) || this.isPointable(element, croppedRect);
           timerEnd();
@@ -102,8 +100,13 @@ export class RectDetector {
       .get(element)
       .get("position")!
       .toString();
-    // TODO We need to support some case like "transform" property in ancestor.
-    // See https://developer.mozilla.org/en-US/docs/Web/CSS/position#fixed_positioning
+    /**
+     * WHY: fixed/sticky elements are positioned relative to the viewport (or
+     * a transformed ancestor), so parent-overflow cropping doesn't apply.
+     * We don't yet handle the "transform" property in an ancestor changing
+     * the containing block. See
+     * https://developer.mozilla.org/en-US/docs/Web/CSS/position#fixed_positioning
+     */
     if (elementPosition === "fixed" || elementPosition === "sticky")
       return rect;
 
@@ -190,7 +193,7 @@ function getAreaRects(
   }
 
   if (element.shape === "circle") {
-    // return a square that be inscribed in the circle
+    // WHY: return a square that be inscribed in the circle
     const [x, y, r] = coords;
     const d = r / Math.sqrt(2);
     return [
@@ -218,8 +221,10 @@ function getAreaRects(
     ];
   }
   if (element.shape === "poly") {
-    // return a rectangle that contains all points
-    // We should use a convex hull algorithm to get a better rectangle.
+    /**
+     * WHY: returns a rectangle that contains all points. We should use a
+     * convex hull algorithm to get a better rectangle.
+     */
     const xs = coords.filter((_, i) => i % 2 === 0);
     const ys = coords.filter((_, i) => i % 2 === 1);
     const top = Math.min(...ys) + imgRect.y;

@@ -5,7 +5,6 @@ import { isEditable } from "../dom/elements";
 import { isSingleLetter } from "../lib/strings";
 import { printError } from "../lib/errors";
 
-// TODO: Factor out the blurer and then rename this class.
 export class KeyboardHandlerContentAll {
   private hitMatcher: KeyHoldMatcher | null = null;
   private blurMatcher: KeyHoldMatcher | null = null;
@@ -14,8 +13,10 @@ export class KeyboardHandlerContentAll {
   private cancelMatcher: KeyHoldMatcher | null = null;
   private hintLetters = "";
   private matchedBlacklist: string[] = [];
-  // true when hints were attached by magic key hold (fires on keyup);
-  // false when attached by sticky key (fires only via actionKey/cancelKey).
+  /**
+   * WHY: true when hints were attached by magic key hold (fires on keyup);
+   * false when attached by sticky key (fires only via actionKey/cancelKey).
+   */
   private holdHinting = false;
 
   constructor(
@@ -54,7 +55,6 @@ export class KeyboardHandlerContentAll {
     this.matchedBlacklist = matchedBlacklist;
   }
 
-  // Reset the held-key history of every matcher.
   private resetMatchers() {
     this.hitMatcher?.reset();
     this.blurMatcher?.reset();
@@ -63,7 +63,7 @@ export class KeyboardHandlerContentAll {
     this.cancelMatcher?.reset();
   }
 
-  // Return true if the event is handled.
+  // INVARIANT: returns true if the event is handled.
   handleKeydown(event: KeyboardEvent): boolean {
     const hitMatcher = this.hitMatcher?.keydown(event);
     const blurMatcher = this.blurMatcher?.keydown(event);
@@ -117,7 +117,7 @@ export class KeyboardHandlerContentAll {
     return false;
   }
 
-  // Return true if the event is handled.
+  // INVARIANT: returns true if the event is handled.
   handleKeyup(event: KeyboardEvent): boolean {
     const hitMatcher = this.hitMatcher?.keyup(event);
     this.blurMatcher?.keyup(event);
@@ -140,18 +140,22 @@ export class KeyboardHandlerContentAll {
     return false;
   }
 
-  // End the current hint session. Resetting the matchers clears any key left
-  // "held" in their history because its keyup was lost — e.g. an Action Key
-  // that fired a target=_blank action and opened a new tab, stealing focus
-  // before keyup arrived. Without this, the stuck key would spuriously match on
-  // the next session.
+  /**
+   * WHY: resetting the matchers clears any key left "held" in their history
+   * because its keyup was lost, e.g. an Action Key that fired a
+   * target=_blank action and opened a new tab, stealing focus before keyup
+   * arrived. Without this, the stuck key would spuriously match on the next
+   * session.
+   */
   private endSession() {
     this.holdHinting = false;
     this.resetMatchers();
   }
 
-  // Just hijack the event when hinting.
-  // Return true if the event is handled.
+  /**
+   * WHY: just hijacks the event when hinting.
+   * INVARIANT: returns true if the event is handled.
+   */
   handleKeypress() {
     return this.hinter.isHinting;
   }
