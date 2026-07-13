@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS: Settings = {
   stickyKey: "",
   actionKey: "",
   cancelKey: "",
-  css: "", // load from an external file
+  css: "", // WHY: loaded lazily from an external file (default-style.css).
   blackList: DEFAULT_BLACK_LIST,
   additionalSelectors: DEFAULT_ADDITIONAL_SELECTORS,
 };
@@ -51,10 +51,10 @@ class Storage {
 
     if (Object.keys(defaults).length === 0) return;
 
-    // Re-read right before writing and drop any key that gained a value while
-    // we were computing defaults (the slow `fetchCss` in particular). This
-    // read-modify-write is not atomic, so a settings write landing right after
-    // install would otherwise be clobbered by our default.
+    /* WHY: re-read right before writing and drop any key that gained a value
+       while we were computing defaults (the slow `fetchCss` in particular).
+       This read-modify-write is not atomic, so a settings write landing right
+       after install would otherwise be clobbered by our default. */
     const keys = Object.keys(defaults) as (keyof Settings)[];
     const recheck = await this.storage.get<Partial<Settings>>(keys);
     for (const key of keys) {
@@ -67,10 +67,11 @@ class Storage {
     }
   }
 
-  // Read-only: substitutes the default value for any key still missing in
-  // storage. Consumers use this so reads stay correct even before the
-  // onInstalled back-fill has run (e.g. right after a fresh install). No write
-  // happens, so there is no read-modify-write race.
+  /**
+   * WHY: substitutes the default value for any key still missing in storage
+   * so reads stay correct even before the onInstalled back-fill has run
+   * (e.g. right after a fresh install). Read-only, so no read-modify-write race.
+   */
   async get<K extends keyof Settings>(names: K[]): Promise<Pick<Settings, K>> {
     const current = await this.storage.get<Pick<Settings, K>>(names);
     const result: Partial<Pick<Settings, K>> = {};
@@ -114,17 +115,21 @@ const local = new Storage(chrome.storage.local);
 let storage: Storage | null = null;
 
 export default {
-  // Resolves the active storage area (sync vs local) and memoizes it. Pass
-  // `force` to re-resolve after the area may have changed.
+  /**
+   * Resolves the active storage area (sync vs local) and memoizes it. Pass
+   * `force` to re-resolve after the area may have changed.
+   */
   async getStorage(force = false): Promise<Storage> {
     if (force) storage = null;
     if (storage) return storage;
     storage = (await isLocal()) ? local : sync;
     return storage;
   },
-  // Writes default values for any missing keys. Run only from the
-  // onInstalled handler, never on ordinary startup: this read-modify-write is
-  // non-atomic and could clobber a concurrent settings write.
+  /**
+   * WHY: run only from the onInstalled handler, never on ordinary startup —
+   * this read-modify-write is non-atomic and could clobber a concurrent
+   * settings write. Writes default values for any missing keys.
+   */
   async backfillDefaults(): Promise<void> {
     const s = await this.getStorage();
     await s.backfillDefaults();
