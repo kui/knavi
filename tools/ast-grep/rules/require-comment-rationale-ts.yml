@@ -1,0 +1,15 @@
+id: require-comment-rationale-ts
+language: TypeScript
+severity: error
+message: |
+  Comment lacks a rationale keyword. Either delete it, or prefix it with
+  WHY: / HACK: / SAFETY: / INVARIANT: (or use `/** ... */` JSDoc).
+  See tools/ast-grep/rules/README.md for details.
+rule:
+  kind: comment
+  not:
+    any:
+      - regex: '^/\*\*'
+      - regex: '^(//|/\*)\s*(WHY|HACK|SAFETY|INVARIANT)\b'
+      - regex: '^(//|/\*)\s*(eslint-|ts-|@ts-|biome-|prettier-|deno-|c8|istanbul|v8)'
+      - regex: '^(//|/\*)\s*#?(region|endregion)\b'

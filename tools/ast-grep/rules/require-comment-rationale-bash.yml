@@ -1,0 +1,13 @@
+id: require-comment-rationale-bash
+language: Bash
+severity: error
+message: |
+  Comment lacks a rationale keyword. Either delete it, or prefix it with
+  WHY: / HACK: / SAFETY: / INVARIANT:.
+rule:
+  kind: comment
+  not:
+    any:
+      - regex: "^#!"
+      - regex: '^#\s*(WHY|HACK|SAFETY|INVARIANT)\b'
+      - regex: '^#\s*shellcheck\b'

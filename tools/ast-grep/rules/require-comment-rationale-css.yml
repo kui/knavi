@@ -1,0 +1,10 @@
+id: require-comment-rationale-css
+language: Css
+severity: error
+message: |
+  Comment lacks a rationale keyword. Either delete it, or prefix it with
+  WHY: / HACK: / SAFETY: / INVARIANT:.
+rule:
+  kind: comment
+  not:
+    regex: '^/\*\s*(WHY|HACK|SAFETY|INVARIANT)\b'
