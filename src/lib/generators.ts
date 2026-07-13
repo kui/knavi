@@ -1,7 +1,5 @@
-// TODO Return non-generator types to prevent `return` from being used.
 export function createQueue<T>(): {
   enqueue: Generator<void, void, T>;
-  // Wait if the queue is empty.
   dequeue: AsyncGenerator<T | undefined, void, void>;
 } {
   const queue: (T | undefined)[] = [];

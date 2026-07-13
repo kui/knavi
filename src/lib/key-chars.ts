@@ -1,14 +1,11 @@
-// Maps a KeyboardEvent.code of a "writing system" key to the character(s) it
-// can produce *without modifiers*. The same physical `code` yields different
-// characters between layouts (US ANSI vs Japanese JIS), so each candidate is
-// listed and conflict detection over-approximates: a hint set containing ANY
-// candidate is treated as a conflict.
-//
-// Hint matching at runtime compares `event.key` (the produced character)
-// against the configured hint letters, while key bindings are stored as
-// `event.code`. This map bridges those two representations.
-
-// US ANSI unshifted characters for punctuation/space codes.
+/**
+ * WHY: the same physical `code` yields different characters between layouts
+ * (US ANSI vs Japanese JIS), so conflict detection over-approximates by
+ * listing every candidate a code can produce and treating a hint set
+ * containing ANY candidate as a conflict. Hint matching at runtime compares
+ * `event.key` (the produced character) against the configured hint letters,
+ * while key bindings are stored as `event.code`; this map bridges the two.
+ */
 const US_CHARS: Record<string, string> = {
   Backquote: "`",
   Minus: "-",
@@ -29,14 +26,13 @@ const US_CHARS: Record<string, string> = {
   NumpadDecimal: ".",
 };
 
-// Japanese JIS unshifted characters where they differ from US ANSI.
 const JIS_CHARS: Record<string, string> = {
   Equal: "^",
   BracketLeft: "@",
   BracketRight: "[",
   Backslash: "]",
   Quote: ":",
-  IntlYen: "¥", // ¥
+  IntlYen: "¥",
   IntlRo: "\\",
 };
 
