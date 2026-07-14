@@ -13,7 +13,7 @@ export class BlurerContentRoot {
     (activeElement.blur as () => void)();
 
     if (!rect) return;
-    // In the root frame, layout-viewport coordinates equal root-viewport coordinates.
+    // INVARIANT: In the root frame, layout-viewport coordinates equal root-viewport coordinates.
     this.view.blur(new Rect({ ...rect, origin: "root-viewport" }));
   }
 }
