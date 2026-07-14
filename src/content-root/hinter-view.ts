@@ -20,6 +20,7 @@ export class HintView {
 
   private style: HTMLStyleElement;
   private hints: Hints | null = null;
+  private cycleKey = "";
 
   constructor() {
     this.container = document.createElement("div");
@@ -38,8 +39,17 @@ export class HintView {
     this.style = this.root.appendChild(document.createElement("style"));
   }
 
-  setup(css: string) {
+  setup(css: string, cycleKey: string) {
     this.style.textContent = css;
+    this.cycleKey = cycleKey;
+  }
+
+  setCss(css: string) {
+    this.style.textContent = css;
+  }
+
+  setCycleKey(cycleKey: string) {
+    this.cycleKey = cycleKey;
   }
 
   isStarted(): boolean {
@@ -127,11 +137,56 @@ export class HintView {
     });
   }
 
-  hit(changes: HintedElement[], actionDescriptions: ActionDescriptions | null) {
+  hit(
+    changes: HintedElement[],
+    actionDescriptions: ActionDescriptions | null,
+    cycleBadge: { count: number } | null,
+  ) {
     if (!this.hints) throw Error("Illegal state");
+    this.clearCycleBadge();
     this.highlightHints(changes, actionDescriptions);
+    const hitTarget = changes.find((t) => t.state === "hit") ?? null;
+    if (hitTarget && cycleBadge)
+      this.setCycleBadge(hitTarget, cycleBadge.count);
     this.moveOverlay();
-    this.moveActiveOverlay(changes.find((t) => t.state === "hit") ?? null);
+    this.moveActiveOverlay(hitTarget);
+  }
+
+  /**
+   * Returns targets whose first hint chip's viewport rect intersects the given
+   * hit's first chip rect with positive area. Includes the hit itself.
+   * Iteration order matches DOM insertion order.
+   */
+  computeCycleSet(hit: HintedElement): HintedElement[] {
+    if (!this.hints) return [];
+    const hitEntry = this.hints.get(hit);
+    if (!hitEntry || hitEntry.hints.length === 0) return [];
+    const hitRect = hitEntry.hints[0].getBoundingClientRect();
+    const result: HintedElement[] = [];
+    for (const { hinted, hints } of this.hints.all()) {
+      if (hints.length === 0) continue;
+      const r = hints[0].getBoundingClientRect();
+      if (intersectsWithPositiveArea(hitRect, r)) result.push(hinted);
+    }
+    return result;
+  }
+
+  private setCycleBadge(hit: HintedElement, count: number) {
+    const entry = this.hints!.get(hit);
+    if (!entry) return;
+    for (const el of entry.hints) {
+      el.dataset.cycleKey = this.cycleKey;
+      el.dataset.cycleCount = String(count);
+    }
+  }
+
+  private clearCycleBadge() {
+    for (const { hints } of this.hints!.all()) {
+      for (const el of hints) {
+        delete el.dataset.cycleKey;
+        delete el.dataset.cycleCount;
+      }
+    }
   }
 
   private highlightHints(
@@ -270,4 +325,12 @@ function buildHintElements(target: HintedElement): HTMLElement[] {
 
 function px(n: number): string {
   return `${Math.round(n)}px`;
+}
+
+function intersectsWithPositiveArea(a: DOMRect, b: DOMRect): boolean {
+  const left = Math.max(a.left, b.left);
+  const right = Math.min(a.right, b.right);
+  const top = Math.max(a.top, b.top);
+  const bottom = Math.min(a.bottom, b.bottom);
+  return right > left && bottom > top;
 }

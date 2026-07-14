@@ -22,6 +22,11 @@ export const router = Router.newRuntimeInstance()
       },
     );
   })
+  .add("CycleHint", async (_msg, sender) => {
+    return await sendToTab(requireTabId(sender), "CycleHintInTab", undefined, {
+      frameId: 0,
+    });
+  })
   .add("RemoveHints", async ({ options, execute }, sender) => {
     return await sendToTab(
       requireTabId(sender),

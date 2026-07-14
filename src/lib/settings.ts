@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS: Settings = {
   stickyKey: "",
   actionKey: "",
   cancelKey: "",
+  cycleKey: "Tab",
   css: "", // WHY: loaded lazily from an external file (default-style.css).
   blackList: DEFAULT_BLACK_LIST,
   additionalSelectors: DEFAULT_ADDITIONAL_SELECTORS,

@@ -51,6 +51,11 @@ export default class HinterClient {
     await sendToRuntime("HitHint", { key });
   }
 
+  async cycleHint() {
+    if (!this.hinting) throw Error("Illegal state");
+    await sendToRuntime("CycleHint", undefined);
+  }
+
   async removeHints(options: ActionOptions, execute: boolean) {
     if (!this.hinting) throw Error("Illegal state");
     this.hinting = false;

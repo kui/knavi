@@ -10,6 +10,7 @@ declare interface Settings {
   stickyKey: string;
   actionKey: string;
   cancelKey: string;
+  cycleKey: string;
   css: string;
   blackList: string;
   additionalSelectors: string;

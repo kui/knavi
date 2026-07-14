@@ -30,6 +30,7 @@ async function setupKeyboardHandler() {
       "stickyKey",
       "actionKey",
       "cancelKey",
+      "cycleKey",
     ]),
     settingsClient.matchBlacklist(location.href),
   ]);
@@ -46,6 +47,7 @@ const RELEVANT_KEYS: (keyof Settings)[] = [
   "stickyKey",
   "actionKey",
   "cancelKey",
+  "cycleKey",
   "blackList",
 ];
 

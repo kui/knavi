@@ -166,6 +166,41 @@
         </tr>
       </table>
 
+      <h2>Cycle Key</h2>
+      <p>
+        When the selected hint chip is overlapped by other chips, press the
+        Cycle Key to move the selection through those overlapping hints without
+        typing more letters. Press [Unbind] to disable.
+      </p>
+      <table class="config-table">
+        <tr>
+          <th><label for="cycle-key">Cycle Key</label></th>
+          <td>
+            <input
+              is="key-input"
+              id="cycle-key"
+              name="cycleKey"
+              value="Tab"
+              autocomplete="off"
+            />
+            <button
+              data-valueset-target="#cycle-key"
+              data-valueset-default
+              title="Reset to the default key"
+            >
+              Reset
+            </button>
+            <button
+              data-valueset-target="#cycle-key"
+              data-valueset=""
+              title="Unbind to disable"
+            >
+              Unbind
+            </button>
+          </td>
+        </tr>
+      </table>
+
       <h2>Style</h2>
 
       <p>Styles for the hint elements and overlays.</p>

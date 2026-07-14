@@ -8,6 +8,12 @@ interface HintContext {
   targets: HintedElement[];
   inputSequence: string[];
   hitTarget?: HintedElement | undefined;
+  /**
+   * Snapshot taken on the first Cycle Key press. Fixed set of targets whose
+   * chip rects intersected the originally-hit chip. Repeated presses cycle
+   * through it in DOM insertion order; any letter input clears it.
+   */
+  cycle?: { set: HintedElement[]; index: number } | undefined;
 }
 
 export class HinterContentRoot {
@@ -101,12 +107,51 @@ export class HinterContentRoot {
 
     if (!this.hintLetters.includes(inputLetter)) return;
 
+    delete context.cycle;
+
     const changes = [...updateContext(context, inputLetter)];
 
     const actionDescriptions = context.hitTarget
       ? context.hitTarget.descriptions
       : null;
-    this.view.hit(changes, actionDescriptions);
+    const cycleBadge = this.computeCycleBadge(context);
+    this.view.hit(changes, actionDescriptions, cycleBadge);
+  }
+
+  cycleHint() {
+    const context = this.context;
+    if (!context) throw Error("Ilegal state invocation: hinting not started");
+    if (!context.hitTarget) return;
+
+    if (!context.cycle) {
+      const set = this.view.computeCycleSet(context.hitTarget);
+      if (set.length <= 1) return;
+      const index = set.indexOf(context.hitTarget);
+      if (index < 0) return;
+      context.cycle = { set, index };
+    }
+
+    const cycle = context.cycle;
+    const prevHit = context.hitTarget;
+    cycle.index = (cycle.index + 1) % cycle.set.length;
+    const newHit = cycle.set[cycle.index];
+    if (newHit === prevHit) return;
+
+    prevHit.state = "candidate";
+    newHit.state = "hit";
+    context.hitTarget = newHit;
+
+    this.view.hit([prevHit, newHit], newHit.descriptions, {
+      count: cycle.set.length - 1,
+    });
+  }
+
+  private computeCycleBadge(context: HintContext): { count: number } | null {
+    if (!context.hitTarget) return null;
+    if (context.cycle) return { count: context.cycle.set.length - 1 };
+    const set = this.view.computeCycleSet(context.hitTarget);
+    const count = set.length - 1;
+    return count > 0 ? { count } : null;
   }
 
   async removeHints(options: ActionOptions, execute: boolean) {

@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Overlapping hints</title>
+    <style>
+      body {
+        margin: 40px;
+        font-family: sans-serif;
+      }
+      #stack {
+        position: relative;
+        width: 300px;
+        height: 120px;
+      }
+      #back,
+      #front {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+      #back {
+        width: 300px;
+        height: 120px;
+        border: 1px solid #ccc;
+        background: #f0f0f0;
+      }
+      #front {
+        padding: 4px 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <p>
+      Two clickable elements share the top-left anchor: a large card and a small
+      link on top of it.
+    </p>
+    <div id="stack">
+      <button
+        id="back"
+        type="button"
+        onclick="document.body.setAttribute('data-back-clicked', '1')"
+      >
+        outer card
+      </button>
+      <a
+        id="front"
+        href="javascript:void(document.body.setAttribute('data-front-clicked','1'))"
+        >front link</a
+      >
+    </div>
+  </body>
+</html>

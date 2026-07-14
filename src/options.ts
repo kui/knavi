@@ -28,6 +28,7 @@ const KEY_LABELS: Record<string, string> = {
   blurKey: "Blur Key",
   actionKey: "Action Key",
   cancelKey: "Cancel Key",
+  cycleKey: "Cycle Key",
   hints: "Hint Letters",
 };
 
@@ -53,7 +54,7 @@ const KEY_PAIR_CONFLICTS: [string, string][] = [
 /* WHY: Key patterns that must not coincide with a hint letter: only keys that fire
    during the hinting phase. (Sticky Key and Blur Key fire only while not
    hinting, so they are excluded.) */
-const HINTS_VS_KEYS = ["magicKey", "actionKey", "cancelKey"];
+const HINTS_VS_KEYS = ["magicKey", "actionKey", "cancelKey", "cycleKey"];
 
 /** Normalize a key-input pattern string (e.g. "Ctrl + KeyA") for comparison. */
 function normalizeKeyPattern(value: string): string {
