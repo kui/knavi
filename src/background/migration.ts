@@ -9,9 +9,11 @@ export interface StorageHandle {
   setSingle(key: "css", value: string): Promise<void>;
 }
 
-// The subset of the settings module the install/update handlers depend on.
-// Passing the module behind this interface keeps the handlers (and tests)
-// decoupled from the rest of the settings API.
+/**
+ * WHY: The subset of the settings module the install/update handlers depend on.
+ * Passing the module behind this interface keeps the handlers (and tests)
+ * decoupled from the rest of the settings API.
+ */
 interface MigrationSettings {
   getStorage(): Promise<StorageHandle>;
   backfillDefaults(): Promise<void>;
@@ -31,8 +33,10 @@ export async function migrate400(storage: StorageHandle) {
   console.info("[knavi] migration 4.0.0: prepended backdrop rule to css");
 }
 
-// Thin router: dispatch each onInstalled reason to its handler. Keep the
-// back-fill / migration logic in the handlers below, not here.
+/**
+ * WHY: Thin router: dispatch each onInstalled reason to its handler. Keep the
+ * back-fill / migration logic in the handlers below, not here.
+ */
 export async function onInstalled(
   details: chrome.runtime.InstalledDetails,
   settings: MigrationSettings,

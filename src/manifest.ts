@@ -33,8 +33,10 @@ export default function manifest(pkg: Pkg): chrome.runtime.ManifestV3 {
     },
     options_ui: {
       page: "options.html",
-      // Open as a full tab, not embedded in chrome://extensions: the embedded
-      // dialog closes on Esc, which conflicts with configuring keys like Esc.
+      /**
+       * WHY: Open as a full tab, not embedded in chrome://extensions: the embedded
+       * dialog closes on Esc, which conflicts with configuring keys like Esc.
+       */
       open_in_tab: true,
     },
     action: {

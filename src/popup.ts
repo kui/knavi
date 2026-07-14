@@ -70,9 +70,11 @@ async function init() {
     return;
   }
 
-  // The popup always uses these canonical pattern forms. A user may have
-  // blacklisted the same page in a different shape via the options page, in
-  // which case the toggle here adds a separate line rather than reusing it.
+  /**
+   * WHY: The popup always uses these canonical pattern forms. A user may have
+   * blacklisted the same page in a different shape via the options page, in
+   * which case the toggle here adds a separate line rather than reusing it.
+   */
   const sitePattern = `${url.origin}/*`;
   const urlPattern = `${url.origin}${url.pathname}*`;
 

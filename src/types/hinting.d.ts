@@ -5,7 +5,6 @@ interface ActionOptions {
   metaKey: boolean;
 }
 
-// Identifier for a element in a frame.
 interface ElementId {
   index: number;
   frameId: number;
