@@ -139,8 +139,8 @@
   padding: 3px;
   border-radius: 4px;
   line-height: 1em;
-  right: calc(100% + 4px);
-  top: 0;
+  left: 0;
+  bottom: calc(100% + 2px);
   display: none;
   white-space: nowrap;
 }
