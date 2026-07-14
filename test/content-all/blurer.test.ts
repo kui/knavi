@@ -68,19 +68,19 @@ void describe("BlurerContentAll.handleBlurRelay", () => {
       source: fakeSource,
     } as MessageEvent);
 
-    // Clear GetFrameId messages recorded during registry setup.
+    // WHY: clear GetFrameId messages recorded during registry setup.
     sentToRuntime.length = 0;
 
     const blurer = new BlurerContentAll(registry);
     blurer.handleBlurRelay(5, null);
 
-    // Wait for the async sendToRuntime call.
+    // WHY: wait for the async sendToRuntime call.
     await new Promise<void>((resolve) => setImmediate(resolve));
 
     assert.equal(sentToRuntime.length, 1);
     const sent = sentToRuntime[0];
     assert.equal(sent.type, "BlurUp");
-    // null rect must be forwarded, not swallowed
+    // INVARIANT: null rect must be forwarded, not swallowed
     assert.equal((sent.payload as Record<string, unknown>).rect, null);
   });
 
@@ -88,7 +88,7 @@ void describe("BlurerContentAll.handleBlurRelay", () => {
     const registry = makeRegistry();
 
     const fakeSource = { window: {} } as unknown as Window;
-    // getClientRects returns an empty iterable (zero-size / display:none iframe).
+    // WHY: getClientRects returns an empty iterable (zero-size / display:none iframe).
     const fakeIframe = {
       tagName: "IFRAME",
       contentWindow: fakeSource,

@@ -30,9 +30,7 @@ should_start_with_version_header() {
   fi
 }
 
-# The line right after the version header becomes the git tag subject (and
-# therefore the GitHub release title). Require a non-bullet digest line there
-# whenever bullets exist; otherwise the first bullet ends up as the title.
+# WHY: the line right after the version header becomes the git tag subject (GitHub release title), so require a non-bullet digest line there whenever bullets exist, or the first bullet becomes the title.
 should_have_digest_before_bullets() {
   local file="$1"
   local third

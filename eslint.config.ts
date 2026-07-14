@@ -15,7 +15,7 @@ export default defineConfig([
     ],
     languageOptions: {
       parserOptions: {
-        // https://typescript-eslint.io/packages/parser/#projectservice
+        // WHY: https://typescript-eslint.io/packages/parser/#projectservice
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },

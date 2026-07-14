@@ -24,7 +24,6 @@ function addDir(zip: JSZip, dir: string, base: string): void {
 }
 
 async function main(): Promise<void> {
-  // Produce a minified production build before zipping.
   await build({ minify: true });
   const zip = new JSZip();
   addDir(zip, BUILD, BUILD);

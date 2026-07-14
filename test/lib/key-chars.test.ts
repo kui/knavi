@@ -14,11 +14,11 @@ void describe("keyCodeToChars", () => {
   });
 
   void test("maps punctuation codes across US and JIS layouts", () => {
-    // Semicolon only differs on US (";").
+    // WHY: Semicolon only differs on US (";").
     assert.deepStrictEqual(keyCodeToChars("Semicolon"), [";"]);
-    // Quote yields "'" on US and ":" on JIS.
+    // WHY: Quote yields "'" on US and ":" on JIS.
     assert.deepStrictEqual(keyCodeToChars("Quote"), ["'", ":"]);
-    // BracketLeft yields "[" on US and "@" on JIS.
+    // WHY: BracketLeft yields "[" on US and "@" on JIS.
     assert.deepStrictEqual(keyCodeToChars("BracketLeft"), ["[", "@"]);
   });
 

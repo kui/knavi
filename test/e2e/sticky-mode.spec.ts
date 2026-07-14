@@ -7,7 +7,7 @@ import {
   setSettings,
 } from "./fixtures";
 
-// Use keys unlikely to conflict with the default magicKey (Space).
+// WHY: use keys unlikely to conflict with the default magicKey (Space).
 const STICKY_KEY = "KeyQ";
 const ACTION_KEY = "Enter";
 const CANCEL_KEY = "Escape";
@@ -23,7 +23,7 @@ test.describe("sticky mode", () => {
   });
 
   test.afterEach(async ({ context }) => {
-    // Reset to defaults so other tests are not affected.
+    // WHY: reset to defaults so other tests are not affected.
     await setSettings(context, { stickyKey: "", actionKey: "", cancelKey: "" });
   });
 
@@ -31,7 +31,6 @@ test.describe("sticky mode", () => {
     page,
   }) => {
     await attachHintsSticky(page, STICKY_KEY);
-    // After pressing + releasing the sticky key, hints must still be visible.
     await expect(page.locator(".hint").first()).toBeVisible({ timeout: 3_000 });
   });
 
@@ -64,16 +63,13 @@ test.describe("sticky mode", () => {
     await expect(page.locator(".hint").first()).not.toBeVisible({
       timeout: 3_000,
     });
-    // Checkbox must not have toggled.
     expect(await checkbox.isChecked()).toBe(checkedBefore);
   });
 
   test("second sticky session works after an action steals focus", async ({
     page,
   }) => {
-    // First session: fire the action with the Action Key DOWN only and never
-    // send its keyup, simulating a target=_blank action that opens a new tab
-    // and steals focus before keyup arrives. The window then loses focus.
+    // WHY: fire the action with the Action Key DOWN only and never send its keyup, simulating a target=_blank action that steals focus before keyup arrives.
     await attachHintsSticky(page, STICKY_KEY);
     const hintText1 = await findHintFor(page, "input[type=checkbox]");
     for (const ch of hintText1) {
@@ -84,8 +80,7 @@ test.describe("sticky mode", () => {
       timeout: 3_000,
     });
 
-    // Second session: hints must appear and stay visible after one hint letter,
-    // i.e. the stuck Action Key must not spuriously fire removeHints.
+    // INVARIANT: hints must appear and stay visible after one hint letter; the stuck Action Key must not spuriously fire removeHints.
     await attachHintsSticky(page, STICKY_KEY);
     const hintText2 = await findHintFor(page, "input[type=text]");
     await page.keyboard.press(hintText2[0]);
