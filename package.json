@@ -8,7 +8,7 @@
     "build": "tsx scripts/build.ts",
     "zip": "tsx scripts/zip.ts",
     "clean": "tsx scripts/clean.ts",
-    "lint": "run-s lint:eslint lint:prettier lint:tsc lint:changelog",
+    "lint": "run-s lint:eslint lint:prettier lint:tsc lint:changelog lint:ast-grep",
     "lint:eslint": "eslint --flag unstable_native_nodejs_ts_config --cache --cache-strategy content .",
     "lint:prettier": "prettier --check --log-level warn --cache --cache-strategy content .",
     "lint:tsc": "tsc --build",
