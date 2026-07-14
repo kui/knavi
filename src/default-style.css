@@ -133,7 +133,7 @@
 }
 
 .hint::before {
-  content: attr(data-cycle-key) " +" attr(data-cycle-count);
+  content: "⟳ " attr(data-cycle-key) " (+" attr(data-cycle-count) ")";
   bottom: 0px;
 }
 .hint[data-state="hit"][data-cycle-key]::before {
