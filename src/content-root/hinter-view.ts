@@ -39,11 +39,6 @@ export class HintView {
     this.style = this.root.appendChild(document.createElement("style"));
   }
 
-  setup(css: string, cycleKey: string) {
-    this.style.textContent = css;
-    this.cycleKey = cycleKey;
-  }
-
   setCss(css: string) {
     this.style.textContent = css;
   }

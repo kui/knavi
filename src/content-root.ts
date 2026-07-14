@@ -22,7 +22,8 @@ const blurer = new BlurerContentRoot(blurerView);
     "hints",
     "cycleKey",
   ]);
-  hinterView.setup(css, cycleKey);
+  hinterView.setCss(css);
+  hinterView.setCycleKey(cycleKey);
   hinter.setup(hints);
 })().catch(printError);
 
