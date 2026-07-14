@@ -53,7 +53,6 @@ export class HinterContentRoot {
     }
   }
 
-  // TODO We can meke this function better for keyboard typing.
   *generateHintTexts(): Generator<string> {
     const history: string[] = [];
 
@@ -62,7 +61,7 @@ export class HinterContentRoot {
       yield t;
     }
 
-    // At first, Add repeat 2 same letters text because we input these easily.
+    // WHY: Emit repeated 2-same-letter hints first because they're easier to type.
     for (const t of this.hintLetters) {
       const h = t + t;
       history.push(h);
@@ -73,7 +72,7 @@ export class HinterContentRoot {
     while (true) {
       const suffix = history[index];
       for (const t of this.hintLetters) {
-        if (suffix === t) continue; // Avoid above 2-same-letters-text
+        if (suffix === t) continue; // WHY: already emitted as a 2-same-letter hint above
         const h = t + suffix;
         history.push(h);
         yield h;
@@ -115,10 +114,10 @@ export class HinterContentRoot {
     if (!context) {
       throw Error("Ilegal state invocation: hinting not started");
     }
-    // Clear the context synchronously, before any await. Executing the action
-    // round-trips a message (e.g. a target=_blank action opening a new tab); a
-    // second AttachHints arriving meanwhile must not see a stale context and
-    // throw "already started hinting".
+    /* WHY: Clear the context synchronously, before any await. Executing the
+     * action round-trips a message (e.g. a target=_blank action opening a new
+     * tab); a second AttachHints arriving meanwhile must not see a stale
+     * context and throw "already started hinting". */
     this.context = null;
     this.view.remove();
     await this.rectAggregator.action(
@@ -128,7 +127,7 @@ export class HinterContentRoot {
   }
 }
 
-// Return true if the state is changed.
+/** Return true if the state is changed. */
 function updateTargetState(target: HintedElement, input: string): boolean {
   const oldState = target.state;
   if (target.hint === input) {
@@ -141,7 +140,7 @@ function updateTargetState(target: HintedElement, input: string): boolean {
   return oldState !== target.state;
 }
 
-// Return targets whose state is changed.
+/** Return targets whose state is changed. */
 function* updateContext(
   context: HintContext,
   inputLetter: SingleLetter,

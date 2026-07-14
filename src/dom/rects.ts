@@ -37,8 +37,10 @@ export class Coordinates<
   }
 }
 
-// Indicates Rect that is relative to the origin.
-// The coordinates (x, y) indicate the top-left corner of the rect.
+/**
+ * A Rect that is relative to the origin.
+ * The coordinates (x, y) indicate the top-left corner of the rect.
+ */
 export class Rect<Type extends CoordinateType, Origin extends CoordinateType>
   extends Coordinates<Type, Origin>
   implements RectJSON<Type, Origin>
@@ -60,7 +62,7 @@ export class Rect<Type extends CoordinateType, Origin extends CoordinateType>
     return Rect.intersection(rects[0].type, ...rects);
   }
 
-  // Returns null if the rects don't intersect.
+  /** Returns null if the rects don't intersect. */
   static intersection<
     Type extends CoordinateType,
     Origin extends CoordinateType,
@@ -132,9 +134,10 @@ export class Rect<Type extends CoordinateType, Origin extends CoordinateType>
     });
   }
 
-  // Resize the rect by the given sides.
-  // Positive value means expanding the rect.
-  // Negative value means shrinking the rect.
+  /**
+   * Resize the rect by the given sides.
+   * Positive value means expanding the rect, negative value means shrinking it.
+   */
   resize(
     arg:
       | {
@@ -161,8 +164,10 @@ export class Rect<Type extends CoordinateType, Origin extends CoordinateType>
     });
   }
 
-  // Returns rects that is bonded if the reciever rect intersects with a given first rect.
-  // The reciever rect is just added to the given rects if it doesn't intersect with any rects.
+  /**
+   * Returns rects bonded with the receiver rect if it intersects one of them,
+   * otherwise the receiver rect is just appended to the given rects.
+   */
   bondIfIntersect(rects: Rect<Type, Origin>[]): Rect<Type, Origin>[] {
     const newRects: Rect<Type, Origin>[] = [...rects];
     let isIntersected = false;

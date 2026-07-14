@@ -20,7 +20,6 @@ export function isScrollable(
   return false;
 }
 
-// Input types that never accept character input from the keyboard.
 const NON_TEXT_INPUT_TYPES = new Set([
   "hidden",
   "checkbox",
@@ -44,7 +43,7 @@ export function isEditable(element: EventTarget) {
   if (element instanceof HTMLTextAreaElement)
     return !element.disabled && !element.readOnly;
   if ("selectionStart" in element && element.selectionStart != null) {
-    // custom elements exposing the selection API
+    // WHY: custom elements exposing the selection API
     const el = element as unknown as {
       disabled?: boolean;
       readOnly?: boolean;
@@ -93,7 +92,7 @@ export function applyStyle<E extends HTMLElement>(
 
 export function applyRect(
   element: HTMLElement,
-  // Origin element(-padding) should be offsetParent.
+  // INVARIANT: Origin element(-padding) should be offsetParent.
   rect: Rect<"element-border", "element-padding">,
 ): HTMLElement {
   applyStyle(element, styleByRect(rect));
@@ -101,7 +100,7 @@ export function applyRect(
 }
 
 export function styleByRect(
-  // Origin element(-padding) should be offsetParent.
+  // INVARIANT: Origin element(-padding) should be offsetParent.
   rect: Rect<"element-border", "element-padding">,
 ): Pick<CSSStyleDeclaration, "top" | "left" | "width" | "height"> {
   return {
@@ -200,7 +199,8 @@ export function getPaddingRects(
   return clientRects.map((r) => paddingRect.offsets(r.reverse()));
 }
 
-// https://developer.mozilla.org/ja/play?id=DHsQtf%2Bkx53WFGR2KG1novl1TT5ML%2F0VHABLcyh94WFJ5QGkScrEmjxke24Zi62Kjv%2FHXvZWdWHqC7yP
+/* WHY: See this playground for the padding/content-rect edge cases this
+ * function accounts for: https://developer.mozilla.org/ja/play?id=DHsQtf%2Bkx53WFGR2KG1novl1TT5ML%2F0VHABLcyh94WFJ5QGkScrEmjxke24Zi62Kjv%2FHXvZWdWHqC7yP */
 export function getContentRects(
   element: HTMLElement,
   rects: Rect<"element-border", "layout-viewport">[] = getClientRects(element),
@@ -209,8 +209,8 @@ export function getContentRects(
   if (rects.length === 0) return [];
 
   const paddingCss = getCSSValuesForEachEdges(style, (s) => `padding-${s}`);
-  // TODO We can compute the px of paddings with "em" unit.
-  // But it seems that there are few cases where the padding of an iframe is specified in "em" units.
+  /* WHY: "em"-unit padding isn't handled below; it's rare for an iframe's
+   * padding to be specified in "em" units. */
   if (everyZeroOrPxUnit(paddingCss)) {
     const resizePx = toResizePx(paddingCss);
     return getPaddingRects(element, rects).map(
@@ -227,25 +227,16 @@ export function getContentRects(
 
   switch (style.get("box-sizing")?.toString()) {
     case "content-box":
-      // TODO implement
-      // We can get content area with dirty hack.
-      // 1. Get padding area box.
-      // 2. Store current element's style.
-      // 3. Set padding to 0 and transition to none.
-      // 4. Get padding area box again.
-      // 5. Restore style.
-      // 6. Calculate content area from the two padding area.
       break;
     case "border-box":
-      // TODO implement
-      // We can get content area with more dirty hack than above
-      // by changing box-sizing into content-box.
       break;
     default:
       throw Error(`Unknown box-sizing: ${style.get("box-sizing")?.toString()}`);
   }
 
-  // Workaround to avoid above dirty hacks.
+  /* WHY: Computing the exact content-box/border-box rect would require
+   * toggling padding to 0, remeasuring, then restoring the element's style;
+   * approximate with the padding rect instead. */
   return getPaddingRects(element, rects).map(
     (rect) => new Rect({ ...rect, type: "element-content" }),
   );

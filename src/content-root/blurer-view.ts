@@ -36,11 +36,9 @@ export default class BlurView {
 
     this.remove();
 
-    // The coordinates of the <body> element may need to be used as the offset of the "container"
-    // depending on the CSS position of the <body> element.
-    // See https://developer.mozilla.org/en-US/docs/Web/CSS/position#absolute_positioning
-    // > The absolutely positioned element is positioned relative to its nearest positioned
-    // > ancestor (i.e., the nearest ancestor that is not static).
+    /* WHY: The coordinates of the <body> element may need to be used as the offset of the
+     * "container" depending on the CSS position of the <body> element. See
+     * https://developer.mozilla.org/en-US/docs/Web/CSS/position#absolute_positioning */
     const bodyOffsets: Coordinates<"element-padding", "root-viewport"> =
       getComputedStyle(body).position === "static"
         ? new Coordinates({

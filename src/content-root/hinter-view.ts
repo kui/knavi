@@ -12,10 +12,10 @@ export class HintView {
   private container: HTMLDivElement;
   private root: ShadowRoot;
 
-  // Bounding rect of the hit and candidate elements.
+  /** Bounding rect of the hit and candidate elements. */
   private overlay: HTMLDivElement;
 
-  // Bounding rect of the hit element only.
+  /** Bounding rect of the hit element only. */
   private activeOverlay: HTMLDivElement;
 
   private style: HTMLStyleElement;
@@ -68,19 +68,17 @@ export class HintView {
   private initStyles() {
     const vpRect = vp.layout.rect();
 
-    // The "container" is a popover, so it is promoted to the top layer.
-    // A top-layer element resolves its `position: absolute` against the initial
-    // containing block (the viewport), regardless of the CSS position of the
-    // <body> element. So we always anchor the container to the viewport and do
-    // not need to compensate for the offset of a positioned <body>.
+    /* WHY: The "container" is a popover, so it is promoted to the top layer. A
+     * top-layer element resolves `position: absolute` against the initial
+     * containing block (the viewport) regardless of the CSS position of the
+     * <body> element, so we don't need to compensate for a positioned <body>. */
     const overlayRect = new Rect({
       ...vpRect,
 
-      // The "overlay" element overlays the viewport,
-      // so "layout-viewport" is treated as an "element-border".
+      /* WHY: The "overlay" element overlays the viewport, so "layout-viewport"
+       * is treated as an "element-border". */
       type: "element-border",
 
-      // TODO "initial-containing-block" can be treated as an "element-padding"?
       origin: "element-padding",
     });
 
@@ -180,8 +178,8 @@ export class HintView {
       this.overlay,
       { display: "block" },
       styleByRect(
-        // Force set origin because the offsetParent of `this.overlay` is no padding.
-        // The offsetParent is `this.root`.
+        /* WHY: Force set origin because the offsetParent of `this.overlay` is
+         * `this.root`, which has no padding. */
         new Rect({
           ...newRect,
           origin: "element-padding",
@@ -253,8 +251,7 @@ function generateHintElements(
 }
 
 function buildHintElements(target: HintedElement): HTMLElement[] {
-  // Currently, we use only the first rect because multiple hints are too noisy.
-  // const rects = target.rects;
+  // WHY: Use only the first rect; multiple hints per element are too noisy.
   return target.rects.slice(0, 1).map((rect) => {
     const h = document.createElement("div");
     h.textContent = target.hint;

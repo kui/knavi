@@ -15,8 +15,9 @@ export class RectAggregatorClient {
     }
   }
 
-  // Aggregate all rects including elements inside iframes.
-  // Requests route through the background service worker via chrome.runtime.
+  /* WHY: Requests route through the background service worker via
+   * chrome.runtime so that rects from elements inside iframes can be
+   * aggregated too. */
   async *aggregate(): AsyncGenerator<ElementRects[]> {
     if (this.callback) throw Error("Illegal state: already fetching");
 
@@ -58,14 +59,14 @@ export class RectAggregatorClient {
   }
 
   action(
-    // Provide null to execute no action.
+    // INVARIANT: Provide undefined to execute no action.
     elementId: ElementId | undefined,
     options: ActionOptions,
   ) {
     if (!this.callback) throw Error("Illegal state: not aggregating");
-    // Clear the callback synchronously before signalling "Complete" (which ends
-    // the aggregate() loop on a later micro-task) so a second aggregate() call
-    // from a concurrent AttachHints does not throw "already fetching".
+    /* WHY: Clear the callback synchronously before signalling "Complete" (which
+     * ends the aggregate() loop on a later micro-task) so a second aggregate()
+     * call from a concurrent AttachHints does not throw "already fetching". */
     const callback = this.callback;
     this.callback = null;
     callback("Complete");
