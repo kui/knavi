@@ -4,7 +4,7 @@ severity: error
 message: |
   Comment lacks a rationale keyword. Either delete it, or prefix it with
   WHY: / HACK: / SAFETY: / INVARIANT: (or use `/** ... */` JSDoc).
-  See tools/ast-grep/rules/README.md for details.
+  See ast-grep/rules/README.md for details.
 rule:
   kind: comment
   not:

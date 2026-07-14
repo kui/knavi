@@ -1,5 +1,5 @@
 ruleDirs:
-  - tools/ast-grep/rules
+  - ast-grep/rules
 # WHY: ast-grep has no built-in jsonc parser. tsconfig files use jsonc (line
 # comments, trailing commas), so route them through the TypeScript grammar,
 # which tolerates both. Keeps them covered by require-comment-rationale-ts.
