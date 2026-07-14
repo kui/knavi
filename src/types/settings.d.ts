@@ -1,7 +1,9 @@
 declare interface Settings {
-  // "magicKey" is the legacy storage key; the UI label is "Peek Key".
-  // Renaming the storage key would invalidate existing users' settings, so
-  // only the label was updated.
+  /**
+   * "magicKey" is the legacy storage key; the UI label is "Peek Key".
+   * Renaming the storage key would invalidate existing users' settings, so
+   * only the label was updated.
+   */
   magicKey: string;
   hints: string;
   blurKey: string;
