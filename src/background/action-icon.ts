@@ -39,7 +39,7 @@ function isDisabled(url: string | undefined, list: BlackList): boolean {
 
 /**
  * `chrome.action.setIcon`'s Promise form resolves successfully even on error,
- * while still populating `chrome.runtime.lastError` — so `.catch()` never
+ * while still populating `chrome.runtime.lastError`. So `.catch()` never
  * fires and Chromium logs an "Unchecked runtime.lastError" warning. The
  * callback form is the only way to observe the error: read `lastError`
  * inside the callback (which marks it checked) and surface it as a rejection.
