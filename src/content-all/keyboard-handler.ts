@@ -63,7 +63,7 @@ export class KeyboardHandlerContentAll {
     this.cancelMatcher?.reset();
   }
 
-  // INVARIANT: returns true if the event is handled.
+  /** Returns true if the event is handled. */
   handleKeydown(event: KeyboardEvent): boolean {
     const hitMatcher = this.hitMatcher?.keydown(event);
     const blurMatcher = this.blurMatcher?.keydown(event);
@@ -117,7 +117,7 @@ export class KeyboardHandlerContentAll {
     return false;
   }
 
-  // INVARIANT: returns true if the event is handled.
+  /** Returns true if the event is handled. */
   handleKeyup(event: KeyboardEvent): boolean {
     const hitMatcher = this.hitMatcher?.keyup(event);
     this.blurMatcher?.keyup(event);
