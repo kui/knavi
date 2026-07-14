@@ -100,13 +100,11 @@ export class RectDetector {
       .get(element)
       .get("position")!
       .toString();
-    /**
-     * Fixed/sticky elements are positioned relative to the viewport (or
-     * a transformed ancestor), so parent-overflow cropping doesn't apply.
-     * We don't yet handle the "transform" property in an ancestor changing
-     * the containing block. See
-     * https://developer.mozilla.org/en-US/docs/Web/CSS/position#fixed_positioning
-     */
+    /* WHY: fixed/sticky elements are positioned relative to the viewport (or
+       a transformed ancestor), so parent-overflow cropping doesn't apply.
+       We don't yet handle the "transform" property in an ancestor changing
+       the containing block. See
+       https://developer.mozilla.org/en-US/docs/Web/CSS/position#fixed_positioning */
     if (elementPosition === "fixed" || elementPosition === "sticky")
       return rect;
 
@@ -221,10 +219,8 @@ function getAreaRects(
     ];
   }
   if (element.shape === "poly") {
-    /**
-     * Returns a rectangle that contains all points. We should use a
-     * convex hull algorithm to get a better rectangle.
-     */
+    /* WHY: returns a rectangle that contains all points. We should use a
+       convex hull algorithm to get a better rectangle. */
     const xs = coords.filter((_, i) => i % 2 === 0);
     const ys = coords.filter((_, i) => i % 2 === 1);
     const top = Math.min(...ys) + imgRect.y;

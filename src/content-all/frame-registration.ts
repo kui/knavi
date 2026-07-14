@@ -104,28 +104,24 @@ export class FrameRegistry {
       | undefined;
 
     if (data?.["@type"] === ANNOUNCEMENT_TYPE) {
-      /**
-       * MessageEventSource is Window | MessagePort | ServiceWorker.
-       * Duck-type via `"window" in source`: `window` is on the cross-origin
-       * property allowlist (so `in` never throws SecurityError), and only
-       * Window has it, MessagePort and ServiceWorker do not. Avoids
-       * `instanceof ServiceWorker`, which throws ReferenceError in insecure
-       * contexts (http).
-       */
+      /* WHY: MessageEventSource is Window | MessagePort | ServiceWorker.
+         Duck-type via `"window" in source`: `window` is on the cross-origin
+         property allowlist (so `in` never throws SecurityError), and only
+         Window has it, MessagePort and ServiceWorker do not. Avoids
+         `instanceof ServiceWorker`, which throws ReferenceError in insecure
+         contexts (http). */
       const source = e.source;
       if (!source || !("window" in source)) return;
 
       const iframe = findIframeBySource(source);
       if (!iframe) {
-        /**
-         * Reachable in benign cases that we can't disambiguate from
-         * real misses: iframes inside closed shadow roots (unreachable via
-         * DOM walk), React remount races where `contentWindow` identity is
-         * lost mid-handshake, iframe removed mid-flight, src swap, bfcache
-         * revival. `source.parent === window` doesn't reliably indicate a
-         * real miss either, since the first two cases also satisfy it. Log
-         * at debug only.
-         */
+        /* WHY: reachable in benign cases that we can't disambiguate from
+           real misses: iframes inside closed shadow roots (unreachable via
+           DOM walk), React remount races where `contentWindow` identity is
+           lost mid-handshake, iframe removed mid-flight, src swap, bfcache
+           revival. `source.parent === window` doesn't reliably indicate a
+           real miss either, since the first two cases also satisfy it. Log
+           at debug only. */
         console.debug("FrameIdAnnouncement from unknown source:", source);
         return;
       }

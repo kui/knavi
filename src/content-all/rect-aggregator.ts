@@ -140,11 +140,9 @@ export class RectAggregatorContentAll {
       return;
     }
 
-    /**
-     * Polls until the child frame has completed its FrameIdAnnouncement
-     * handshake. Under CI load the postMessage round-trip can arrive after
-     * AllRectsRequest fan-out, so wait up to 300 ms before giving up.
-     */
+    /* WHY: polls until the child frame has completed its FrameIdAnnouncement
+       handshake. Under CI load the postMessage round-trip can arrive after
+       AllRectsRequest fan-out, so wait up to 300 ms before giving up. */
     let childFrameId = this.frameRegistry.getFrameId(frame);
     if (childFrameId == null) {
       for (let i = 0; i < 30; i++) {
