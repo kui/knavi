@@ -3,7 +3,7 @@ import { getBoundingClientRect } from "../dom/elements";
 import { printError } from "../lib/errors";
 import { FrameRegistry } from "./frame-registration";
 
-// WHY: sends BlurUp to background, which relays it toward the root frame.
+/** Sends BlurUp to background, which relays it toward the root frame. */
 export default class Blur {
   constructor(private readonly frameRegistry: FrameRegistry) {}
 

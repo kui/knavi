@@ -7,7 +7,7 @@ import { FrameRegistry } from "./frame-registration";
 export class BlurerContentAll {
   constructor(private readonly frameRegistry: FrameRegistry) {}
 
-  // WHY: handles BlurRelay from background: transform rect to parent coords and send BlurUp.
+  /** Handles BlurRelay from background: transform rect to parent coords and send BlurUp. */
   handleBlurRelay(
     childFrameId: number,
     rectJson: RectJSON<"element-border", "layout-viewport"> | null,
