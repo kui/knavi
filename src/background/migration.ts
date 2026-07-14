@@ -15,13 +15,14 @@ const CYCLE_BADGE_RULES = `.hint::before {
   padding: 3px;
   border-radius: 4px;
   line-height: 1em;
-  left: 0;
-  bottom: calc(100% + 2px);
-  display: none;
-  white-space: nowrap;
+  transition: 200ms;
+  bottom: 0px;
+  opacity: 0;
 }
 .hint[data-state="hit"][data-cycle-key]::before {
-  display: inline-block;
+  transition-delay: 200ms;
+  bottom: calc(100% + 4px);
+  opacity: 1;
 }`;
 
 export interface StorageHandle {

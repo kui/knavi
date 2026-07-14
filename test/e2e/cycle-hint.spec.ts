@@ -55,28 +55,27 @@ test.describe("cycle key on overlapping hints", () => {
     await expect(hit).toHaveAttribute("data-cycle-key", CYCLE_KEY);
     await expect(hit).toHaveAttribute("data-cycle-count", "1");
 
-    /* WHY: the badge is rendered via the CSS ::before pseudo-element; assert
-       it is visible on-screen (not clipped by the overlay container's
-       overflow:hidden and not display:none). */
-    const badge = await page.evaluate(() => {
-      const root = document.querySelector(
-        "#com-github-kui-knavi-container",
-      )?.shadowRoot;
-      const chip = root?.querySelector<HTMLElement>(".hint[data-state='hit']");
-      if (!chip) return null;
-      const chipRect = chip.getBoundingClientRect();
-      const s = getComputedStyle(chip, "::before");
-      return {
-        content: s.content,
-        display: s.display,
-        visibility: s.visibility,
-        chipRect: { x: chipRect.x, y: chipRect.y },
-        vp: { w: window.innerWidth, h: window.innerHeight },
-      };
-    });
-    expect(badge).not.toBeNull();
-    expect(badge!.display).not.toBe("none");
-    expect(badge!.visibility).not.toBe("hidden");
+    /* WHY: the badge is rendered via the CSS ::before pseudo-element; the
+       hit state fades it in via opacity transition (delay 200ms + 200ms
+       duration). Poll until opacity settles to catch cases where the rule
+       is missing or gated off. */
+    const readBadge = () =>
+      page.evaluate(() => {
+        const root = document.querySelector(
+          "#com-github-kui-knavi-container",
+        )?.shadowRoot;
+        const chip = root?.querySelector<HTMLElement>(
+          ".hint[data-state='hit']",
+        );
+        if (!chip) return null;
+        const s = getComputedStyle(chip, "::before");
+        return {
+          content: s.content,
+          opacity: s.opacity,
+        };
+      });
+    await expect.poll(async () => (await readBadge())?.opacity).toBe("1");
+    const badge = await readBadge();
     expect(badge!.content).toContain(CYCLE_KEY);
     expect(badge!.content).toContain("+1");
 
