@@ -17,11 +17,9 @@ let cachedList: BlackList | undefined;
 
 async function loadBlackList(): Promise<BlackList> {
   if (cachedList) return cachedList;
-  /**
-   * WHY: getStorage() is read-only (back-fill runs only on install/update), so
-   * updating the icon never writes default settings. getSingle still yields
-   * the default blacklist before any back-fill has run.
-   */
+  /* WHY: getStorage() is read-only (back-fill runs only on install/update), so
+     updating the icon never writes default settings. getSingle still yields
+     the default blacklist before any back-fill has run. */
   const storage = await settings.getStorage();
   cachedList = new BlackList(await storage.getSingle("blackList"));
   return cachedList;
@@ -40,7 +38,7 @@ function isDisabled(url: string | undefined, list: BlackList): boolean {
 }
 
 /**
- * HACK: `chrome.action.setIcon`'s Promise form resolves successfully even on error,
+ * `chrome.action.setIcon`'s Promise form resolves successfully even on error,
  * while still populating `chrome.runtime.lastError` — so `.catch()` never
  * fires and Chromium logs an "Unchecked runtime.lastError" warning. The
  * callback form is the only way to observe the error: read `lastError`
@@ -87,11 +85,9 @@ export function init() {
       .catch(printErrorUnlessTargetGone);
   });
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    /**
-     * WHY: The exact onUpdated firing behavior (e.g. for history.pushState/
-     * replaceState navigations) is not documented, so we react broadly to any
-     * URL/status change and re-evaluate from the tab's current URL.
-     */
+    /* WHY: The exact onUpdated firing behavior (e.g. for history.pushState/
+       replaceState navigations) is not documented, so we react broadly to any
+       URL/status change and re-evaluate from the tab's current URL. */
     if (changeInfo.url == null && changeInfo.status == null) return;
     loadBlackList()
       .then((list) => updateTab(tabId, tab.url, list))

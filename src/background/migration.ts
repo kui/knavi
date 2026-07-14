@@ -10,7 +10,7 @@ export interface StorageHandle {
 }
 
 /**
- * WHY: The subset of the settings module the install/update handlers depend on.
+ * The subset of the settings module the install/update handlers depend on.
  * Passing the module behind this interface keeps the handlers (and tests)
  * decoupled from the rest of the settings API.
  */
@@ -34,7 +34,7 @@ export async function migrate400(storage: StorageHandle) {
 }
 
 /**
- * WHY: Thin router: dispatch each onInstalled reason to its handler. Keep the
+ * Thin router: dispatch each onInstalled reason to its handler. Keep the
  * back-fill / migration logic in the handlers below, not here.
  */
 export async function onInstalled(

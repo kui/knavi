@@ -20,10 +20,8 @@ async function init() {
   initKeyConflictValidation(body);
 }
 
-/**
- * WHY: "magicKey" is the legacy storage key; see src/types/settings.d.ts for why
- * the UI label diverges from it.
- */
+/* WHY: "magicKey" is the legacy storage key; see src/types/settings.d.ts for why
+   the UI label diverges from it. */
 const KEY_LABELS: Record<string, string> = {
   magicKey: "Peek Key",
   stickyKey: "Sticky Key",
@@ -33,18 +31,16 @@ const KEY_LABELS: Record<string, string> = {
   hints: "Hint Letters",
 };
 
-/**
- * WHY: Key-pattern pairs that must not be bound to the same key.
- *
- * Keys are split by the phase in which they fire:
- *   - while NOT hinting: Peek Key, Sticky Key, Blur Key
- *   - while hinting:     Action Key, Cancel Key, hint letters
- *     (the Peek Key is also held throughout a hold session, so it overlaps
- *      the hinting phase too)
- * Keys that only ever fire in different phases can safely share a binding.
- * Hence Blur Key may share with Action/Cancel/hints, and Sticky Key may share
- * with Action/Cancel/hints.
- */
+/* WHY: Key-pattern pairs that must not be bound to the same key.
+
+   Keys are split by the phase in which they fire:
+     - while NOT hinting: Peek Key, Sticky Key, Blur Key
+     - while hinting:     Action Key, Cancel Key, hint letters
+       (the Peek Key is also held throughout a hold session, so it overlaps
+        the hinting phase too)
+   Keys that only ever fire in different phases can safely share a binding.
+   Hence Blur Key may share with Action/Cancel/hints, and Sticky Key may share
+   with Action/Cancel/hints. */
 const KEY_PAIR_CONFLICTS: [string, string][] = [
   ["magicKey", "stickyKey"],
   ["magicKey", "blurKey"],
@@ -54,11 +50,9 @@ const KEY_PAIR_CONFLICTS: [string, string][] = [
   ["actionKey", "cancelKey"],
 ];
 
-/**
- * WHY: Key patterns that must not coincide with a hint letter: only keys that fire
- * during the hinting phase. (Sticky Key and Blur Key fire only while not
- * hinting, so they are excluded.)
- */
+/* WHY: Key patterns that must not coincide with a hint letter: only keys that fire
+   during the hinting phase. (Sticky Key and Blur Key fire only while not
+   hinting, so they are excluded.) */
 const HINTS_VS_KEYS = ["magicKey", "actionKey", "cancelKey"];
 
 /** Normalize a key-input pattern string (e.g. "Ctrl + KeyA") for comparison. */
