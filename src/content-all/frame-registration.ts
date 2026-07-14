@@ -2,18 +2,21 @@ import { listIframesInShadowRoots } from "../dom/elements";
 import { sendToRuntime } from "../lib/chrome-messages";
 import { printError } from "../lib/errors";
 
-// Locate the iframe element whose contentWindow is `source`.
-// Tiered to avoid a full DOM walk in the common case:
-//   0. `source.closed` — skip everything for dead windows (stale messages from
-//      removed iframes / bfcache); no point scanning the DOM for a corpse.
-//   1. `source.frameElement` — O(1), reaches through shadow boundaries when
-//      same-origin. `frameElement` is NOT on the cross-origin property
-//      allowlist, so reading it on a cross-origin Window throws SecurityError;
-//      swallow and fall through to the DOM-side lookup.
-//   2. Live light-DOM HTMLCollection — covers cross-origin iframes that live
-//      in the light DOM (the typical ad/embed case).
-//   3. Shadow-root walk — last resort for the rare cross-origin iframe that
-//      is hosted inside a shadow tree.
+/**
+ * Locates the iframe element whose contentWindow is `source`, tiered to
+ * avoid a full DOM walk in the common case:
+ *   0. `source.closed`: skip everything for dead windows (stale messages
+ *      from removed iframes / bfcache); no point scanning the DOM for a
+ *      corpse.
+ *   1. `source.frameElement`: O(1), reaches through shadow boundaries when
+ *      same-origin. `frameElement` is NOT on the cross-origin property
+ *      allowlist, so reading it on a cross-origin Window throws
+ *      SecurityError; swallow and fall through to the DOM-side lookup.
+ *   2. Live light-DOM HTMLCollection: covers cross-origin iframes that live
+ *      in the light DOM (the typical ad/embed case).
+ *   3. Shadow-root walk: last resort for the rare cross-origin iframe that
+ *      is hosted inside a shadow tree.
+ */
 function findIframeBySource(source: Window): HTMLIFrameElement | undefined {
   if (source.closed) return undefined;
 
@@ -21,7 +24,7 @@ function findIframeBySource(source: Window): HTMLIFrameElement | undefined {
     const direct = source.frameElement;
     if (direct?.tagName === "IFRAME") return direct as HTMLIFrameElement;
   } catch {
-    // cross-origin source: frameElement access throws; fall through.
+    // WHY: cross-origin source, frameElement access throws; fall through.
   }
 
   for (const iframe of document.getElementsByTagName("iframe")) {
@@ -48,10 +51,13 @@ interface ParentFrameIdResponse {
   parentFrameId: number;
 }
 
-// Tracks child iframe ↔ frameId mappings via postMessage handshake and resolves
-// this frame's parentFrameId. The only place in the codebase that still uses
-// window.postMessage cross-frame, because frameId is needed before any
-// chrome.runtime relay can address the parent/child by frameId.
+/**
+ * The only place in the codebase that still uses window.postMessage
+ * cross-frame, because frameId is needed before any chrome.runtime relay can
+ * address the parent/child by frameId. Tracks child iframe to frameId
+ * mappings via postMessage handshake and resolves this frame's
+ * parentFrameId.
+ */
 export class FrameRegistry {
   private readonly iframeByFrameId = new Map<number, HTMLIFrameElement>();
   private readonly iframeToFrameId = new Map<HTMLIFrameElement, number>();
@@ -71,7 +77,7 @@ export class FrameRegistry {
               "@type": ANNOUNCEMENT_TYPE,
               frameId,
             } satisfies FrameIdAnnouncement,
-            "*", // intentional: avoids silent drop if the parent navigates mid-flight.
+            "*", // WHY: intentional, avoids silent drop if the parent navigates mid-flight.
           );
         })
         .catch(printError);
@@ -98,22 +104,24 @@ export class FrameRegistry {
       | undefined;
 
     if (data?.["@type"] === ANNOUNCEMENT_TYPE) {
-      // MessageEventSource = Window | MessagePort | ServiceWorker.
-      // Duck-type via `"window" in source`: `window` is on the cross-origin
-      // property allowlist (so `in` never throws SecurityError), and only Window
-      // has it — MessagePort and ServiceWorker do not. Avoids `instanceof
-      // ServiceWorker`, which throws ReferenceError in insecure contexts (http).
+      /* WHY: MessageEventSource is Window | MessagePort | ServiceWorker.
+         Duck-type via `"window" in source`: `window` is on the cross-origin
+         property allowlist (so `in` never throws SecurityError), and only
+         Window has it, MessagePort and ServiceWorker do not. Avoids
+         `instanceof ServiceWorker`, which throws ReferenceError in insecure
+         contexts (http). */
       const source = e.source;
       if (!source || !("window" in source)) return;
 
       const iframe = findIframeBySource(source);
       if (!iframe) {
-        // Reachable in benign cases that we can't disambiguate from real misses:
-        // iframes inside closed shadow roots (unreachable via DOM walk), React
-        // remount races where `contentWindow` identity is lost mid-handshake,
-        // iframe removed mid-flight, src swap, bfcache revival. `source.parent
-        // === window` doesn't reliably indicate a real miss either, since the
-        // first two cases also satisfy it. Log at debug only.
+        /* WHY: reachable in benign cases that we can't disambiguate from
+           real misses: iframes inside closed shadow roots (unreachable via
+           DOM walk), React remount races where `contentWindow` identity is
+           lost mid-handshake, iframe removed mid-flight, src swap, bfcache
+           revival. `source.parent === window` doesn't reliably indicate a
+           real miss either, since the first two cases also satisfy it. Log
+           at debug only. */
         console.debug("FrameIdAnnouncement from unknown source:", source);
         return;
       }
@@ -121,7 +129,7 @@ export class FrameRegistry {
       this.iframeByFrameId.set(data.frameId, iframe);
       this.iframeToFrameId.set(iframe, data.frameId);
 
-      // Reply with our own frameId so the child can store its parentFrameId.
+      // WHY: reply with our own frameId so the child can store its parentFrameId.
       this.myFrameIdPromise
         .then((parentFrameId) => {
           source.postMessage(

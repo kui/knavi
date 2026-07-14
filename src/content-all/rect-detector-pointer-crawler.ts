@@ -37,7 +37,7 @@ export class PointerCrawler {
   }
 
   private *generatePoints(a: Area): Generator<[number, number]> {
-    // Naive implementation
+    // WHY: naive implementation
     for (let x = a.minX; x < a.maxX; x += this.stepPx) {
       for (let y = a.minY; y < a.maxY; y += this.stepPx) {
         yield [x, y];
@@ -83,7 +83,6 @@ export class PointerCrawler {
     let pointedElement = document.elementFromPoint(x, y);
     if (pointedElement == null) return null;
 
-    // Traverse into shadow DOMs
     const stack = [pointedElement];
     while (pointedElement.shadowRoot) {
       const elemementInShadow = pointedElement.shadowRoot.elementFromPoint(

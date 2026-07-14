@@ -94,10 +94,6 @@ HANDLERS.push({
   },
 });
 
-// -----------------------------------------
-// Element Class Specific Handlers
-// -----------------------------------------
-
 HANDLERS.push({
   getDescriptions() {
     return {
@@ -121,7 +117,6 @@ const CLICKABLE_INPUT_TYPES = new Set([
   "reset",
 ]);
 
-// input elements for clickable types.
 HANDLERS.push({
   getDescriptions() {
     return {
@@ -141,7 +136,6 @@ HANDLERS.push({
   },
 });
 
-// input elements exclude clickable types.
 HANDLERS.push({
   getDescriptions() {
     return {
@@ -160,7 +154,7 @@ HANDLERS.push({
     try {
       target.showPicker();
     } catch {
-      // NotAllowedError when the frame lacks user activation; focus is enough.
+      // WHY: NotAllowedError when the frame lacks user activation; focus is enough.
     }
   },
 });
@@ -212,15 +206,11 @@ HANDLERS.push({
       try {
         target.showPicker();
       } catch {
-        // NotAllowedError when the frame lacks user activation; focus is enough.
+        // WHY: NotAllowedError when the frame lacks user activation; focus is enough.
       }
     }
   },
 });
-
-// -----------------------------------------
-// /Element Class Specific Handlers
-// -----------------------------------------
 
 const CLICKABLE_SELECTORS = [
   "a[*|href]",
@@ -230,7 +220,7 @@ const CLICKABLE_SELECTORS = [
   "[onmousedown]",
   "[onmouseup]",
 
-  // See https://developer.mozilla.org/ja/docs/Web/Accessibility/ARIA/Roles
+  // WHY: see https://developer.mozilla.org/ja/docs/Web/Accessibility/ARIA/Roles
   "[role=link]",
   "[role=button]",
   "[role=checkbox]",
@@ -352,7 +342,7 @@ HANDLERS.push({
       return;
     }
 
-    // Make scrollable it with your keyboard.
+    // WHY: make scrollable it with your keyboard.
     if (!element.hasAttribute("tabindex")) {
       element.setAttribute("tabindex", "-1");
       element.addEventListener(
