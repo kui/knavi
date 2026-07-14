@@ -14,7 +14,7 @@ export class KeyboardHandlerContentAll {
   private hintLetters = "";
   private matchedBlacklist: string[] = [];
   /**
-   * WHY: true when hints were attached by magic key hold (fires on keyup);
+   * True when hints were attached by magic key hold (fires on keyup);
    * false when attached by sticky key (fires only via actionKey/cancelKey).
    */
   private holdHinting = false;
@@ -141,7 +141,7 @@ export class KeyboardHandlerContentAll {
   }
 
   /**
-   * WHY: resetting the matchers clears any key left "held" in their history
+   * Resetting the matchers clears any key left "held" in their history
    * because its keyup was lost, e.g. an Action Key that fired a
    * target=_blank action and opened a new tab, stealing focus before keyup
    * arrived. Without this, the stuck key would spuriously match on the next
@@ -153,8 +153,8 @@ export class KeyboardHandlerContentAll {
   }
 
   /**
-   * WHY: just hijacks the event when hinting.
-   * INVARIANT: returns true if the event is handled.
+   * Just hijacks the event when hinting.
+   * Returns true if the event is handled.
    */
   handleKeypress() {
     return this.hinter.isHinting;

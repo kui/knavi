@@ -8,7 +8,7 @@ import { Rect } from "../dom/rects";
 interface ElementRect {
   rect: Rect<"element-border", "layout-viewport">;
   /**
-   * WHY: a phantom rect is not originally in the DOM tree (e.g. the clickable
+   * A phantom rect is not originally in the DOM tree (e.g. the clickable
    * area of an <area> element), so it should skip the isPointable check that
    * a real element would need.
    */
@@ -101,7 +101,7 @@ export class RectDetector {
       .get("position")!
       .toString();
     /**
-     * WHY: fixed/sticky elements are positioned relative to the viewport (or
+     * Fixed/sticky elements are positioned relative to the viewport (or
      * a transformed ancestor), so parent-overflow cropping doesn't apply.
      * We don't yet handle the "transform" property in an ancestor changing
      * the containing block. See
@@ -222,7 +222,7 @@ function getAreaRects(
   }
   if (element.shape === "poly") {
     /**
-     * WHY: returns a rectangle that contains all points. We should use a
+     * Returns a rectangle that contains all points. We should use a
      * convex hull algorithm to get a better rectangle.
      */
     const xs = coords.filter((_, i) => i % 2 === 0);

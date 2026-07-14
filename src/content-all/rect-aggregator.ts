@@ -141,7 +141,7 @@ export class RectAggregatorContentAll {
     }
 
     /**
-     * WHY: polls until the child frame has completed its FrameIdAnnouncement
+     * Polls until the child frame has completed its FrameIdAnnouncement
      * handshake. Under CI load the postMessage round-trip can arrive after
      * AllRectsRequest fan-out, so wait up to 300 ms before giving up.
      */

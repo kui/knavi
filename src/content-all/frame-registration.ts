@@ -3,7 +3,7 @@ import { sendToRuntime } from "../lib/chrome-messages";
 import { printError } from "../lib/errors";
 
 /**
- * WHY: locates the iframe element whose contentWindow is `source`, tiered to
+ * Locates the iframe element whose contentWindow is `source`, tiered to
  * avoid a full DOM walk in the common case:
  *   0. `source.closed`: skip everything for dead windows (stale messages
  *      from removed iframes / bfcache); no point scanning the DOM for a
@@ -52,7 +52,7 @@ interface ParentFrameIdResponse {
 }
 
 /**
- * WHY: the only place in the codebase that still uses window.postMessage
+ * The only place in the codebase that still uses window.postMessage
  * cross-frame, because frameId is needed before any chrome.runtime relay can
  * address the parent/child by frameId. Tracks child iframe to frameId
  * mappings via postMessage handshake and resolves this frame's
@@ -105,7 +105,7 @@ export class FrameRegistry {
 
     if (data?.["@type"] === ANNOUNCEMENT_TYPE) {
       /**
-       * WHY: MessageEventSource is Window | MessagePort | ServiceWorker.
+       * MessageEventSource is Window | MessagePort | ServiceWorker.
        * Duck-type via `"window" in source`: `window` is on the cross-origin
        * property allowlist (so `in` never throws SecurityError), and only
        * Window has it, MessagePort and ServiceWorker do not. Avoids
@@ -118,7 +118,7 @@ export class FrameRegistry {
       const iframe = findIframeBySource(source);
       if (!iframe) {
         /**
-         * WHY: reachable in benign cases that we can't disambiguate from
+         * Reachable in benign cases that we can't disambiguate from
          * real misses: iframes inside closed shadow roots (unreachable via
          * DOM walk), React remount races where `contentWindow` identity is
          * lost mid-handshake, iframe removed mid-flight, src swap, bfcache
