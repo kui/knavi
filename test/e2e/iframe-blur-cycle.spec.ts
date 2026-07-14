@@ -36,7 +36,6 @@ test.describe("iframe blur cycle (sticky mode)", () => {
   }) => {
     await gotoTest(page, "iframe.html");
 
-    // 1. Focus the iframe element via sticky hint
     await attachHintsSticky(page, STICKY_KEY);
     const hintText = await findHintFor(page, "iframe");
     for (const ch of hintText) {
@@ -44,10 +43,9 @@ test.describe("iframe blur cycle (sticky mode)", () => {
     }
     await page.keyboard.press(ACTION_KEY);
 
-    // 2. Blur via blur key
     await page.keyboard.press(BLUR_KEY);
 
-    // 3. Re-focus via sticky hint — the hint key must fire the action, not RemoveHints.
+    // WHY: re-focus via sticky hint; the hint key must fire the action, not RemoveHints.
     await attachHintsSticky(page, STICKY_KEY);
     const hintText2 = await findHintFor(page, "iframe");
     expect(hintText2).toBeTruthy();
@@ -55,7 +53,7 @@ test.describe("iframe blur cycle (sticky mode)", () => {
     for (const ch of hintText2) {
       await page.keyboard.press(ch);
     }
-    // Hints should have been consumed (hit state reached), not cancelled.
+    // INVARIANT: hints should have been consumed (hit state reached), not cancelled.
     const hitHint = page.locator(".hint[data-state='hit']");
     await expect(hitHint).toHaveCount(1, { timeout: 2_000 });
 

@@ -1,7 +1,4 @@
-// Ported from the original `glob-trie.js` test suite
-// (https://github.com/rbranson/glob-trie.js/blob/master/test.js).
-// The `remove` / `nodeCount` based assertions are omitted because those
-// methods are not part of the API used by knavi.
+// WHY: ported from the original glob-trie.js test suite (https://github.com/rbranson/glob-trie.js/blob/master/test.js); `remove` / `nodeCount` based assertions are omitted because those methods are not part of the API used by knavi.
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
@@ -184,7 +181,7 @@ void describe("GlobTrie", () => {
           "*[0-9]",
           "*[0-9]*",
           "*[0-9]*",
-          "*[0-9]*", // matched once per character, as in the original
+          "*[0-9]*", // WHY: matched once per character, as in the original
         ]),
       );
     });
@@ -210,7 +207,6 @@ void describe("GlobTrie", () => {
       );
     });
 
-    // Every escaped metacharacter
     for (const c of ["[", "]", "(", ")", ".", "?", "\\"]) {
       void test(`escaped ${c}`, () => {
         assert.deepStrictEqual(

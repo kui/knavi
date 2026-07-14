@@ -2,7 +2,7 @@ import { test, expect, gotoTest, attachHints, findHintFor } from "./fixtures";
 
 test.describe("hint placement", () => {
   test.afterEach(async ({ page }) => {
-    // Release Space in case a test did not do so.
+    // WHY: release Space in case a test did not do so.
     await page.keyboard.up("Space").catch(() => void 0);
   });
 
@@ -59,7 +59,7 @@ test.describe("hint placement", () => {
 
     const hints = page.locator(".hint");
     const count = await hints.count();
-    // 4 <area> elements (default, rect, circle, poly)
+    // WHY: 4 <area> elements (default, rect, circle, poly)
     expect(count).toBeGreaterThanOrEqual(4);
 
     await page.keyboard.up("Space");

@@ -9,7 +9,6 @@ test.describe("hint actions", () => {
     await gotoTest(page, "input.html");
     await hit(page, "input[type=text]");
 
-    // After Space release the input should be focused.
     await expect(page.locator("input[type=text]").first()).toBeFocused({
       timeout: 3_000,
     });
@@ -55,7 +54,7 @@ test.describe("hint actions", () => {
       .getAttribute("data-hint");
     if (!firstHintText) throw new Error("No hint found");
 
-    // Type the first character — matching hints become candidate/hit.
+    // WHY: typing the first character narrows matching hints to candidate/hit state.
     await page.keyboard.press(firstHintText[0]);
 
     const candidateOrHit = page.locator(

@@ -1,7 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-// Patch globals before importing the module so instanceof checks work in Node.js.
 /* eslint-disable @typescript-eslint/no-empty-function */
 class FakeInput implements EventTarget {
   type = "text";
@@ -23,10 +22,10 @@ class FakeTextarea implements EventTarget {
   removeEventListener() {}
 }
 /* eslint-enable @typescript-eslint/no-empty-function */
+// WHY: patch globals before importing the module so instanceof checks work in Node.js.
 (globalThis as Record<string, unknown>).HTMLInputElement = FakeInput;
 (globalThis as Record<string, unknown>).HTMLTextAreaElement = FakeTextarea;
 
-// Import after patching globals.
 const { isEditable } = await import("../../src/dom/elements.js");
 
 function input(overrides: Partial<FakeInput> = {}): EventTarget {

@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-// BlurerContentRoot is loaded in the root frame only.
+// WHY: BlurerContentRoot is loaded in the root frame only, so parent === window here.
 (globalThis as Record<string, unknown>).parent = globalThis;
 (globalThis as Record<string, unknown>).window = globalThis;
 

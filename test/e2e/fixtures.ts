@@ -25,8 +25,7 @@ export const test = base.extend<Fixtures>({
   context: async ({}, use) => {
     const userDataDir = mkdtempSync(path.join(tmpdir(), "knavi-e2e-"));
     const ctx = await chromium.launchPersistentContext(userDataDir, {
-      // headless: true sets the old --headless flag which blocks extensions.
-      // Pass --headless=new directly so extensions (and the service worker) work.
+      // HACK: headless: true sets the old --headless flag which blocks extensions, so pass --headless=new directly instead so extensions (and the service worker) work.
       headless: false,
       args: [
         "--headless=new",
@@ -34,7 +33,7 @@ export const test = base.extend<Fixtures>({
         `--load-extension=${BUILD}`,
       ],
     });
-    // Wait for the service worker to start (confirms extension is loaded).
+    // WHY: wait for the service worker to start (confirms extension is loaded).
     if (ctx.serviceWorkers().length === 0) {
       await ctx.waitForEvent("serviceworker", { timeout: 10_000 });
     }
@@ -52,10 +51,6 @@ export const test = base.extend<Fixtures>({
 
 export { expect };
 
-// ---------------------------------------------------------------------------
-// Helpers shared across specs
-// ---------------------------------------------------------------------------
-
 /**
  * Set extension settings via the background service worker.
  * Only pass the keys you want to change; others remain untouched.
@@ -65,7 +60,7 @@ export async function setSettings(
   settings: Record<string, string>,
 ): Promise<void> {
   const sw = context.serviceWorkers()[0];
-  // chrome is available at runtime in the service worker; not known to TS here.
+  // WHY: chrome is available at runtime in the service worker; not known to TS here.
   await sw.evaluate(
     (s) =>
       new Promise<void>((resolve) => {
@@ -92,12 +87,11 @@ export async function setSettings(
 export async function gotoTest(page: Page, name: string): Promise<void> {
   await page.goto(name);
   await page.waitForLoadState("load");
-  // Wait for the root frame's content-all script to finish setting up.
   await page.waitForFunction(
     () => document.documentElement.dataset.knaviReady === "1",
     { timeout: 10_000 },
   );
-  // Click the body to ensure keyboard focus is on the page.
+  // WHY: click the body to ensure keyboard focus is on the page.
   await page.locator("body").click({ position: { x: 1, y: 1 } });
 }
 
@@ -107,7 +101,7 @@ export async function gotoTest(page: Page, name: string): Promise<void> {
  */
 export async function attachHints(page: Page): Promise<void> {
   await page.keyboard.down("Space");
-  // Hint elements live inside a shadow root; Playwright auto-pierces open shadows.
+  // WHY: hint elements live inside a shadow root; Playwright auto-pierces open shadows.
   await expect(page.locator(".hint").first()).toBeVisible({ timeout: 5_000 });
 }
 

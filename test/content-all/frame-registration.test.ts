@@ -32,7 +32,7 @@ setParent(fakeWindow);
 const { FrameRegistry } =
   await import("../../src/content-all/frame-registration.js");
 
-// Duck-type via `"window" in source` to identify a Window source.
+/** Duck-type via `"window" in source` to identify a Window source. */
 function makeWindowSource(
   onPostMessage?: (data: unknown, origin: string) => void,
 ): Window {
@@ -53,7 +53,7 @@ void describe("FrameRegistry — announcement to parent", () => {
   });
 
   void test("no-ops when running in the root frame", async () => {
-    setParent(fakeWindow); // parent === window
+    setParent(fakeWindow); // WHY: parent === window signals the root frame
     new FrameRegistry();
     await new Promise<void>((resolve) => setImmediate(resolve));
     assert.equal(postedMessages.length, 0);
@@ -195,7 +195,7 @@ void describe("FrameRegistry — parentFrameId resolution", () => {
   });
 
   void test("resolves to undefined in root frame", async () => {
-    setParent(fakeWindow); // parent === window → root frame
+    setParent(fakeWindow); // WHY: parent === window → root frame
     const registry = new FrameRegistry();
     const result = await registry.parentFrameId;
     assert.equal(result, undefined);
@@ -206,7 +206,7 @@ void describe("FrameRegistry — parentFrameId resolution", () => {
       postMessage: (data: unknown, targetOrigin: string) =>
         postedMessages.push({ target: "parent", data, targetOrigin }),
     };
-    setParent(fakeParent); // non-root frame
+    setParent(fakeParent); // WHY: distinct from window, so this simulates a non-root frame
 
     const registry = new FrameRegistry();
 
@@ -246,7 +246,7 @@ void describe("FrameRegistry — parentFrameId resolution", () => {
       source: fakeParent,
     } as unknown as MessageEvent;
     registry.handleMessage(firstMsg);
-    registry.handleMessage(secondMsg); // ignored: Promise already resolved to 100
+    registry.handleMessage(secondMsg); // INVARIANT: ignored, Promise already resolved to 100
 
     const result = await registry.parentFrameId;
     assert.equal(result, 100);
