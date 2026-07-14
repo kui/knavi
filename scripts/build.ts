@@ -28,7 +28,7 @@ const JS_ENTRIES = [
 const ICON_WIDTHS = [16, 48, 128];
 
 export interface BuildOptions {
-  // WHY: esbuild also auto-defines process.env.NODE_ENV to "production" when minification is enabled.
+  /** esbuild also auto-defines process.env.NODE_ENV to "production" when minification is enabled. */
   readonly minify?: boolean;
 }
 

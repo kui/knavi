@@ -32,7 +32,7 @@ setParent(fakeWindow);
 const { FrameRegistry } =
   await import("../../src/content-all/frame-registration.js");
 
-// WHY: duck-type via `"window" in source` to identify a Window source.
+/** Duck-type via `"window" in source` to identify a Window source. */
 function makeWindowSource(
   onPostMessage?: (data: unknown, origin: string) => void,
 ): Window {
