@@ -4,6 +4,26 @@ import { printError } from "../lib/errors";
 const BACKDROP_RULE =
   ":host::backdrop { background-color: transparent !important; }";
 
+const CYCLE_BADGE_RULES = `.hint::before {
+  content: attr(data-cycle-key) " +" attr(data-cycle-count);
+  text-transform: none;
+  font-size: 50%;
+  position: absolute;
+  background-color: #333;
+  color: white;
+  border: #ccc 1px solid;
+  padding: 3px;
+  border-radius: 4px;
+  line-height: 1em;
+  left: 0;
+  bottom: calc(100% + 2px);
+  display: none;
+  white-space: nowrap;
+}
+.hint[data-state="hit"][data-cycle-key]::before {
+  display: inline-block;
+}`;
+
 export interface StorageHandle {
   getSingle(key: "css"): Promise<string | null | undefined>;
   setSingle(key: "css", value: string): Promise<void>;
@@ -24,6 +44,11 @@ export function isOlderThan400(version: string): boolean {
   return major < 4;
 }
 
+export function isOlderThan420(version: string): boolean {
+  const [major, minor] = version.split(".").map(Number);
+  return major < 4 || (major === 4 && minor < 2);
+}
+
 export async function migrate400(storage: StorageHandle) {
   const css = await storage.getSingle("css");
   if (css == null || css.includes(":host::backdrop")) return;
@@ -31,6 +56,18 @@ export async function migrate400(storage: StorageHandle) {
     "/* Added automatically on migration to v4.0.0. You can remove this if not needed. */";
   await storage.setSingle("css", comment + "\n" + BACKDROP_RULE + "\n\n" + css);
   console.info("[knavi] migration 4.0.0: prepended backdrop rule to css");
+}
+
+export async function migrate420(storage: StorageHandle) {
+  const css = await storage.getSingle("css");
+  if (css == null || css.includes("data-cycle-key")) return;
+  const comment =
+    "/* Added automatically on migration to v4.2.0. You can remove this if not needed. */";
+  await storage.setSingle(
+    "css",
+    comment + "\n" + CYCLE_BADGE_RULES + "\n\n" + css,
+  );
+  console.info("[knavi] migration 4.2.0: prepended cycle-badge rules to css");
 }
 
 /**
@@ -60,9 +97,10 @@ async function handleUpdate(
   previousVersion?: string,
 ) {
   await settings.backfillDefaults();
-  if (previousVersion && isOlderThan400(previousVersion)) {
-    await migrate400(await settings.getStorage());
-  }
+  if (!previousVersion) return;
+  const storage = await settings.getStorage();
+  if (isOlderThan400(previousVersion)) await migrate400(storage);
+  if (isOlderThan420(previousVersion)) await migrate420(storage);
 }
 
 export function init(settings: typeof Settings) {
