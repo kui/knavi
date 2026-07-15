@@ -111,10 +111,10 @@ export class HinterContentRoot {
 
     const changes = [...updateContext(context, inputLetter)];
 
-    const actionDescriptions = context.hitTarget
-      ? context.hitTarget.descriptions
+    const actionDescriptions = context.hitTarget?.descriptions ?? null;
+    const cycleBadge = context.hitTarget
+      ? cycleBadgeFor(this.view.computeCycleSet(context.hitTarget))
       : null;
-    const cycleBadge = this.computeCycleBadge(context);
     this.view.hit(changes, actionDescriptions, cycleBadge);
   }
 
@@ -144,14 +144,6 @@ export class HinterContentRoot {
     this.view.hit([prevHit, newHit], newHit.descriptions, {
       count: cycle.set.length - 1,
     });
-  }
-
-  private computeCycleBadge(context: HintContext): { count: number } | null {
-    if (!context.hitTarget) return null;
-    if (context.cycle) return { count: context.cycle.set.length - 1 };
-    const set = this.view.computeCycleSet(context.hitTarget);
-    const count = set.length - 1;
-    return count > 0 ? { count } : null;
   }
 
   async removeHints(options: ActionOptions, execute: boolean) {
@@ -200,6 +192,11 @@ function* updateContext(
       yield t;
     }
   }
+}
+
+function cycleBadgeFor(set: HintedElement[]): { count: number } | null {
+  const count = set.length - 1;
+  return count > 0 ? { count } : null;
 }
 
 function take<T>(iter: Generator<T>, length: number): T[] {
