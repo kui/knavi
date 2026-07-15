@@ -5,7 +5,7 @@ const BACKDROP_RULE =
   ":host::backdrop { background-color: transparent !important; }";
 
 const CYCLE_BADGE_RULES = `.hint::before {
-  content: "⟳ " attr(data-cycle-key) " (+" attr(data-cycle-count) ")";
+  content: "⟳ " attr(data-cycle-key) " " attr(data-cycle-index) "/" attr(data-cycle-total);
   text-transform: none;
   font-size: 50%;
   position: absolute;

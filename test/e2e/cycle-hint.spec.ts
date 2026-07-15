@@ -54,6 +54,8 @@ test.describe("cycle key on overlapping hints", () => {
     const hit = page.locator(".hint[data-state='hit']");
     await expect(hit).toHaveAttribute("data-cycle-key", CYCLE_KEY);
     await expect(hit).toHaveAttribute("data-cycle-count", "1");
+    await expect(hit).toHaveAttribute("data-cycle-total", "2");
+    await expect(hit).toHaveAttribute("data-cycle-index", /^[12]$/);
 
     /* WHY: the badge is rendered via the CSS ::before pseudo-element; the
        hit state fades it in via opacity transition (delay 200ms + 200ms
@@ -77,7 +79,7 @@ test.describe("cycle key on overlapping hints", () => {
     await expect.poll(async () => (await readBadge())?.opacity).toBe("1");
     const badge = await readBadge();
     expect(badge!.content).toContain(CYCLE_KEY);
-    expect(badge!.content).toContain("+1");
+    expect(badge!.content).toContain("/2");
 
     await page.keyboard.press(CYCLE_KEY);
 

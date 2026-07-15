@@ -147,6 +147,7 @@ export class HinterContentRoot {
     this.view.hit([prevHit, newHit], newHit.descriptions, {
       count: cycle.set.length - 1,
       index: cycle.index + 1,
+      total: cycle.set.length,
     });
   }
 
@@ -201,11 +202,11 @@ function* updateContext(
 function cycleBadgeFor(
   set: HintedElement[],
   hit: HintedElement,
-): { count: number; index: number } | null {
+): { count: number; index: number; total: number } | null {
   const count = set.length - 1;
   if (count <= 0) return null;
   const index = set.indexOf(hit) + 1;
-  return { count, index };
+  return { count, index, total: set.length };
 }
 
 function take<T>(iter: Generator<T>, length: number): T[] {

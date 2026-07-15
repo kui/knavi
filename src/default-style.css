@@ -133,7 +133,8 @@
 }
 
 .hint::before {
-  content: "⟳ " attr(data-cycle-key) " (+" attr(data-cycle-count) ")";
+  content: "⟳ " attr(data-cycle-key) " " attr(data-cycle-index) "/"
+    attr(data-cycle-total);
   bottom: 0px;
 }
 .hint[data-state="hit"][data-cycle-key]::before {
