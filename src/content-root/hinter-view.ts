@@ -135,14 +135,13 @@ export class HintView {
   hit(
     changes: HintedElement[],
     actionDescriptions: ActionDescriptions | null,
-    cycleBadge: { count: number } | null,
+    cycleBadge: { count: number; index: number } | null,
   ) {
     if (!this.hints) throw Error("Illegal state");
     this.clearCycleBadge();
     this.highlightHints(changes, actionDescriptions);
     const hitTarget = changes.find((t) => t.state === "hit") ?? null;
-    if (hitTarget && cycleBadge)
-      this.setCycleBadge(hitTarget, cycleBadge.count);
+    if (hitTarget && cycleBadge) this.setCycleBadge(hitTarget, cycleBadge);
     this.moveOverlay();
     this.moveActiveOverlay(hitTarget);
   }
@@ -166,12 +165,16 @@ export class HintView {
     return result;
   }
 
-  private setCycleBadge(hit: HintedElement, count: number) {
+  private setCycleBadge(
+    hit: HintedElement,
+    badge: { count: number; index: number },
+  ) {
     const entry = this.hints!.get(hit);
     if (!entry) return;
     for (const el of entry.hints) {
       el.dataset.cycleKey = this.cycleKey;
-      el.dataset.cycleCount = String(count);
+      el.dataset.cycleCount = String(badge.count);
+      el.dataset.cycleIndex = String(badge.index);
     }
   }
 
@@ -180,6 +183,7 @@ export class HintView {
       for (const el of hints) {
         delete el.dataset.cycleKey;
         delete el.dataset.cycleCount;
+        delete el.dataset.cycleIndex;
       }
     }
   }

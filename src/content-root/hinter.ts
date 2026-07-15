@@ -113,7 +113,10 @@ export class HinterContentRoot {
 
     const actionDescriptions = context.hitTarget?.descriptions ?? null;
     const cycleBadge = context.hitTarget
-      ? cycleBadgeFor(this.view.computeCycleSet(context.hitTarget))
+      ? cycleBadgeFor(
+          this.view.computeCycleSet(context.hitTarget),
+          context.hitTarget,
+        )
       : null;
     this.view.hit(changes, actionDescriptions, cycleBadge);
   }
@@ -143,6 +146,7 @@ export class HinterContentRoot {
 
     this.view.hit([prevHit, newHit], newHit.descriptions, {
       count: cycle.set.length - 1,
+      index: cycle.index + 1,
     });
   }
 
@@ -194,9 +198,14 @@ function* updateContext(
   }
 }
 
-function cycleBadgeFor(set: HintedElement[]): { count: number } | null {
+function cycleBadgeFor(
+  set: HintedElement[],
+  hit: HintedElement,
+): { count: number; index: number } | null {
   const count = set.length - 1;
-  return count > 0 ? { count } : null;
+  if (count <= 0) return null;
+  const index = set.indexOf(hit) + 1;
+  return { count, index };
 }
 
 function take<T>(iter: Generator<T>, length: number): T[] {
