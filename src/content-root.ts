@@ -17,14 +17,22 @@ const blurerView = new BlurView();
 const blurer = new BlurerContentRoot(blurerView);
 
 (async () => {
-  const { css, hints } = await settingsClient.get(["css", "hints"]);
-  hinterView.setup(css);
+  const { css, hints, cycleKey } = await settingsClient.get([
+    "css",
+    "hints",
+    "cycleKey",
+  ]);
+  hinterView.setCss(css);
+  hinterView.setCycleKey(cycleKey);
   hinter.setup(hints);
 })().catch(printError);
 
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.css) {
-    hinterView.setup(changes.css.newValue as Settings["css"]);
+    hinterView.setCss(changes.css.newValue as Settings["css"]);
+  }
+  if (changes.cycleKey) {
+    hinterView.setCycleKey(changes.cycleKey.newValue as Settings["cycleKey"]);
   }
   if (changes.hints) {
     hinter.setup(changes.hints.newValue as Settings["hints"]);
@@ -38,6 +46,7 @@ chrome.runtime.onMessage.addListener(
     )
     .add("AttachHintsInTab", () => hinter.attachHints())
     .add("HitHintInTab", ({ key }) => hinter.hitHint(key))
+    .add("CycleHintInTab", () => hinter.cycleHint())
     .add("RemoveHintsInTab", ({ options, execute }) =>
       hinter.removeHints(options, execute),
     )

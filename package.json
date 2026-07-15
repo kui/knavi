@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "knavi",
-  "version": "4.1.1",
+  "version": "4.2.0",
   "description": "A Hit-a-Hint Chrome extension. Press the space key plus a hint key to click links and buttons without a mouse.",
   "type": "module",
   "scripts": {

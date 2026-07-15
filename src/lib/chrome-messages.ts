@@ -26,6 +26,10 @@ export interface RuntimeMessages {
     payload: { key: SingleLetter };
     response: void;
   };
+  CycleHint: {
+    payload: void;
+    response: void;
+  };
   RemoveHints: {
     payload: { options: ActionOptions; execute: boolean };
     response: void;
@@ -71,6 +75,10 @@ export interface TabMessages {
   };
   HitHintInTab: {
     payload: { key: SingleLetter };
+    response: void;
+  };
+  CycleHintInTab: {
+    payload: void;
     response: void;
   };
   RemoveHintsInTab: {

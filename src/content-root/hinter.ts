@@ -8,6 +8,12 @@ interface HintContext {
   targets: HintedElement[];
   inputSequence: string[];
   hitTarget?: HintedElement | undefined;
+  /**
+   * Snapshot taken on the first Cycle Key press. Fixed set of targets whose
+   * chip rects intersected the originally-hit chip. Repeated presses cycle
+   * through it in DOM insertion order; any letter input clears it.
+   */
+  cycle?: { set: HintedElement[]; index: number } | undefined;
 }
 
 export class HinterContentRoot {
@@ -101,12 +107,48 @@ export class HinterContentRoot {
 
     if (!this.hintLetters.includes(inputLetter)) return;
 
+    delete context.cycle;
+
     const changes = [...updateContext(context, inputLetter)];
 
-    const actionDescriptions = context.hitTarget
-      ? context.hitTarget.descriptions
+    const actionDescriptions = context.hitTarget?.descriptions ?? null;
+    const cycleBadge = context.hitTarget
+      ? cycleBadgeFor(
+          this.view.computeCycleSet(context.hitTarget),
+          context.hitTarget,
+        )
       : null;
-    this.view.hit(changes, actionDescriptions);
+    this.view.hit(changes, actionDescriptions, cycleBadge);
+  }
+
+  cycleHint() {
+    const context = this.context;
+    if (!context) throw Error("Ilegal state invocation: hinting not started");
+    if (!context.hitTarget) return;
+
+    if (!context.cycle) {
+      const set = this.view.computeCycleSet(context.hitTarget);
+      if (set.length <= 1) return;
+      const index = set.indexOf(context.hitTarget);
+      if (index < 0) return;
+      context.cycle = { set, index };
+    }
+
+    const cycle = context.cycle;
+    const prevHit = context.hitTarget;
+    cycle.index = (cycle.index + 1) % cycle.set.length;
+    const newHit = cycle.set[cycle.index];
+    if (newHit === prevHit) return;
+
+    prevHit.state = "candidate";
+    newHit.state = "hit";
+    context.hitTarget = newHit;
+
+    this.view.hit([prevHit, newHit], newHit.descriptions, {
+      count: cycle.set.length - 1,
+      index: cycle.index + 1,
+      total: cycle.set.length,
+    });
   }
 
   async removeHints(options: ActionOptions, execute: boolean) {
@@ -155,6 +197,16 @@ function* updateContext(
       yield t;
     }
   }
+}
+
+function cycleBadgeFor(
+  set: HintedElement[],
+  hit: HintedElement,
+): { count: number; index: number; total: number } | null {
+  const count = set.length - 1;
+  if (count <= 0) return null;
+  const index = set.indexOf(hit) + 1;
+  return { count, index, total: set.length };
 }
 
 function take<T>(iter: Generator<T>, length: number): T[] {

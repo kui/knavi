@@ -11,6 +11,7 @@ export class KeyboardHandlerContentAll {
   private stickyMatcher: KeyHoldMatcher | null = null;
   private actionMatcher: KeyHoldMatcher | null = null;
   private cancelMatcher: KeyHoldMatcher | null = null;
+  private cycleMatcher: KeyHoldMatcher | null = null;
   private hintLetters = "";
   private matchedBlacklist: string[] = [];
   /**
@@ -27,7 +28,13 @@ export class KeyboardHandlerContentAll {
   setup(
     settings: Pick<
       Settings,
-      "magicKey" | "blurKey" | "hints" | "stickyKey" | "actionKey" | "cancelKey"
+      | "magicKey"
+      | "blurKey"
+      | "hints"
+      | "stickyKey"
+      | "actionKey"
+      | "cancelKey"
+      | "cycleKey"
     >,
     matchedBlacklist: string[],
   ) {
@@ -48,6 +55,8 @@ export class KeyboardHandlerContentAll {
       settings.cancelKey === ""
         ? null
         : KeyHoldMatcher.parse(settings.cancelKey);
+    this.cycleMatcher =
+      settings.cycleKey === "" ? null : KeyHoldMatcher.parse(settings.cycleKey);
     this.matchedBlacklist = matchedBlacklist;
   }
 
@@ -61,6 +70,7 @@ export class KeyboardHandlerContentAll {
     this.stickyMatcher?.reset();
     this.actionMatcher?.reset();
     this.cancelMatcher?.reset();
+    this.cycleMatcher?.reset();
   }
 
   /** Returns true if the event is handled. */
@@ -70,6 +80,7 @@ export class KeyboardHandlerContentAll {
     const stickyMatcher = this.stickyMatcher?.keydown(event);
     const actionMatcher = this.actionMatcher?.keydown(event);
     const cancelMatcher = this.cancelMatcher?.keydown(event);
+    const cycleMatcher = this.cycleMatcher?.keydown(event);
 
     if (this.isBlacklisted()) {
       return false;
@@ -90,6 +101,10 @@ export class KeyboardHandlerContentAll {
           .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, true)
           .catch(printError);
         this.endSession();
+        return true;
+      }
+      if (cycleMatcher?.match()) {
+        this.hinter.cycleHint().catch(printError);
         return true;
       }
       if (isSingleLetter(event.key) && this.hintLetters.includes(event.key)) {
@@ -124,6 +139,7 @@ export class KeyboardHandlerContentAll {
     this.stickyMatcher?.keyup(event);
     this.actionMatcher?.keyup(event);
     this.cancelMatcher?.keyup(event);
+    this.cycleMatcher?.keyup(event);
 
     if (this.isBlacklisted()) {
       return false;
