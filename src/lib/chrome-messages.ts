@@ -85,6 +85,26 @@ export interface TabMessages {
     payload: { options: ActionOptions; execute: boolean };
     response: void;
   };
+  /**
+   * Broadcast to every frame (no frameId filter) when the background
+   * forwards AttachHints/RemoveHints, so each frame's KeyboardHandler routes
+   * keystrokes correctly even when focus sits in a frame that did not
+   * initiate the session (#120).
+   * Kept separate from AttachHintsInTab/RemoveHintsInTab on purpose: those
+   * are 1:1 RPCs to the session-owning root frame, and frames eavesdropping
+   * on them cannot observe the response, so a failed attach would strand
+   * them at hinting=true and handleKeypress would swallow every keystroke.
+   * A dedicated message lets the background compensate with {active:false}
+   * when the attach fails.
+   * INVARIANT: dispatch at request time, not after the RPC settles.
+   * AttachHintsInTab resolves only after rect streaming and RemoveHintsInTab
+   * only after the action executes; by then the next session's keystrokes
+   * can already be in flight and a late sync would clobber the newer flag.
+   */
+  SyncHintingState: {
+    payload: { active: boolean };
+    response: void;
+  };
 
   ExecuteActionInFrame: {
     payload: { id: ElementId; options: ActionOptions };
@@ -133,16 +153,6 @@ type MHandler<M, T extends keyof M> = (
   sender: chrome.runtime.MessageSender,
 ) => MResponse<M, T> | Promise<MResponse<M, T>>;
 
-/**
- * A passive handler observes a message without sending a response.
- * Use addPassive() when another listener in a different script owns the
- * sendResponse for the same message type.
- */
-type MPassiveHandler<M, T extends keyof M> = (
-  data: MPayload<M, T>,
-  sender: chrome.runtime.MessageSender,
-) => void | Promise<void>;
-
 type MSendResponseArg<M, T extends keyof M> =
   | { response: MResponse<M, T> }
   | { error: Error };
@@ -161,10 +171,6 @@ export class Router<
   RegisteredTypes extends keyof M | void,
 > {
   private readonly handlers = new Map<keyof M, MHandler<M, keyof M>>();
-  private readonly passiveHandlers = new Map<
-    keyof M,
-    MPassiveHandler<M, keyof M>
-  >();
 
   // WHY: use the static factories instead of `new Router`.
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -178,32 +184,13 @@ export class Router<
     return new Router();
   }
 
-  private isRegistered(type: keyof M): boolean {
-    return this.handlers.has(type) || this.passiveHandlers.has(type);
-  }
-
   add<T extends Exclude<keyof M, RegisteredTypes>>(
     type: T,
     handler: MHandler<M, T>,
   ): Router<M, Exclude<RegisteredTypes | T, void>> {
-    if (this.isRegistered(type))
+    if (this.handlers.has(type))
       throw Error(`Already registered: type=${String(type)}`);
     this.handlers.set(type, handler);
-    return this;
-  }
-
-  /**
-   * Register a passive handler: observes the message without sending a
-   * response. Use when another listener in a different script (e.g.
-   * content-root.ts) owns the sendResponse for this message type.
-   */
-  addPassive<T extends Exclude<keyof M, RegisteredTypes>>(
-    type: T,
-    handler: MPassiveHandler<M, T>,
-  ): Router<M, Exclude<RegisteredTypes | T, void>> {
-    if (this.isRegistered(type))
-      throw Error(`Already registered: type=${String(type)}`);
-    this.passiveHandlers.set(type, handler);
     return this;
   }
 
@@ -213,9 +200,6 @@ export class Router<
   ): Router<M, Exclude<RegisteredTypes | T, void>> {
     for (const [type, handler] of router.handlers) {
       this.handlers.set(type, handler);
-    }
-    for (const [type, handler] of router.passiveHandlers) {
-      this.passiveHandlers.set(type, handler);
     }
     return this;
   }
@@ -230,20 +214,6 @@ export class Router<
     sendResponse: (arg: MSendResponseArg<M, T>) => void,
   ): boolean | void {
     const msgType = (message as { "@type": keyof M })["@type"];
-
-    const passiveHandler = this.passiveHandlers.get(msgType);
-    if (passiveHandler) {
-      console.debug("Recieve (passive): ", message);
-      try {
-        const result = passiveHandler(message, sender);
-        if (result instanceof Promise) {
-          result.catch((e) => console.warn("Passive handler error:", e));
-        }
-      } catch (e) {
-        console.warn("Passive handler error:", e);
-      }
-      return; // WHY: do not call sendResponse; the active listener owns the response.
-    }
 
     const handler = this.handlers.get(msgType);
     if (!handler) return;

@@ -23,9 +23,9 @@ export default class HinterClient {
   }
 
   /**
-   * WHY: keeps the root frame's keyboard handler in sync with sessions
-   * initiated by child frames. Called by content-all.ts when it observes
-   * AttachHints or RemoveHints arriving at the root frame.
+   * WHY: keyboard focus can move to a frame that did not initiate the hint
+   * session, so every frame's flag is synced via the SyncHintingState
+   * broadcast (see TabMessages in chrome-messages.ts and #120).
    */
   syncHinting(active: boolean) {
     this.hinting = active;
