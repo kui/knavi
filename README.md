@@ -54,5 +54,8 @@ Edit changelog in `changelog/<CurrentVersion>.md`. It will be used for release n
 1. Check the version in [package.json](package.json)
 2. Confirm `changelog/<Version>.md`
 3. Commit and push them
-4. Execute `scripts/tag_for_release.sh`
+4. Create and push the release tag by either:
+   - Running the [tag-for-release workflow](https://github.com/kui/knavi/actions/workflows/tag-for-release.yaml)
+     on GitHub Actions ("Run workflow" button, or `gh workflow run tag-for-release.yaml`)
+   - Executing `scripts/tag_for_release.bash` locally and pushing the tag
 5. Bump minor version in [package.json](package.json) for next release
