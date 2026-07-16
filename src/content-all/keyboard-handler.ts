@@ -169,6 +169,15 @@ export class KeyboardHandlerContentAll {
   }
 
   /**
+   * WHY: a keydown that moves focus out of this frame (e.g. Tab) loses its
+   * keyup here, sticking the key in matcher history; a stuck cycle key then
+   * swallows every hint letter as a cycle match.
+   */
+  handleBlur() {
+    this.resetMatchers();
+  }
+
+  /**
    * Just hijacks the event when hinting.
    * Returns true if the event is handled.
    */
