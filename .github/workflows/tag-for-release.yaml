@@ -11,6 +11,12 @@ jobs:
   tag:
     runs-on: ubuntu-latest
     steps:
+      # WHY: workflow_dispatch cannot restrict selectable refs, so fail fast when run on a non-master ref.
+      - name: Refuse non-master ref
+        if: github.ref != 'refs/heads/master'
+        run: |
+          echo "::error::This workflow must be run on master (got $GITHUB_REF)."
+          exit 1
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
       - name: Install dependencies
