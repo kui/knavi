@@ -125,3 +125,6 @@ window.addEventListener(
   },
   true,
 );
+window.addEventListener("blur", () => {
+  keyboardHandler.handleBlur();
+});
