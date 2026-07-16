@@ -9,8 +9,8 @@ jobs:
   dry-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: jdx/mise-action@v2
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
       - name: Install dependencies
         run: npm ci
       - name: Build
