@@ -2,7 +2,6 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { Resvg } from "@resvg/resvg-js";
-import { isMain } from "./is-main";
 
 export function convertSvg(
   input: string,
@@ -18,7 +17,7 @@ export function convertSvg(
   writeFileSync(output, pngData.asPng());
 }
 
-if (isMain(import.meta.url)) {
+if (import.meta.main) {
   const [input, output, widthStr] = process.argv.slice(2);
   if (!input || !output) {
     console.error("Usage: convert-svg.ts <input.svg> <output.png> [width]");

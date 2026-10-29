@@ -3,7 +3,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { isMain } from "./is-main";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -14,6 +13,6 @@ export function version(): string {
   return pkg.version;
 }
 
-if (isMain(import.meta.url)) {
+if (import.meta.main) {
   console.log(version());
 }
