@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Duplicate hints across shadow boundaries</title>
+    <style>
+      body {
+        margin: 40px;
+        font-family: sans-serif;
+      }
+      section {
+        margin-bottom: 32px;
+      }
+      #a-link {
+        display: inline-block;
+      }
+      #b-host {
+        display: block;
+        width: 200px;
+        height: 40px;
+        cursor: pointer;
+      }
+      #d-wrapper {
+        display: inline-flex;
+        cursor: pointer;
+      }
+      #c-stack {
+        position: relative;
+        width: 200px;
+        height: 80px;
+      }
+      #c-back,
+      #c-front {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 200px;
+        cursor: pointer;
+      }
+      #c-back {
+        height: 80px;
+        background: #eee;
+      }
+      #c-front {
+        height: 40px;
+        background: #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <section>
+      <p>
+        A: a link wraps a custom element whose shadow content is a
+        <code>cursor: pointer</code> box. It should get one hint.
+      </p>
+      <a id="a-link" href="#a-clicked"><test-pointer-box></test-pointer-box></a>
+    </section>
+
+    <section>
+      <p>
+        B: a <code>cursor: pointer</code> custom element whose shadow content
+        inherits the cursor. It should get one hint.
+      </p>
+      <test-pointer-fill id="b-host"></test-pointer-fill>
+    </section>
+
+    <section>
+      <p>
+        D: a <code>cursor: pointer</code> wrapper around a button. It should get
+        one hint, for the button.
+      </p>
+      <div id="d-wrapper"><button id="d-button">button</button></div>
+    </section>
+
+    <section>
+      <p>
+        C (known case): two <code>cursor: pointer</code> siblings stacked at the
+        same corner. They still get two hints.
+      </p>
+      <div id="c-stack">
+        <div id="c-back"></div>
+        <div id="c-front"></div>
+      </div>
+    </section>
+
+    <script>
+      for (const id of ["b-host", "d-button", "c-front"]) {
+        document.getElementById(id).addEventListener("click", () => {
+          document.body.dataset.clicked = id;
+        });
+      }
+      customElements.define(
+        "test-pointer-box",
+        class extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: "open" }).innerHTML = `
+              <div style="width: 200px; height: 40px; background: #ddd; cursor: pointer"></div>`;
+          }
+        },
+      );
+      customElements.define(
+        "test-pointer-fill",
+        class extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: "open" }).innerHTML = `
+              <div style="width: 100%; height: 100%; background: #ddd"></div>`;
+          }
+        },
+      );
+    </script>
+  </body>
+</html>

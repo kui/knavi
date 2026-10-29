@@ -4,6 +4,7 @@ import {
   gotoTest,
   attachHints,
   findHintFor,
+  countHintsFor,
   hit,
 } from "./fixtures";
 
@@ -109,5 +110,59 @@ test.describe("hint placement", () => {
     );
 
     await page.keyboard.up("Space");
+  });
+});
+
+test.describe("duplicate hints across shadow boundaries", () => {
+  test.afterEach(async ({ page }) => {
+    await page.keyboard.up("Space").catch(() => void 0);
+  });
+
+  for (const target of ["#a-link", "#b-host", "#d-button"]) {
+    test(`${target} gets exactly one hint`, async ({ page }) => {
+      await gotoTest(page, "shadow-duplicate-hints.html");
+      await attachHints(page);
+
+      expect(await countHintsFor(page, target)).toBe(1);
+    });
+  }
+
+  test("hitting a pointer box inside a link follows the link", async ({
+    page,
+  }) => {
+    await gotoTest(page, "shadow-duplicate-hints.html");
+    await hit(page, "#a-link");
+
+    await expect(page).toHaveURL(/#a-clicked$/);
+  });
+
+  test("hitting a pointer host clicks it", async ({ page }) => {
+    await gotoTest(page, "shadow-duplicate-hints.html");
+    await hit(page, "#b-host");
+
+    await expect(page.locator("body")).toHaveAttribute(
+      "data-clicked",
+      "b-host",
+    );
+  });
+
+  test("hitting a pointer wrapper's button clicks the button", async ({
+    page,
+  }) => {
+    await gotoTest(page, "shadow-duplicate-hints.html");
+    await hit(page, "#d-button");
+
+    await expect(page.locator("body")).toHaveAttribute(
+      "data-clicked",
+      "d-button",
+    );
+  });
+
+  // WHY: stacked siblings have no ancestor relation, so the dedupe leaves both (#129).
+  test.fail("stacked pointer siblings get one hint", async ({ page }) => {
+    await gotoTest(page, "shadow-duplicate-hints.html");
+    await attachHints(page);
+
+    expect(await countHintsFor(page, "#c-front")).toBe(1);
   });
 });

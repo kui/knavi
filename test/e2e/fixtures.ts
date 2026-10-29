@@ -149,6 +149,29 @@ export async function findHintFor(
 }
 
 /**
+ * Count the hints whose position matches `targetSelector`.
+ */
+export async function countHintsFor(
+  page: Page,
+  targetSelector: string,
+  tolerancePx = 5,
+): Promise<number> {
+  const targetBox = await page.locator(targetSelector).first().boundingBox();
+  if (!targetBox)
+    throw new Error(`Cannot find bounding box for ${targetSelector}`);
+
+  const boxes = await Promise.all(
+    (await page.locator(".hint").all()).map((hint) => hint.boundingBox()),
+  );
+  return boxes.filter(
+    (box) =>
+      box &&
+      Math.abs(box.x - targetBox.x) <= tolerancePx &&
+      Math.abs(box.y - targetBox.y) <= tolerancePx,
+  ).length;
+}
+
+/**
  * Full hint activation flow: attach hints → find hint for target → type hint
  * letters → release Space (triggers the action).
  */
