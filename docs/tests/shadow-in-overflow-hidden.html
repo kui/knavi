@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Shadow DOM inside overflow: hidden</title>
+    <style>
+      body {
+        margin: 40px;
+        font-family: sans-serif;
+      }
+      #clip {
+        overflow: hidden;
+        width: 320px;
+      }
+      #occlusion {
+        position: relative;
+        width: 200px;
+        height: 40px;
+        margin-top: 40px;
+      }
+      #occluded-button {
+        width: 200px;
+        height: 40px;
+      }
+      #overlay {
+        position: absolute;
+        inset: 0;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <p>
+      The player controls live in an open shadow root whose content covers the
+      whole <code>overflow: hidden</code> container. They should get hints.
+    </p>
+    <div id="clip">
+      <test-player></test-player>
+    </div>
+
+    <p>
+      The button below is covered by an unrelated shadow-DOM overlay. It should
+      not get a hint.
+    </p>
+    <div id="occlusion">
+      <button id="occluded-button">covered button</button>
+      <test-overlay id="overlay"></test-overlay>
+    </div>
+
+    <p><button id="light-button">light button</button></p>
+
+    <script>
+      customElements.define(
+        "test-player",
+        class extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: "open" }).innerHTML = `
+              <div style="position: relative; width: 320px; height: 180px; background: #333">
+                <button id="shadow-play" style="position: absolute; left: 8px; bottom: 8px">Play</button>
+                <button id="shadow-mute" style="position: absolute; right: 8px; bottom: 8px">Mute</button>
+              </div>`;
+            for (const button of this.shadowRoot.querySelectorAll("button")) {
+              button.addEventListener("click", () => {
+                document.body.dataset.clicked = button.id;
+              });
+            }
+          }
+        },
+      );
+      customElements.define(
+        "test-overlay",
+        class extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: "open" }).innerHTML = `
+              <div style="width: 100%; height: 100%; background: rgba(0, 0, 0, 0.3)"></div>`;
+          }
+        },
+      );
+    </script>
+  </body>
+</html>
