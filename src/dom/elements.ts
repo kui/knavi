@@ -72,6 +72,27 @@ export function* traverseParent(
 }
 
 /**
+ * Like `traverseParent()`, but steps from a shadow root to its host instead of
+ * stopping at the shadow boundary.
+ */
+export function* traverseComposedParent(
+  element: Element,
+  includeSelf?: boolean,
+): Generator<Element> {
+  let p: Element | null = includeSelf ? element : composedParent(element);
+  while (p) {
+    yield p;
+    p = composedParent(p);
+  }
+}
+
+function composedParent(element: Element): Element | null {
+  if (element.parentElement) return element.parentElement;
+  const parent = element.parentNode;
+  return parent instanceof ShadowRoot ? parent.host : null;
+}
+
+/**
  * Like `ancestor.contains(node)`, but also returns true when `node` lives in
  * a shadow tree hosted (possibly through nested shadow roots) by `ancestor`
  * or one of its descendants.

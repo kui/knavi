@@ -1,5 +1,10 @@
 import { nextAnimationFrame } from "../dom/animations";
-import { isEditable, isScrollable, traverseParent } from "../dom/elements";
+import {
+  isEditable,
+  isScrollable,
+  traverseComposedParent,
+  traverseParent,
+} from "../dom/elements";
 import { first, flatMap, last, takeWhile } from "../lib/iters";
 
 /** Type guard that narrows `o` to having a callable method `name`. */
@@ -15,6 +20,8 @@ export interface ActionProfile {
 }
 
 interface ActionHandler {
+  /** True when the handler guesses clickability from styling alone. */
+  heuristic?: boolean;
   getDescriptions(): ActionDescriptions;
   isSupported(target: Element): boolean | ActionProfile;
   handle(target: Element, options: MouseEventInit): Promise<void> | void;
@@ -22,6 +29,7 @@ interface ActionHandler {
 
 interface Action {
   descriptions: ActionDescriptions;
+  heuristic: boolean;
   handle(options: MouseEventInit): Promise<void> | void;
   actualTarget?: HTMLElement | SVGElement;
 }
@@ -57,9 +65,11 @@ export class ActionFinder {
     if (!profiles) return undefined;
 
     const { profile, handler } = profiles;
+    const heuristic = handler.heuristic ?? false;
     if (profile === true) {
       return {
         descriptions: handler.getDescriptions(),
+        heuristic,
         handle: (options) => handler.handle(target, options),
       };
     }
@@ -67,6 +77,7 @@ export class ActionFinder {
     const { actualTarget } = profile;
     return {
       descriptions: handler.getDescriptions(),
+      heuristic,
       handle: (options) => handler.handle(actualTarget, options),
       actualTarget,
     };
@@ -241,7 +252,8 @@ HANDLERS.push({
     };
   },
   isSupported(target) {
-    for (const element of traverseParent(target, true))
+    // WHY: an element inside a shadow tree hosted within a link targets the link, as it would in light DOM (#129).
+    for (const element of traverseComposedParent(target, true))
       if (
         (element instanceof HTMLElement || element instanceof SVGElement) &&
         element.matches(CLICKABLE_SELECTORS)
@@ -261,6 +273,7 @@ const CLICKABLE_CURSOR_TYPES = new Set([
   "zoom-out",
 ]);
 HANDLERS.push({
+  heuristic: true,
   getDescriptions() {
     return {
       short: "Click?",
@@ -381,6 +394,8 @@ function dispatchMouseEvent(
     button: 0,
     bubbles: true,
     cancelable: true,
+    // WHY: real mouse events cross shadow boundaries; without this a click on shadow content never reaches the host's listeners.
+    composed: true,
     ctrlKey: options.ctrlKey,
     shiftKey: options.shiftKey,
     altKey: options.altKey,

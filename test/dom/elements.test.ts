@@ -27,6 +27,12 @@ class FakeNode {
   constructor(parent: FakeNode | null = null) {
     this.parent = parent;
   }
+  get parentNode(): FakeNode | null {
+    return this.parent;
+  }
+  get parentElement(): FakeNode | null {
+    return this.parent instanceof FakeShadowRoot ? null : this.parent;
+  }
   contains(other: FakeNode | null): boolean {
     for (let n = other; n; n = n.parent) if (n === this) return true;
     return false;
@@ -47,7 +53,7 @@ class FakeShadowRoot extends FakeNode {
 (globalThis as Record<string, unknown>).HTMLTextAreaElement = FakeTextarea;
 (globalThis as Record<string, unknown>).ShadowRoot = FakeShadowRoot;
 
-const { containsComposed, isEditable } =
+const { containsComposed, isEditable, traverseComposedParent } =
   await import("../../src/dom/elements.js");
 
 function input(overrides: Partial<FakeInput> = {}): EventTarget {
@@ -206,4 +212,30 @@ void describe("containsComposed", () => {
 
   void test("does not contain null", () =>
     assert.equal(contains(wrapper, null), false));
+});
+
+void describe("traverseComposedParent", () => {
+  const wrapper = new FakeNode();
+  const host = new FakeNode(wrapper);
+  const shadow = new FakeShadowRoot(host);
+  const innerHost = new FakeNode(shadow);
+  const innerShadow = new FakeShadowRoot(innerHost);
+  const button = new FakeNode(innerShadow);
+  const parents = (e: FakeNode, includeSelf?: boolean) => [
+    ...traverseComposedParent(e as unknown as Element, includeSelf),
+  ];
+
+  void test("steps from shadow roots to their hosts", () =>
+    assert.deepEqual(parents(button), [innerHost, host, wrapper]));
+
+  void test("includes the element itself when asked", () =>
+    assert.deepEqual(parents(button, true), [
+      button,
+      innerHost,
+      host,
+      wrapper,
+    ]));
+
+  void test("yields nothing for a root element", () =>
+    assert.deepEqual(parents(wrapper), []));
 });
