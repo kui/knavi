@@ -13,6 +13,6 @@ export function version(): string {
   return pkg.version;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.main) {
   console.log(version());
 }

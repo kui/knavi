@@ -15,6 +15,6 @@ export function jsonizeManifest(): string {
   return JSON.stringify(manifest(pkg), null, 2);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.main) {
   console.log(jsonizeManifest());
 }

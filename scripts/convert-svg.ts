@@ -17,7 +17,7 @@ export function convertSvg(
   writeFileSync(output, pngData.asPng());
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.main) {
   const [input, output, widthStr] = process.argv.slice(2);
   if (!input || !output) {
     console.error("Usage: convert-svg.ts <input.svg> <output.png> [width]");

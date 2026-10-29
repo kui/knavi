@@ -83,6 +83,6 @@ export async function build({
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.main) {
   await build({ minify: process.env.NODE_ENV === "production" });
 }
