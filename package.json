@@ -12,7 +12,7 @@
     "lint:eslint": "eslint --flag unstable_native_nodejs_ts_config --cache --cache-strategy content .",
     "lint:prettier": "prettier --check --log-level warn --cache --cache-strategy content .",
     "lint:tsc": "tsc --build",
-    "lint:changelog": "tsx scripts/run-bash.ts scripts/lint_changelog.bash",
+    "lint:changelog": "tsx scripts/lint-changelog.ts",
     "lint:ast-grep": "ast-grep scan",
     "fix": "run-s fix:eslint fix:prettier",
     "fix:eslint": "eslint --flag unstable_native_nodejs_ts_config --cache --cache-strategy content --fix .",
