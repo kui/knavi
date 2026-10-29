@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Pkg } from "../types/npm";
+import { isMain } from "./is-main";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -15,6 +16,6 @@ export function jsonizeManifest(): string {
   return JSON.stringify(manifest(pkg), null, 2);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   console.log(jsonizeManifest());
 }

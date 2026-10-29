@@ -12,6 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { convertSvg } from "./convert-svg";
 import { jsonizeManifest } from "./jsonize-manifest";
+import { isMain } from "./is-main";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
@@ -83,6 +84,6 @@ export async function build({
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   await build({ minify: process.env.NODE_ENV === "production" });
 }
