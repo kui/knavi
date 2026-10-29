@@ -22,11 +22,33 @@ class FakeTextarea implements EventTarget {
   removeEventListener() {}
 }
 /* eslint-enable @typescript-eslint/no-empty-function */
+class FakeNode {
+  readonly parent: FakeNode | null;
+  constructor(parent: FakeNode | null = null) {
+    this.parent = parent;
+  }
+  contains(other: FakeNode | null): boolean {
+    for (let n = other; n; n = n.parent) if (n === this) return true;
+    return false;
+  }
+  getRootNode(): FakeNode {
+    return this.parent ? this.parent.getRootNode() : this;
+  }
+}
+class FakeShadowRoot extends FakeNode {
+  readonly host: FakeNode;
+  constructor(host: FakeNode) {
+    super();
+    this.host = host;
+  }
+}
 // WHY: patch globals before importing the module so instanceof checks work in Node.js.
 (globalThis as Record<string, unknown>).HTMLInputElement = FakeInput;
 (globalThis as Record<string, unknown>).HTMLTextAreaElement = FakeTextarea;
+(globalThis as Record<string, unknown>).ShadowRoot = FakeShadowRoot;
 
-const { isEditable } = await import("../../src/dom/elements.js");
+const { containsComposed, isEditable } =
+  await import("../../src/dom/elements.js");
 
 function input(overrides: Partial<FakeInput> = {}): EventTarget {
   return Object.assign(new FakeInput(), overrides);
@@ -154,4 +176,34 @@ void describe("isEditable", () => {
         false,
       ));
   });
+});
+
+void describe("containsComposed", () => {
+  const document = new FakeNode();
+  const wrapper = new FakeNode(document);
+  const host = new FakeNode(wrapper);
+  const shadow = new FakeShadowRoot(host);
+  const innerHost = new FakeNode(shadow);
+  const innerShadow = new FakeShadowRoot(innerHost);
+  const button = new FakeNode(innerShadow);
+  const sibling = new FakeNode(document);
+  const contains = (a: FakeNode, n: FakeNode | null) =>
+    containsComposed(a as unknown as Node, n as unknown as Node | null);
+
+  void test("contains a light-DOM descendant", () =>
+    assert.equal(contains(wrapper, host), true));
+
+  void test("contains itself", () => assert.equal(contains(host, host), true));
+
+  void test("contains an element inside a descendant's shadow tree", () =>
+    assert.equal(contains(wrapper, innerHost), true));
+
+  void test("contains an element inside nested shadow trees", () =>
+    assert.equal(contains(wrapper, button), true));
+
+  void test("does not contain an unrelated element", () =>
+    assert.equal(contains(sibling, button), false));
+
+  void test("does not contain null", () =>
+    assert.equal(contains(wrapper, null), false));
 });
