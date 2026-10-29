@@ -158,7 +158,7 @@ export class RectDetector {
     rect: Rect<"element-border", "layout-viewport">,
   ) {
     for (const e of this.pointerCrawler.crawl(rect)) {
-      // WHY: the crawler resolves points into shadow trees, which Node.contains() does not cross.
+      // WHY: cropByParent() also asks this for overflow-clipping ancestors; a false negative here drops every hint inside them.
       if (containsComposed(element, e)) return true;
     }
     return false;

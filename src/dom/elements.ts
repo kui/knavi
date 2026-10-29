@@ -77,7 +77,8 @@ export function* traverseParent(
  * or one of its descendants.
  */
 export function containsComposed(ancestor: Node, node: Node | null): boolean {
-  for (let n = node; n; ) {
+  let n = node;
+  while (n) {
     if (ancestor.contains(n)) return true;
     const root = n.getRootNode();
     n = root instanceof ShadowRoot ? root.host : null;
