@@ -71,6 +71,21 @@ export function* traverseParent(
   }
 }
 
+/**
+ * Like `ancestor.contains(node)`, but also returns true when `node` lives in
+ * a shadow tree hosted (possibly through nested shadow roots) by `ancestor`
+ * or one of its descendants.
+ */
+export function containsComposed(ancestor: Node, node: Node | null): boolean {
+  let n = node;
+  while (n) {
+    if (ancestor.contains(n)) return true;
+    const root = n.getRootNode();
+    n = root instanceof ShadowRoot ? root.host : null;
+  }
+  return false;
+}
+
 export function* traverseFirstChild(
   element: Element,
   includeSelf?: boolean,

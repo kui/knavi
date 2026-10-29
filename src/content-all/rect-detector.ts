@@ -1,5 +1,9 @@
 import { Cache, CachedFetcher } from "../lib/cache";
-import { getBoundingClientRect, traverseParent } from "../dom/elements";
+import {
+  containsComposed,
+  getBoundingClientRect,
+  traverseParent,
+} from "../dom/elements";
 import { filter, first, flatMap } from "../lib/iters";
 import { Timers } from "../lib/metrics";
 import { PointerCrawler } from "./rect-detector-pointer-crawler";
@@ -154,7 +158,8 @@ export class RectDetector {
     rect: Rect<"element-border", "layout-viewport">,
   ) {
     for (const e of this.pointerCrawler.crawl(rect)) {
-      if (Boolean(e) && element.contains(e)) return true;
+      // WHY: cropByParent() also asks this for overflow-clipping ancestors; a false negative here drops every hint inside them.
+      if (containsComposed(element, e)) return true;
     }
     return false;
   }

@@ -1,4 +1,11 @@
-import { test, expect, gotoTest, attachHints, findHintFor } from "./fixtures";
+import {
+  test,
+  expect,
+  gotoTest,
+  attachHints,
+  findHintFor,
+  hit,
+} from "./fixtures";
 
 test.describe("hint placement", () => {
   test.afterEach(async ({ page }) => {
@@ -61,6 +68,45 @@ test.describe("hint placement", () => {
     const count = await hints.count();
     // WHY: 4 <area> elements (default, rect, circle, poly)
     expect(count).toBeGreaterThanOrEqual(4);
+
+    await page.keyboard.up("Space");
+  });
+
+  test("shadow-in-overflow-hidden: shadow controls get hints", async ({
+    page,
+  }) => {
+    await gotoTest(page, "shadow-in-overflow-hidden.html");
+    await attachHints(page);
+
+    // WHY: Playwright CSS locators pierce open shadow roots.
+    await findHintFor(page, "#shadow-play");
+    await findHintFor(page, "#shadow-mute");
+
+    await page.keyboard.up("Space");
+  });
+
+  test("shadow-in-overflow-hidden: hitting a shadow control clicks it", async ({
+    page,
+  }) => {
+    await gotoTest(page, "shadow-in-overflow-hidden.html");
+    await hit(page, "#shadow-play");
+
+    await expect(page.locator("body")).toHaveAttribute(
+      "data-clicked",
+      "shadow-play",
+    );
+  });
+
+  test("shadow-in-overflow-hidden: element covered by a shadow overlay gets no hint", async ({
+    page,
+  }) => {
+    await gotoTest(page, "shadow-in-overflow-hidden.html");
+    await attachHints(page);
+
+    await findHintFor(page, "#light-button");
+    await expect(findHintFor(page, "#occluded-button")).rejects.toThrow(
+      /No hint found/,
+    );
 
     await page.keyboard.up("Space");
   });
