@@ -7,6 +7,8 @@ cd "$(dirname "$0")/.."
 main() {
   local v file
   v="$(scripts/version.ts)"
+  # WHY: set -e does not catch a command that succeeds with empty output, which would otherwise create changelog/.md.
+  [[ -n "$v" ]] || { echo "scripts/version.ts printed no version" >&2; exit 1; }
   file="changelog/$v.md"
   ensure_file_exists "$v" "$file"
   should_start_with_version_header "$v" "$file"
