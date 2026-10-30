@@ -287,6 +287,8 @@ HANDLERS.push({
     };
   },
   isSupported(target) {
+    // WHY: an editable element inherits `cursor: pointer` from a link around it, which says nothing about clicking it.
+    if (startsEditing(target)) return false;
     const parents = takeWhile(traverseParent(target, true), (element) => {
       if (!(element instanceof HTMLElement || element instanceof SVGElement))
         return false;
