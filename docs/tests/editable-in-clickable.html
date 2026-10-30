@@ -41,6 +41,16 @@
 
     <section>
       <p>
+        A contenteditable inside a link, which inherits the link's
+        <code>cursor: pointer</code>. It should get its own Edit hint.
+      </p>
+      <a id="link-wrapper" class="button" href="#">
+        <span id="link-ce" class="editable" contenteditable>editable</span>
+      </a>
+    </section>
+
+    <section>
+      <p>
         The same inside a shadow tree. The textarea should get its own Edit
         hint.
       </p>

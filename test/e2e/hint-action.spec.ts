@@ -71,8 +71,8 @@ test.describe("editable elements inside clickable elements", () => {
     await page.keyboard.up("Space").catch(() => void 0);
   });
 
-  for (const target of ["#light-ta", "#light-ce", "#shadow-ta"]) {
-    test(`hitting ${target} inside role=button focuses it`, async ({
+  for (const target of ["#light-ta", "#light-ce", "#link-ce", "#shadow-ta"]) {
+    test(`hitting ${target} inside a clickable element focuses it`, async ({
       page,
     }) => {
       await gotoTest(page, "editable-in-clickable.html");
