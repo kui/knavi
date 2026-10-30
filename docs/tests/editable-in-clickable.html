@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Editable elements inside clickable elements</title>
+    <style>
+      body {
+        margin: 40px;
+        font-family: sans-serif;
+      }
+      section {
+        margin-bottom: 32px;
+      }
+      .button {
+        display: inline-block;
+        padding: 20px;
+        background: #eee;
+      }
+      .editable {
+        display: inline-block;
+        width: 160px;
+        border: 1px solid #999;
+      }
+      #editor {
+        padding: 20px;
+        border: 1px solid #999;
+      }
+    </style>
+  </head>
+  <body>
+    <section>
+      <p>
+        A textarea and a contenteditable inside a
+        <code>role=button</code> element. Each should get its own Edit hint.
+      </p>
+      <div id="light-button" class="button" role="button" tabindex="0">
+        <textarea id="light-ta"></textarea>
+        <div id="light-ce" class="editable" contenteditable>editable</div>
+      </div>
+    </section>
+
+    <section>
+      <p>
+        The same inside a shadow tree. The textarea should get its own Edit
+        hint.
+      </p>
+      <div id="shadow-button" class="button" role="button" tabindex="0">
+        <test-shadow-textarea id="shadow-host"></test-shadow-textarea>
+      </div>
+    </section>
+
+    <section>
+      <p>
+        A link in a rich text editor. The bold text inside the link should
+        still click the link.
+      </p>
+      <div id="editor" contenteditable>
+        text <a id="editor-link" href="#"><b id="editor-bold">bold link</b></a>
+      </div>
+    </section>
+
+    <script>
+      document.getElementById("editor-link").addEventListener("click", (e) => {
+        e.preventDefault();
+        document.body.dataset.clicked = "editor-link";
+      });
+      customElements.define(
+        "test-shadow-textarea",
+        class extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: "open" }).innerHTML = `
+              <textarea id="shadow-ta"></textarea>`;
+          }
+        },
+      );
+    </script>
+  </body>
+</html>
