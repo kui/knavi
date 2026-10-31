@@ -241,7 +241,11 @@ HANDLERS.push({
     };
   },
   isSupported(target) {
-    for (const element of traverseParent(target, true))
+    // WHY: a real click on an editable element starts editing it instead of activating a clickable ancestor.
+    const candidates = startsEditing(target)
+      ? [target]
+      : traverseParent(target, true);
+    for (const element of candidates)
       if (
         (element instanceof HTMLElement || element instanceof SVGElement) &&
         element.matches(CLICKABLE_SELECTORS)
@@ -253,6 +257,21 @@ HANDLERS.push({
     await simulateClick(target, options);
   },
 });
+
+/**
+ * True for an editable element other than content that only inherits
+ * editability from an enclosing editing host, so that a link inside a rich
+ * text editor still gathers its descendants.
+ */
+function startsEditing(target: Element): boolean {
+  if (!isEditable(target)) return false;
+  if (!(target instanceof HTMLElement) || !target.isContentEditable)
+    return true;
+  return !(
+    target.parentElement instanceof HTMLElement &&
+    target.parentElement.isContentEditable
+  );
+}
 
 const CLICKABLE_CURSOR_TYPES = new Set([
   "pointer",
@@ -268,6 +287,8 @@ HANDLERS.push({
     };
   },
   isSupported(target) {
+    // WHY: an editable element inherits `cursor: pointer` from a link around it, which says nothing about clicking it.
+    if (startsEditing(target)) return false;
     const parents = takeWhile(traverseParent(target, true), (element) => {
       if (!(element instanceof HTMLElement || element instanceof SVGElement))
         return false;
