@@ -9,6 +9,7 @@ import { Coordinates, Rect } from "../dom/rects";
 import settingsClient from "../lib/settings-client";
 import { printError } from "../lib/errors";
 import { FrameRegistry } from "./frame-registration";
+import { dropNestedHeuristicDuplicates } from "./hint-dedupe";
 
 interface ElementProfile {
   id: ElementId;
@@ -17,6 +18,7 @@ interface ElementProfile {
   descriptions: ActionDescriptions;
   handle: (options: ActionOptions) => Promise<void> | void;
   actualTarget?: HTMLElement | SVGElement;
+  heuristic: boolean;
 }
 
 interface AggregationContext {
@@ -120,7 +122,7 @@ export class RectAggregatorContentAll {
     ];
     timers.print();
     detector.printMetrics();
-    return bondByActualTarget(elementProfiles);
+    return dropNestedHeuristicDuplicates(bondByActualTarget(elementProfiles));
   }
 
   private async propagateMessage(
