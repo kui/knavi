@@ -65,3 +65,32 @@ test.describe("hint actions", () => {
     await page.keyboard.up("Space");
   });
 });
+
+test.describe("editable elements inside clickable elements", () => {
+  test.afterEach(async ({ page }) => {
+    await page.keyboard.up("Space").catch(() => void 0);
+  });
+
+  for (const target of ["#light-ta", "#light-ce", "#link-ce", "#shadow-ta"]) {
+    test(`hitting ${target} inside a clickable element focuses it`, async ({
+      page,
+    }) => {
+      await gotoTest(page, "editable-in-clickable.html");
+      await hit(page, target);
+
+      await expect(page.locator(target)).toBeFocused({ timeout: 3_000 });
+    });
+  }
+
+  test("hitting a link in a rich text editor clicks the link", async ({
+    page,
+  }) => {
+    await gotoTest(page, "editable-in-clickable.html");
+    await hit(page, "#editor-link");
+
+    await expect(page.locator("body")).toHaveAttribute(
+      "data-clicked",
+      "editor-link",
+    );
+  });
+});

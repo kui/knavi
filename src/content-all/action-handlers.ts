@@ -252,8 +252,12 @@ HANDLERS.push({
     };
   },
   isSupported(target) {
+    // WHY: a real click on an editable element starts editing it instead of activating a clickable ancestor.
     // WHY: an element inside a shadow tree hosted within a link targets the link, as it would in light DOM (#129).
-    for (const element of traverseComposedParent(target, true))
+    const candidates = startsEditing(target)
+      ? [target]
+      : traverseComposedParent(target, true);
+    for (const element of candidates)
       if (
         (element instanceof HTMLElement || element instanceof SVGElement) &&
         element.matches(CLICKABLE_SELECTORS)
@@ -265,6 +269,21 @@ HANDLERS.push({
     await simulateClick(target, options);
   },
 });
+
+/**
+ * True for an editable element other than content that only inherits
+ * editability from an enclosing editing host, so that a link inside a rich
+ * text editor still gathers its descendants.
+ */
+function startsEditing(target: Element): boolean {
+  if (!isEditable(target)) return false;
+  if (!(target instanceof HTMLElement) || !target.isContentEditable)
+    return true;
+  return !(
+    target.parentElement instanceof HTMLElement &&
+    target.parentElement.isContentEditable
+  );
+}
 
 const CLICKABLE_CURSOR_TYPES = new Set([
   "pointer",
@@ -281,6 +300,8 @@ HANDLERS.push({
     };
   },
   isSupported(target) {
+    // WHY: an editable element inherits `cursor: pointer` from a link around it, which says nothing about clicking it.
+    if (startsEditing(target)) return false;
     const parents = takeWhile(traverseParent(target, true), (element) => {
       if (!(element instanceof HTMLElement || element instanceof SVGElement))
         return false;
