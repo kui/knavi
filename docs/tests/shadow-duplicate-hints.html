@@ -24,6 +24,11 @@
         display: inline-flex;
         cursor: pointer;
       }
+      #e-wrapper {
+        padding: 20px;
+        background: #f4f4f4;
+        cursor: pointer;
+      }
       #c-stack {
         position: relative;
         width: 200px;
@@ -83,7 +88,21 @@
       </div>
     </section>
 
+    <section>
+      <p>
+        E: a <code>cursor: pointer</code> control inside a shadow tree, within a
+        <code>cursor: pointer</code> wrapper as large as a whole post. The
+        control should keep its own hint instead of folding into the wrapper.
+      </p>
+      <div id="e-wrapper">
+        <test-pointer-control id="e-host"></test-pointer-control>
+      </div>
+    </section>
+
     <script>
+      document.getElementById("e-wrapper").addEventListener("click", () => {
+        document.body.dataset.clicked ??= "e-wrapper";
+      });
       for (const id of ["b-host", "d-button", "c-front"]) {
         document.getElementById(id).addEventListener("click", () => {
           document.body.dataset.clicked = id;
@@ -96,6 +115,21 @@
             super();
             this.attachShadow({ mode: "open" }).innerHTML = `
               <div style="width: 200px; height: 40px; background: #ddd; cursor: pointer"></div>`;
+          }
+        },
+      );
+      customElements.define(
+        "test-pointer-control",
+        class extends HTMLElement {
+          constructor() {
+            super();
+            const root = this.attachShadow({ mode: "open" });
+            root.innerHTML = `
+              <div style="height: 20px"></div>
+              <div id="e-control" style="width: 100px; height: 20px; background: #ddd; cursor: pointer"></div>`;
+            root.getElementById("e-control").addEventListener("click", () => {
+              document.body.dataset.clicked = "e-control";
+            });
           }
         },
       );

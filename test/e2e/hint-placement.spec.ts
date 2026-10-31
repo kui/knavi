@@ -158,6 +158,18 @@ test.describe("duplicate hints across shadow boundaries", () => {
     );
   });
 
+  test("hitting a pointer control in a shadow tree inside a pointer wrapper clicks the control", async ({
+    page,
+  }) => {
+    await gotoTest(page, "shadow-duplicate-hints.html");
+    await hit(page, "#e-control");
+
+    await expect(page.locator("body")).toHaveAttribute(
+      "data-clicked",
+      "e-control",
+    );
+  });
+
   // WHY: stacked siblings have no ancestor relation, so the dedupe leaves both (#129).
   test.fail("stacked pointer siblings get one hint", async ({ page }) => {
     await gotoTest(page, "shadow-duplicate-hints.html");
