@@ -8,10 +8,9 @@ export interface DedupeCandidate {
 }
 
 /**
- * Drop a heuristic (`cursor`-based) candidate when another candidate with the
- * same rects is its composed ancestor or descendant, and that other candidate
- * is either a real control or the inner heuristic one, which is what a real
- * mouse click would hit.
+ * Drop a heuristic (`cursor`-based) candidate when a real control with the
+ * same rects is its composed ancestor or descendant, since the control is what
+ * a real mouse click would hit.
  */
 export function dropNestedHeuristicDuplicates<C extends DedupeCandidate>(
   candidates: C[],
@@ -29,11 +28,10 @@ export function dropNestedHeuristicDuplicates<C extends DedupeCandidate>(
 }
 
 function supersedes(other: DedupeCandidate, heuristic: DedupeCandidate) {
-  if (other === heuristic) return false;
-  const inner = target(other);
-  const outer = target(heuristic);
-  if (containsComposed(outer, inner)) return true;
-  return !other.heuristic && containsComposed(inner, outer);
+  if (other.heuristic) return false;
+  const control = target(other);
+  const guess = target(heuristic);
+  return containsComposed(guess, control) || containsComposed(control, guess);
 }
 
 function target(candidate: DedupeCandidate): Element {

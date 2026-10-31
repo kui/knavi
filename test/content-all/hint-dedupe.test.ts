@@ -70,8 +70,15 @@ void describe("dropNestedHeuristicDuplicates", () => {
       [wrapper],
     ));
 
-  void test("keeps the inner one of two heuristic candidates across a shadow boundary", () =>
+  void test("drops a heuristic host around a real control in its shadow tree", () =>
+    assert.deepEqual(
+      survivors(candidate(host, true), candidate(inner, false)),
+      [inner],
+    ));
+
+  void test("keeps both of two nested heuristic candidates", () =>
     assert.deepEqual(survivors(candidate(host, true), candidate(inner, true)), [
+      host,
       inner,
     ]));
 

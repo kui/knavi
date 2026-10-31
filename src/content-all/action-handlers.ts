@@ -3,7 +3,6 @@ import {
   isEditable,
   isScrollable,
   traverseComposedParent,
-  traverseParent,
 } from "../dom/elements";
 import { first, flatMap, last, takeWhile } from "../lib/iters";
 
@@ -281,13 +280,20 @@ HANDLERS.push({
     };
   },
   isSupported(target) {
-    const parents = takeWhile(traverseParent(target, true), (element) => {
-      if (!(element instanceof HTMLElement || element instanceof SVGElement))
-        return false;
-      const cursorStyle = element.computedStyleMap().get("cursor")?.toString();
-      if (!cursorStyle) return false;
-      return CLICKABLE_CURSOR_TYPES.has(cursorStyle);
-    });
+    // WHY: a pointer element inside a pointer host's shadow tree targets the host, as it would in light DOM (#129).
+    const parents = takeWhile(
+      traverseComposedParent(target, true),
+      (element) => {
+        if (!(element instanceof HTMLElement || element instanceof SVGElement))
+          return false;
+        const cursorStyle = element
+          .computedStyleMap()
+          .get("cursor")
+          ?.toString();
+        if (!cursorStyle) return false;
+        return CLICKABLE_CURSOR_TYPES.has(cursorStyle);
+      },
+    );
     const actualTarget = last(parents);
     if (
       actualTarget instanceof HTMLElement ||
