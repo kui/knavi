@@ -46,12 +46,8 @@ test.describe("cycle key on overlapping hints", () => {
 
     for (const ch of topHintText) await page.keyboard.press(ch);
 
-    const initialHit = await page
-      .locator(".hint[data-state='hit']")
-      .getAttribute("data-hint");
-    expect(initialHit).toBe(topHintText);
-
     const hit = page.locator(".hint[data-state='hit']");
+    await expect(hit).toHaveAttribute("data-hint", topHintText);
     await expect(hit).toHaveAttribute("data-cycle-key", CYCLE_KEY);
     await expect(hit).toHaveAttribute("data-cycle-count", "1");
     await expect(hit).toHaveAttribute("data-cycle-total", "2");
@@ -83,10 +79,7 @@ test.describe("cycle key on overlapping hints", () => {
 
     await page.keyboard.press(CYCLE_KEY);
 
-    const cycledHit = await page
-      .locator(".hint[data-state='hit']")
-      .getAttribute("data-hint");
-    expect(cycledHit).toBe(buriedHintText);
+    await expect(hit).toHaveAttribute("data-hint", buriedHintText);
 
     await page.keyboard.press(ACTION_KEY);
 
