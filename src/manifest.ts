@@ -21,6 +21,7 @@ export default function manifest(pkg: Pkg): chrome.runtime.ManifestV3 {
         js: ["content-all.js"],
         run_at: "document_start",
         all_frames: true,
+        match_origin_as_fallback: true,
       },
       {
         matches: ["<all_urls>"],
