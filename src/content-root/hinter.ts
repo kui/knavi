@@ -19,6 +19,10 @@ interface HintContext {
 export class HinterContentRoot {
   private context: HintContext | null = null;
   private hintLetters = "";
+  /* WHY: the root frame loads its settings apart from the frame that catches
+     the magic key, and right after install that load waits on the slow
+     default CSS fetch, so AttachHintsInTab can arrive before setup(). */
+  private readonly setupDone = Promise.withResolvers<void>();
 
   constructor(
     private rectAggregator: RectAggregatorClient,
@@ -27,20 +31,27 @@ export class HinterContentRoot {
 
   setup(hintLetters: string) {
     this.hintLetters = hintLetters;
+    this.setupDone.resolve();
   }
 
   async attachHints() {
     if (this.context)
       throw Error("Ilegal state invocation: already started hinting");
-    if (this.hintLetters.length === 0)
-      throw Error("Ilegal state invocation: hintLetters is empty");
 
-    this.context = {
+    const context: HintContext = {
       inputSequence: [],
       targets: [],
     };
+    this.context = context;
 
+    await this.setupDone.promise;
     await waitUntil(() => Boolean(document.body));
+    // WHY: the magic key may be released while waiting; rendering now would leave hints no session can remove.
+    if (this.context !== context) return;
+    if (this.hintLetters.length === 0) {
+      this.context = null;
+      throw Error("Ilegal state invocation: hintLetters is empty");
+    }
 
     const hintTextGenerator = this.generateHintTexts();
     for await (const elementRects of this.rectAggregator.aggregate()) {
@@ -54,7 +65,7 @@ export class HinterContentRoot {
           ([er, hint]): HintedElement => ({ state: "init", hint, ...er }),
         ),
       ];
-      this.context.targets.push(...targets);
+      context.targets.push(...targets);
       this.view.render(targets);
     }
   }
