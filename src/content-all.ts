@@ -21,7 +21,7 @@ const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
 const rectAggregator = new RectAggregator(frameRegistry);
 const blurer = new Blurer(frameRegistry);
 
-async function setupKeyboardHandler(signal?: AbortSignal) {
+async function setupKeyboardHandler() {
   const [setting, matchedBlacklist] = await Promise.all([
     settingsClient.get([
       "magicKey",
@@ -34,11 +34,6 @@ async function setupKeyboardHandler(signal?: AbortSignal) {
     ]),
     settingsClient.matchBlacklist(location.href),
   ]);
-  /* WHY: setup() replaces the key matchers, dropping the held magic key from
-     their history, so the next keyup would end the session as if the magic
-     key were released. A session can start while the settings above load,
-     e.g. right after install, when the default back-fill fires onChanged. */
-  while (hinterClient.isHinting) await wait(200, signal);
   keyboardHandler.setup(setting, matchedBlacklist);
   console.debug("settings loaded");
   document.documentElement.dataset.knaviReady = "1";
@@ -64,8 +59,10 @@ chrome.storage.onChanged.addListener((changes) => {
     debounceController?.abort();
     debounceController = new AbortController();
     const { signal } = debounceController;
-    await wait(200, signal);
-    await setupKeyboardHandler(signal);
+    do {
+      await wait(200, signal);
+    } while (hinterClient.isHinting);
+    await setupKeyboardHandler();
   })().catch((e) => {
     if (e instanceof DOMException && e.name === "AbortError") return;
     printError(e);

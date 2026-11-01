@@ -108,4 +108,20 @@ void describe("KeyboardHandlerContentAll", () => {
     handler.handleKeydown(keyEvent("keydown", "a", "KeyA"));
     assert.deepEqual(hinter.calls, ["attachHints", "cycleHint"]);
   });
+
+  void test("reloading unchanged settings while the magic key is held keeps the session", () => {
+    startHinting();
+    handler.setup({ ...SETTINGS }, []);
+
+    handler.handleKeydown(keyEvent("keydown", "a", "KeyA"));
+    handler.handleKeyup(keyEvent("keyup", "a", "KeyA"));
+    assert.deepEqual(hinter.calls, ["attachHints", "hitHint:a"]);
+  });
+
+  void test("a changed magic key takes effect on reload", () => {
+    handler.setup({ ...SETTINGS, magicKey: "Shift+Space" }, []);
+
+    handler.handleKeydown(keyEvent("keydown", " ", "Space"));
+    assert.deepEqual(hinter.calls, []);
+  });
 });

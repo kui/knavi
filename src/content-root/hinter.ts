@@ -46,7 +46,8 @@ export class HinterContentRoot {
 
     await this.setupDone.promise;
     await waitUntil(() => Boolean(document.body));
-    // WHY: the magic key may be released while waiting; rendering now would leave hints no session can remove.
+    /* WHY: the magic key may be released at any await below; rendering after
+       that would leave hints no session can remove. */
     if (this.context !== context) return;
     if (this.hintLetters.length === 0) {
       this.context = null;
@@ -55,6 +56,7 @@ export class HinterContentRoot {
 
     const hintTextGenerator = this.generateHintTexts();
     for await (const elementRects of this.rectAggregator.aggregate()) {
+      if (this.context !== context) break;
       if (!this.view.isStarted()) this.view.start();
       if (elementRects.length === 0) continue;
       const hintTexts = take(hintTextGenerator, elementRects.length);
@@ -172,7 +174,8 @@ export class HinterContentRoot {
      * tab); a second AttachHints arriving meanwhile must not see a stale
      * context and throw "already started hinting". */
     this.context = null;
-    this.view.remove();
+    // WHY: the view starts on the first rects, which may not have arrived yet.
+    if (this.view.isStarted()) this.view.remove();
     await this.rectAggregator.action(
       execute ? context.hitTarget?.id : undefined,
       options,

@@ -63,13 +63,14 @@ export class RectAggregatorClient {
     elementId: ElementId | undefined,
     options: ActionOptions,
   ) {
-    if (!this.callback) throw Error("Illegal state: not aggregating");
     /* WHY: Clear the callback synchronously before signalling "Complete" (which
      * ends the aggregate() loop on a later micro-task) so a second aggregate()
-     * call from a concurrent AttachHints does not throw "already fetching". */
+     * call from a concurrent AttachHints does not throw "already fetching".
+     * No callback means the session ended before aggregate() started, while
+     * the root frame's settings were still loading. */
     const callback = this.callback;
     this.callback = null;
-    callback("Complete");
+    callback?.("Complete");
     if (elementId)
       return sendToRuntime("ExecuteAction", { id: elementId, options });
   }
