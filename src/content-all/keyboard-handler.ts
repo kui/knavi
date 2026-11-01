@@ -5,7 +5,17 @@ import { isEditable } from "../dom/elements";
 import { isSingleLetter } from "../lib/strings";
 import { printError } from "../lib/errors";
 
+type MatcherKey =
+  | "magicKey"
+  | "blurKey"
+  | "stickyKey"
+  | "actionKey"
+  | "cancelKey"
+  | "cycleKey";
+type KeySettings = Pick<Settings, MatcherKey | "hints">;
+
 export class KeyboardHandlerContentAll {
+  private settings: KeySettings | null = null;
   private hitMatcher: KeyHoldMatcher | null = null;
   private blurMatcher: KeyHoldMatcher | null = null;
   private stickyMatcher: KeyHoldMatcher | null = null;
@@ -25,38 +35,24 @@ export class KeyboardHandlerContentAll {
     private readonly hinter: Hinter,
   ) {}
 
-  setup(
-    settings: Pick<
-      Settings,
-      | "magicKey"
-      | "blurKey"
-      | "hints"
-      | "stickyKey"
-      | "actionKey"
-      | "cancelKey"
-      | "cycleKey"
-    >,
-    matchedBlacklist: string[],
-  ) {
+  setup(settings: KeySettings, matchedBlacklist: string[]) {
+    const prev = this.settings;
+    this.settings = settings;
+    /* WHY: a matcher holds the keys currently pressed. Rebuilding it while the
+       magic key is held (e.g. the default back-fill right after install fires
+       a reload mid-session) would make the next keyup end the session as if
+       the magic key were released, so keep it when its pattern is unchanged. */
+    const matcher = (key: MatcherKey, current: KeyHoldMatcher | null) => {
+      if (prev?.[key] === settings[key]) return current;
+      return settings[key] === "" ? null : KeyHoldMatcher.parse(settings[key]);
+    };
     this.hintLetters = settings.hints;
-    this.hitMatcher =
-      settings.magicKey === "" ? null : KeyHoldMatcher.parse(settings.magicKey);
-    this.blurMatcher =
-      settings.blurKey === "" ? null : KeyHoldMatcher.parse(settings.blurKey);
-    this.stickyMatcher =
-      settings.stickyKey === ""
-        ? null
-        : KeyHoldMatcher.parse(settings.stickyKey);
-    this.actionMatcher =
-      settings.actionKey === ""
-        ? null
-        : KeyHoldMatcher.parse(settings.actionKey);
-    this.cancelMatcher =
-      settings.cancelKey === ""
-        ? null
-        : KeyHoldMatcher.parse(settings.cancelKey);
-    this.cycleMatcher =
-      settings.cycleKey === "" ? null : KeyHoldMatcher.parse(settings.cycleKey);
+    this.hitMatcher = matcher("magicKey", this.hitMatcher);
+    this.blurMatcher = matcher("blurKey", this.blurMatcher);
+    this.stickyMatcher = matcher("stickyKey", this.stickyMatcher);
+    this.actionMatcher = matcher("actionKey", this.actionMatcher);
+    this.cancelMatcher = matcher("cancelKey", this.cancelMatcher);
+    this.cycleMatcher = matcher("cycleKey", this.cycleMatcher);
     this.matchedBlacklist = matchedBlacklist;
   }
 
