@@ -21,9 +21,6 @@ export default function manifest(pkg: Pkg): chrome.runtime.ManifestV3 {
         js: ["content-all.js"],
         run_at: "document_start",
         all_frames: true,
-        /* WHY: without this, frames with no URL origin of their own (src-less
-           about:blank, srcdoc, data:, blob:) get no content script, so their
-           contents never get hints. E.g. the Hatena Bookmark button iframe. */
         match_origin_as_fallback: true,
       },
       {
