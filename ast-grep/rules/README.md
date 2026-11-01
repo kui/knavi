@@ -18,6 +18,8 @@ rationale keyword.
 Keyword meanings:
 
 - **WHY** — motivation / non-obvious context the code alone cannot convey.
+  Not what an API, manifest key, or platform feature does: that is in its
+  documentation, so restating it (even with a `WHY:` prefix) is still noise.
 - **HACK** — workaround for an upstream/environment issue.
 - **SAFETY** — invariant needed for memory / concurrency correctness.
 - **INVARIANT** — precondition/postcondition contract that must hold.
