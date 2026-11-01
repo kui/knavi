@@ -1,0 +1,23 @@
+<p>
+  A src-less (about:blank) iframe whose content is written by the parent, like
+  the Hatena Bookmark button widget.
+</p>
+
+<div id="container"></div>
+<p id="result">not clicked</p>
+
+<script>
+  const iframe = document.createElement("iframe");
+  iframe.style.width = "300px";
+  iframe.style.height = "80px";
+  document.getElementById("container").appendChild(iframe);
+
+  const doc = iframe.contentDocument;
+  const button = doc.createElement("button");
+  button.textContent = "button in about:blank iframe";
+  button.style.margin = "30px 0 0 60px";
+  button.addEventListener("click", () => {
+    document.getElementById("result").textContent = "clicked";
+  });
+  doc.body.appendChild(button);
+</script>
