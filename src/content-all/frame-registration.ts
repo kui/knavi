@@ -56,7 +56,8 @@ interface ParentFrameIdResponse {
  * cross-frame, because frameId is needed before any chrome.runtime relay can
  * address the parent/child by frameId. Tracks child iframe to frameId
  * mappings via postMessage handshake and resolves this frame's
- * parentFrameId.
+ * parentFrameId. Chrome has no content-script API that maps a Window or
+ * iframe element to a frameId (`runtime.getFrameId` is Firefox-only; see #90).
  */
 export class FrameRegistry {
   private readonly iframeByFrameId = new Map<number, HTMLIFrameElement>();
