@@ -1,37 +1,21 @@
 import { Timers } from "../lib/metrics";
 import { Rect } from "../dom/rects";
 
-interface Area {
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-}
-
-const GRID_POINTS = 4;
+const MIN_POINT_SPACING_PX = 4;
+const EDGE_INSET_PX = 1;
 
 type HitTest = (x: number, y: number) => Element | null;
 
 export class PointerCrawler {
   private timers = new Timers("PointerCrawler");
 
-  constructor(
-    private readonly stepPx: number,
-    private readonly hitTest: HitTest = elementFromPointComposed,
-  ) {}
+  constructor(private readonly hitTest: HitTest = elementFromPointComposed) {}
 
   *crawl(
     crawlArea: Rect<CoordinateType, "layout-viewport">,
   ): Generator<Element | null> {
     const alreadyCrawled = new Set<Element | null>();
-    const step = this.stepPx;
-    const actualArea = {
-      minX: Math.ceil(crawlArea.x / step) * step,
-      maxX: Math.floor((crawlArea.x + crawlArea.width) / step) * step,
-      minY: Math.ceil(crawlArea.y / step) * step,
-      maxY: Math.floor((crawlArea.y + crawlArea.height) / step) * step,
-    };
-    for (const [x, y] of this.generateGridPoints(actualArea)) {
+    for (const [x, y] of samplePoints(crawlArea)) {
       const stop = this.timers.start("elementFromPoint");
       const e = this.hitTest(x, y);
       stop();
@@ -41,19 +25,46 @@ export class PointerCrawler {
     }
   }
 
-  private *generateGridPoints(a: Area): Generator<[number, number]> {
-    const step = this.stepPx;
-    const xStep =
-      Math.max(Math.floor((a.maxX - a.minX) / GRID_POINTS / step), 1) * step;
-    const yStep =
-      Math.max(Math.floor((a.maxY - a.minY) / GRID_POINTS / step), 1) * step;
-    for (let x = a.minX; x < a.maxX; x += xStep)
-      for (let y = a.minY; y < a.maxY; y += yStep) yield [x, y];
-  }
-
   printMetrics() {
     this.timers.print();
   }
+}
+
+/**
+ * Yield the centre of the rect, then a grid that reaches to just inside each
+ * edge, nearest to the centre first. Points along the edges let an element
+ * that is visible only in a thin strip still be hit, and corners come last
+ * because rounded corners and neighbours overlapping the edge miss there most.
+ */
+function* samplePoints({
+  x,
+  y,
+  width,
+  height,
+}: Rect<CoordinateType, "layout-viewport">): Generator<[number, number]> {
+  const cx = x + width / 2;
+  const cy = y + height / 2;
+  yield [cx, cy];
+  const xs = axisPoints(x, width);
+  const ys = axisPoints(y, height);
+  const grid = xs.flatMap((px) => ys.map((py): [number, number] => [px, py]));
+  const distance = ([px, py]: [number, number]) => Math.hypot(px - cx, py - cy);
+  yield* grid.sort((a, b) => distance(a) - distance(b));
+}
+
+/**
+ * Evenly spaced points from just inside the start to just inside the end.
+ * INVARIANT: the count is even, so no point falls on the centre, which
+ * samplePoints() tests first.
+ */
+function axisPoints(start: number, length: number): number[] {
+  const inset = Math.min(EDGE_INSET_PX, length / 4);
+  const span = length - 2 * inset;
+  const count = span / 3 >= MIN_POINT_SPACING_PX ? 4 : 2;
+  return Array.from(
+    { length: count },
+    (_, i) => start + inset + (span * i) / (count - 1),
+  );
 }
 
 function elementFromPointComposed(x: number, y: number): Element | null {

@@ -1,0 +1,66 @@
+<style>
+  a {
+    position: absolute;
+    display: block;
+    background-color: salmon;
+  }
+  .overlay {
+    position: absolute;
+    background-color: rgba(100, 100, 100, 0.9);
+  }
+</style>
+
+<p>
+  Links covered by a non-clickable overlay except for a strip along one edge, or
+  except around the centre, still get a hint.
+</p>
+
+<a
+  id="top-strip"
+  href="#"
+  style="left: 40px; top: 80px; width: 120px; height: 400px"
+></a>
+<div
+  class="overlay"
+  style="left: 30px; top: 120px; width: 140px; height: 370px"
+></div>
+
+<a
+  id="bottom-strip"
+  href="#"
+  style="left: 200px; top: 80px; width: 120px; height: 400px"
+></a>
+<div
+  class="overlay"
+  style="left: 190px; top: 70px; width: 140px; height: 370px"
+></div>
+
+<a
+  id="left-strip"
+  href="#"
+  style="left: 360px; top: 80px; width: 400px; height: 40px"
+></a>
+<div
+  class="overlay"
+  style="left: 370px; top: 70px; width: 400px; height: 60px"
+></div>
+
+<a
+  id="right-strip"
+  href="#"
+  style="left: 360px; top: 200px; width: 400px; height: 40px"
+></a>
+<div
+  class="overlay"
+  style="left: 350px; top: 190px; width: 400px; height: 60px"
+></div>
+
+<a
+  id="small-covered-centre"
+  href="#"
+  style="left: 360px; top: 320px; width: 7px; height: 7px"
+></a>
+<div
+  class="overlay"
+  style="left: 362px; top: 322px; width: 3px; height: 3px"
+></div>

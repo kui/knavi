@@ -264,4 +264,30 @@ test.describe("visibility", () => {
     expect(link.y).toBeLessThan(0);
     await expectHintAt(page, { x: link.x, y: 0 });
   });
+
+  test.describe("small-elements", () => {
+    for (const size of [5, 6, 7])
+      for (const offset of [0, 1, 2, 3])
+        test(`a ${size} px link at offset ${offset} gets a hint`, async ({
+          page,
+        }) => {
+          await gotoTest(page, "small-elements.html");
+          await attachHints(page);
+          await expectHintAtTopLeftOf(page, `#s${size}-o${offset}`);
+        });
+  });
+
+  for (const id of [
+    "top-strip",
+    "bottom-strip",
+    "left-strip",
+    "right-strip",
+    "small-covered-centre",
+  ]) {
+    test(`edge-strips: #${id} gets a hint`, async ({ page }) => {
+      await gotoTest(page, "edge-strips.html");
+      await attachHints(page);
+      await expectHintAtTopLeftOf(page, `#${id}`);
+    });
+  }
 });
