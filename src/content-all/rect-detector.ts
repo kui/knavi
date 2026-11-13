@@ -19,14 +19,14 @@ interface ElementRect {
   isPhantom?: boolean;
 }
 
-const SCAN_STEP_PX = 4;
+const MIN_RECT_SIZE_PX = 4;
 
 export class RectDetector {
   private readonly cache = new Cache<
     Element,
     Rect<"element-border", "actual-viewport">[]
   >();
-  private readonly pointerCrawler = new PointerCrawler(SCAN_STEP_PX);
+  private readonly pointerCrawler = new PointerCrawler();
 
   private readonly timers = new Timers("RectDetector");
 
@@ -171,7 +171,7 @@ export class RectDetector {
 }
 
 function isSmallRect({ width, height }: Sizes) {
-  return width <= SCAN_STEP_PX || height <= SCAN_STEP_PX;
+  return width <= MIN_RECT_SIZE_PX || height <= MIN_RECT_SIZE_PX;
 }
 
 function getAreaRects(

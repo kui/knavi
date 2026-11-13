@@ -276,4 +276,18 @@ test.describe("visibility", () => {
           await expectHintAtTopLeftOf(page, `#s${size}-o${offset}`);
         });
   });
+
+  for (const id of [
+    "top-strip",
+    "bottom-strip",
+    "left-strip",
+    "right-strip",
+    "small-covered-centre",
+  ]) {
+    test(`edge-strips: #${id} gets a hint`, async ({ page }) => {
+      await gotoTest(page, "edge-strips.html");
+      await attachHints(page);
+      await expectHintAtTopLeftOf(page, `#${id}`);
+    });
+  }
 });
