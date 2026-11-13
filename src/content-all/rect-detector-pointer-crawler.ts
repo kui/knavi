@@ -36,39 +36,6 @@ export class PointerCrawler {
     }
   }
 
-  private *generatePoints(a: Area): Generator<[number, number]> {
-    // WHY: naive implementation
-    for (let x = a.minX; x < a.maxX; x += this.stepPx) {
-      for (let y = a.minY; y < a.maxY; y += this.stepPx) {
-        yield [x, y];
-      }
-    }
-  }
-
-  private *generateEdgesPoints(a: Area): Generator<[number, number]> {
-    const step = this.stepPx;
-    for (let x = a.minX; x < a.maxX; x += step) {
-      yield [x, a.minY];
-      yield [x, a.maxY];
-    }
-    for (let y = a.minY; y < a.maxY; y += step) {
-      yield [a.minX, y];
-      yield [a.maxX, y];
-    }
-  }
-
-  private *generateDiagonalPoints(a: Area): Generator<[number, number]> {
-    const step = this.stepPx;
-    const shortEdge = Math.min(a.maxX - a.minX, a.maxY - a.minY);
-    const maxDelta = shortEdge / 2;
-    for (let delta = 0; delta < maxDelta; delta += step) {
-      yield [a.minX + delta, a.minY + delta];
-      yield [a.maxX - delta, a.minY + delta];
-      yield [a.minX + delta, a.maxY - delta];
-      yield [a.maxX - delta, a.maxY - delta];
-    }
-  }
-
   private *generateGridPoints(a: Area): Generator<[number, number]> {
     const step = this.stepPx;
     const xStep =
