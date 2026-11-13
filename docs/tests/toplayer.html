@@ -5,6 +5,7 @@
 </style>
 
 <div
+  id="high-zindex"
   style="
     z-index: 2147483647;
     position: absolute;
@@ -19,9 +20,13 @@
   high zindex
 </div>
 
-<button popovertarget="p1" popovertargetaction="show">Show popover</button>
+<button id="show-popover" popovertarget="p1" popovertargetaction="show">
+  Show popover
+</button>
 
 <div id="p1" popover>
   This is another top layer DOM
-  <button popovertarget="p1" popovertargetaction="hide">Hide popover</button>
+  <button id="hide-popover" popovertarget="p1" popovertargetaction="hide">
+    Hide popover
+  </button>
 </div>

@@ -1,10 +1,12 @@
-<details>
+<details id="with-summary">
   <summary>Details</summary>
   <p>Details1</p>
-  <button onmouseup="alert('mouseup!')">detect mouseup</button>
+  <button id="mouseup-button" onmouseup="alert('mouseup!')">
+    detect mouseup
+  </button>
 </details>
 
-<details>
+<details id="without-summary">
   <p>Details2</p>
-  <button onclick="alert('click!')">detect click</button>
+  <button id="click-button" onclick="alert('click!')">detect click</button>
 </details>

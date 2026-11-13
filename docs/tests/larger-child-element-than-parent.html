@@ -5,17 +5,17 @@
 </style>
 
 <h2>&lt;a&gt; element only contains &lt;img&gt; element</h2>
-<a href="https://www.google.com/">
+<a id="image-link" href="https://www.google.com/">
   <img src="150x150.png" />
 </a>
 
 <h2>&lt;span&gt; element contains &lt;img&gt; element</h2>
-<span onclick="alert('clicked')">
+<span id="image-span" onclick="alert('clicked')">
   <img src="150x150.png" />
 </span>
 
 <h2>Clickable element which contains only detouch children</h2>
-<div onclick="alert('clicked')" style="overflow: auto">
+<div id="detached-children" onclick="alert('clicked')" style="overflow: auto">
   <div style="position: absolute; padding: 16px; background-color: blueviolet">
     "position: absolute" rect
   </div>
@@ -24,7 +24,11 @@
 
 <h2>Clickable element which has a offsetParent</h2>
 <div style="position: relative">
-  <div onclick="alert('clicked')" style="overflow: auto">
+  <div
+    id="detached-children-with-offset-parent"
+    onclick="alert('clicked')"
+    style="overflow: auto"
+  >
     <div
       style="position: absolute; padding: 16px; background-color: blueviolet"
     >
@@ -37,6 +41,7 @@
 <h2>Clickable element which is the position: relative</h2>
 <div style="overflow: auto; width: 200px; background-color: yellow">
   <div
+    id="wider-than-parent"
     onclick="alert('clicked')"
     style="
       padding: 16px;

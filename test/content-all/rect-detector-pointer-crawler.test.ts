@@ -16,17 +16,13 @@ function rect(x: number, y: number, width: number, height: number) {
   });
 }
 
-function consume(it: Iterable<unknown>) {
-  for (const _ of it) void _;
-}
-
 function sampledPoints(r: ReturnType<typeof rect>): [number, number][] {
   const points: [number, number][] = [];
   const crawler = new PointerCrawler(STEP_PX, (x, y) => {
     points.push([x, y]);
     return {} as Element;
   });
-  consume(crawler.crawl(r));
+  void [...crawler.crawl(r)];
   return points;
 }
 

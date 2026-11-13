@@ -117,6 +117,50 @@ export async function attachHintsSticky(
   await expect(page.locator(".hint").first()).toBeVisible({ timeout: 5_000 });
 }
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
+const HINT_TOLERANCE_PX = 5;
+
+function isNear(a: Point, b: Point): boolean {
+  return (
+    Math.abs(a.x - b.x) <= HINT_TOLERANCE_PX &&
+    Math.abs(a.y - b.y) <= HINT_TOLERANCE_PX
+  );
+}
+
+/**
+ * Return the top-left corner and text of every rendered hint.
+ *
+ * INVARIANT: a frame sends all of its rects in one ResponseRectsFragment and
+ * the hinter renders each fragment at once, so on a page without iframes every
+ * hint is present as soon as attachHints() has seen the first one. Checks for
+ * the absence of a hint rely on this and take a single snapshot.
+ */
+export async function hints(page: Page): Promise<(Point & { hint: string })[]> {
+  const all = await page.locator(".hint").all();
+  const found = await Promise.all(
+    all.map(async (h) => ({
+      box: await h.boundingBox(),
+      hint: (await h.getAttribute("data-hint")) ?? "",
+    })),
+  );
+  return found.flatMap(({ box, hint }) =>
+    box ? [{ x: box.x, y: box.y, hint }] : [],
+  );
+}
+
+export async function boxOf(
+  page: Page,
+  selector: string,
+): Promise<Point & { width: number; height: number }> {
+  const box = await page.locator(selector).first().boundingBox();
+  if (!box) throw new Error(`Cannot find bounding box for ${selector}`);
+  return box;
+}
+
 /**
  * Return the hint text (`data-hint`) whose position matches `targetSelector`.
  * Throws if no matching hint is found within the tolerance.
@@ -124,27 +168,12 @@ export async function attachHintsSticky(
 export async function findHintFor(
   page: Page,
   targetSelector: string,
-  tolerancePx = 5,
 ): Promise<string> {
-  const targetBox = await page.locator(targetSelector).first().boundingBox();
-  if (!targetBox)
-    throw new Error(`Cannot find bounding box for ${targetSelector}`);
-
-  const hints = page.locator(".hint");
-  const count = await hints.count();
-  for (let i = 0; i < count; i++) {
-    const hintEl = hints.nth(i);
-    const box = await hintEl.boundingBox();
-    if (!box) continue;
-    if (
-      Math.abs(box.x - targetBox.x) <= tolerancePx &&
-      Math.abs(box.y - targetBox.y) <= tolerancePx
-    ) {
-      return (await hintEl.getAttribute("data-hint")) ?? "";
-    }
-  }
+  const target = await boxOf(page, targetSelector);
+  const found = (await hints(page)).find((h) => isNear(h, target));
+  if (found) return found.hint;
   throw new Error(
-    `No hint found near ${targetSelector} (target x=${targetBox.x.toFixed(0)}, y=${targetBox.y.toFixed(0)})`,
+    `No hint found near ${targetSelector} (target x=${target.x.toFixed(0)}, y=${target.y.toFixed(0)})`,
   );
 }
 
@@ -154,21 +183,49 @@ export async function findHintFor(
 export async function countHintsFor(
   page: Page,
   targetSelector: string,
-  tolerancePx = 5,
 ): Promise<number> {
-  const targetBox = await page.locator(targetSelector).first().boundingBox();
-  if (!targetBox)
-    throw new Error(`Cannot find bounding box for ${targetSelector}`);
+  const target = await boxOf(page, targetSelector);
+  return (await hints(page)).filter((h) => isNear(h, target)).length;
+}
 
-  const boxes = await Promise.all(
-    (await page.locator(".hint").all()).map((hint) => hint.boundingBox()),
+export async function expectHintAt(page: Page, expected: Point): Promise<void> {
+  const points = (await hints(page)).map(({ x, y }) => ({ x, y }));
+  expect(
+    points.some((p) => isNear(p, expected)),
+    `hint at (${expected.x}, ${expected.y}) among ${JSON.stringify(points)}`,
+  ).toBe(true);
+}
+
+export async function expectHintAtTopLeftOf(
+  page: Page,
+  selector: string,
+): Promise<void> {
+  await expectHintAt(page, await boxOf(page, selector));
+}
+
+export async function expectNoHintOn(
+  page: Page,
+  selector: string,
+): Promise<void> {
+  const box = await boxOf(page, selector);
+  const inside = (await hints(page)).filter(
+    (h) =>
+      h.x >= box.x - HINT_TOLERANCE_PX &&
+      h.x <= box.x + box.width + HINT_TOLERANCE_PX &&
+      h.y >= box.y - HINT_TOLERANCE_PX &&
+      h.y <= box.y + box.height + HINT_TOLERANCE_PX,
   );
-  return boxes.filter(
-    (box) =>
-      box &&
-      Math.abs(box.x - targetBox.x) <= tolerancePx &&
-      Math.abs(box.y - targetBox.y) <= tolerancePx,
-  ).length;
+  expect(inside).toEqual([]);
+}
+
+export async function expectHintsOnlyAt(
+  page: Page,
+  allowed: Point[],
+): Promise<void> {
+  const stray = (await hints(page)).filter(
+    (h) => !allowed.some((a) => isNear(h, a)),
+  );
+  expect(stray).toEqual([]);
 }
 
 /**

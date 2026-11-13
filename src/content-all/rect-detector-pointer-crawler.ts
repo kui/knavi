@@ -10,7 +10,7 @@ interface Area {
 
 const GRID_POINTS = 4;
 
-export type HitTest = (x: number, y: number) => Element | null;
+type HitTest = (x: number, y: number) => Element | null;
 
 export class PointerCrawler {
   private timers = new Timers("PointerCrawler");
