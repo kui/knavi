@@ -1,0 +1,44 @@
+<style>
+  .clip {
+    position: absolute;
+    left: 40px;
+    top: 80px;
+    width: 200px;
+    height: 100px;
+    overflow: hidden;
+    background-color: lightgray;
+  }
+  #fixed {
+    position: fixed;
+    left: 400px;
+    top: 300px;
+    width: 120px;
+    height: 40px;
+  }
+  #scroller {
+    top: 220px;
+  }
+  #sticky {
+    position: sticky;
+    top: 0;
+    display: block;
+    height: 30px;
+    background-color: salmon;
+  }
+</style>
+
+<p>
+  A <code>position: fixed</code> element inside an
+  <code>overflow: hidden</code> ancestor is not clipped by it, so it gets a hint
+  outside the ancestor. A <code>position: sticky</code> element stuck to the top
+  of a scrolled <code>overflow: hidden</code> ancestor gets a hint there.
+</p>
+
+<div class="clip">
+  <button id="fixed">fixed</button>
+</div>
+
+<div class="clip" id="scroller">
+  <a id="sticky" href="#">sticky</a>
+  <div style="height: 400px">content</div>
+</div>

@@ -1,0 +1,40 @@
+<style>
+  .clip {
+    position: absolute;
+    left: 40px;
+    width: 200px;
+    height: 100px;
+    overflow: hidden;
+    background-color: lightgray;
+  }
+  .clip a {
+    position: absolute;
+    display: block;
+    width: 120px;
+    height: 60px;
+    background-color: salmon;
+  }
+</style>
+
+<p>
+  Links clipped by an <code>overflow: hidden</code> ancestor get a hint at the
+  top-left corner of their visible part, or none when nothing is visible.
+</p>
+
+<div class="clip" style="top: 80px">
+  <a id="clipped-top-left" href="#" style="left: -30px; top: -20px">
+    clipped top-left
+  </a>
+</div>
+
+<div class="clip" style="top: 220px">
+  <a id="fully-clipped" href="#" style="left: 240px; top: 0px">fully clipped</a>
+</div>
+
+<div class="clip" style="top: 360px">
+  <div style="position: relative; overflow: visible">
+    <a id="clipped-by-grandparent" href="#" style="left: 100px; top: -40px">
+      clipped by grandparent
+    </a>
+  </div>
+</div>

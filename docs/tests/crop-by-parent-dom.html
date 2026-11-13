@@ -1,5 +1,5 @@
 <style>
-  div {
+  #parent {
     position: absolute;
     width: 256px;
     height: 128px;
@@ -24,7 +24,7 @@
 
 <script>
   function scrollDiv(px) {
-    var div = document.querySelector("div");
+    var div = document.getElementById("parent");
     div.scrollTop = px;
   }
 </script>
@@ -33,6 +33,6 @@
 <button onclick="scrollDiv(200)">Scroll 200px</button>
 <button onclick="scrollDiv(300)">Scroll 300px</button>
 
-<div>
+<div id="parent">
   <a onclick="alert('clicked')">click</a>
 </div>

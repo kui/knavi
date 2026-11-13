@@ -10,10 +10,15 @@ interface Area {
 
 const GRID_POINTS = 4;
 
+export type HitTest = (x: number, y: number) => Element | null;
+
 export class PointerCrawler {
   private timers = new Timers("PointerCrawler");
 
-  constructor(private readonly stepPx: number) {}
+  constructor(
+    private readonly stepPx: number,
+    private readonly hitTest: HitTest = elementFromPointComposed,
+  ) {}
 
   *crawl(
     crawlArea: Rect<CoordinateType, "layout-viewport">,
@@ -28,7 +33,7 @@ export class PointerCrawler {
     };
     for (const [x, y] of this.generateGridPoints(actualArea)) {
       const stop = this.timers.start("elementFromPoint");
-      const e = this.elementFromPoint(x, y);
+      const e = this.hitTest(x, y);
       stop();
       if (alreadyCrawled.has(e)) continue;
       alreadyCrawled.add(e);
@@ -46,28 +51,25 @@ export class PointerCrawler {
       for (let y = a.minY; y < a.maxY; y += yStep) yield [x, y];
   }
 
-  private elementFromPoint(x: number, y: number): Element | null {
-    let pointedElement = document.elementFromPoint(x, y);
-    if (pointedElement == null) return null;
-
-    const stack = [pointedElement];
-    while (pointedElement.shadowRoot) {
-      const elemementInShadow = pointedElement.shadowRoot.elementFromPoint(
-        x,
-        y,
-      );
-      if (elemementInShadow && !stack.includes(elemementInShadow)) {
-        stack.push(elemementInShadow);
-        pointedElement = elemementInShadow;
-      } else {
-        return pointedElement;
-      }
-    }
-
-    return pointedElement;
-  }
-
   printMetrics() {
     this.timers.print();
   }
+}
+
+function elementFromPointComposed(x: number, y: number): Element | null {
+  let pointedElement = document.elementFromPoint(x, y);
+  if (pointedElement == null) return null;
+
+  const stack = [pointedElement];
+  while (pointedElement.shadowRoot) {
+    const elemementInShadow = pointedElement.shadowRoot.elementFromPoint(x, y);
+    if (elemementInShadow && !stack.includes(elemementInShadow)) {
+      stack.push(elemementInShadow);
+      pointedElement = elemementInShadow;
+    } else {
+      return pointedElement;
+    }
+  }
+
+  return pointedElement;
 }
