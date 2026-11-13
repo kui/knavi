@@ -1,13 +1,6 @@
 import { Timers } from "../lib/metrics";
 import { Rect } from "../dom/rects";
 
-interface Area {
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-}
-
 const GRID_POINTS = 4;
 
 type HitTest = (x: number, y: number) => Element | null;
@@ -24,14 +17,7 @@ export class PointerCrawler {
     crawlArea: Rect<CoordinateType, "layout-viewport">,
   ): Generator<Element | null> {
     const alreadyCrawled = new Set<Element | null>();
-    const step = this.stepPx;
-    const actualArea = {
-      minX: Math.ceil(crawlArea.x / step) * step,
-      maxX: Math.floor((crawlArea.x + crawlArea.width) / step) * step,
-      minY: Math.ceil(crawlArea.y / step) * step,
-      maxY: Math.floor((crawlArea.y + crawlArea.height) / step) * step,
-    };
-    for (const [x, y] of this.generateGridPoints(actualArea)) {
+    for (const [x, y] of samplePoints(crawlArea, this.stepPx)) {
       const stop = this.timers.start("elementFromPoint");
       const e = this.hitTest(x, y);
       stop();
@@ -41,19 +27,33 @@ export class PointerCrawler {
     }
   }
 
-  private *generateGridPoints(a: Area): Generator<[number, number]> {
-    const step = this.stepPx;
-    const xStep =
-      Math.max(Math.floor((a.maxX - a.minX) / GRID_POINTS / step), 1) * step;
-    const yStep =
-      Math.max(Math.floor((a.maxY - a.minY) / GRID_POINTS / step), 1) * step;
-    for (let x = a.minX; x < a.maxX; x += xStep)
-      for (let y = a.minY; y < a.maxY; y += yStep) yield [x, y];
-  }
-
   printMetrics() {
     this.timers.print();
   }
+}
+
+/**
+ * Yield the centre of the rect first, then the centres of an evenly spaced
+ * grid of up to GRID_POINTS x GRID_POINTS cells, so that every rect wider and
+ * taller than zero gets at least one point strictly inside it.
+ */
+function* samplePoints(
+  { x, y, width, height }: Rect<CoordinateType, "layout-viewport">,
+  stepPx: number,
+): Generator<[number, number]> {
+  yield [x + width / 2, y + height / 2];
+  const cols = cellCount(width, stepPx);
+  const rows = cellCount(height, stepPx);
+  for (let i = 0; i < cols; i++)
+    for (let j = 0; j < rows; j++) {
+      // WHY: with an odd number of cells on both axes, the middle cell's centre is the rect's centre, already tested first.
+      if (2 * i + 1 === cols && 2 * j + 1 === rows) continue;
+      yield [x + (width * (i + 0.5)) / cols, y + (height * (j + 0.5)) / rows];
+    }
+}
+
+function cellCount(length: number, stepPx: number): number {
+  return Math.min(Math.max(Math.floor(length / stepPx), 1), GRID_POINTS);
 }
 
 function elementFromPointComposed(x: number, y: number): Element | null {

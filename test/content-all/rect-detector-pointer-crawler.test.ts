@@ -27,31 +27,54 @@ function sampledPoints(r: ReturnType<typeof rect>): [number, number][] {
 }
 
 void describe("PointerCrawler", () => {
-  void test("samples a grid snapped to the step inside the rect", () => {
-    const xs = [0, 8, 16, 24, 32];
-    assert.deepEqual(
-      sampledPoints(rect(0, 0, 40, 40)),
-      xs.flatMap((x) => xs.map((y) => [x, y])),
-    );
+  void test("tests the centre first, then a grid of cell centres", () => {
+    const xs = [5, 15, 25, 35];
+    assert.deepEqual(sampledPoints(rect(0, 0, 40, 40)), [
+      [20, 20],
+      ...xs.flatMap((x) => xs.map((y) => [x, y])),
+    ]);
   });
 
-  void test("starts the grid at the first step boundary inside the rect", () => {
-    const xs = [4, 12, 20, 28, 36];
-    assert.deepEqual(
-      sampledPoints(rect(1, 1, 40, 40)),
-      xs.flatMap((x) => xs.map((y) => [x, y])),
-    );
+  void test("places the grid relative to the rect, not to a step boundary", () => {
+    assert.deepEqual(sampledPoints(rect(1, 2, 8, 8)), [
+      [5, 6],
+      [3, 4],
+      [3, 8],
+      [7, 4],
+      [7, 8],
+    ]);
   });
 
-  void test("keeps every sample point inside the rect", () => {
+  void test("uses one cell per step on short sides", () => {
+    assert.deepEqual(sampledPoints(rect(0, 0, 6, 40)), [
+      [3, 20],
+      [3, 5],
+      [3, 15],
+      [3, 25],
+      [3, 35],
+    ]);
+  });
+
+  void test("does not test the centre twice", () => {
+    const points = sampledPoints(rect(0, 0, 12, 12));
+    assert.equal(points.length, 9);
+    assert.equal(new Set(points.map((p) => p.join())).size, 9);
+  });
+
+  void test("gives a 5-7 px rect a point at any offset", () => {
+    for (const size of [5, 6, 7])
+      for (const offset of [0, 1, 2, 3]) {
+        const points = sampledPoints(rect(offset, offset, size, size));
+        assert.deepEqual(points[0], [offset + size / 2, offset + size / 2]);
+      }
+  });
+
+  void test("keeps every sample point strictly inside the rect", () => {
     for (const r of [rect(3, 7, 50, 13), rect(10.5, 2.25, 9, 100)]) {
       for (const [x, y] of sampledPoints(r)) {
+        assert.ok(x > r.x && x < r.x + r.width, `x=${x} in ${r.x}+${r.width}`);
         assert.ok(
-          x >= r.x && x <= r.x + r.width,
-          `x=${x} in ${r.x}+${r.width}`,
-        );
-        assert.ok(
-          y >= r.y && y <= r.y + r.height,
+          y > r.y && y < r.y + r.height,
           `y=${y} in ${r.y}+${r.height}`,
         );
       }
