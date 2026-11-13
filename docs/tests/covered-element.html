@@ -1,0 +1,29 @@
+<style>
+  button {
+    position: absolute;
+    left: 40px;
+    width: 120px;
+    height: 40px;
+  }
+  .overlay {
+    position: absolute;
+    background-color: rgba(100, 100, 100, 0.9);
+  }
+</style>
+
+<p>
+  A button fully covered by a non-clickable overlay must get no hint; a
+  partially covered one must still get a hint.
+</p>
+
+<button id="covered" style="top: 80px">covered</button>
+<div class="overlay" style="left: 30px; top: 70px; width: 140px; height: 60px">
+  overlay
+</div>
+
+<button id="partially-covered" style="top: 180px">partially covered</button>
+<div class="overlay" style="left: 30px; top: 170px; width: 70px; height: 60px">
+  overlay
+</div>
+
+<button id="uncovered" style="top: 280px">uncovered</button>
