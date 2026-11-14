@@ -22,18 +22,19 @@ const rectAggregator = new RectAggregator(frameRegistry);
 const blurer = new Blurer(frameRegistry);
 
 async function setupKeyboardHandler() {
-  const [setting, matchedBlacklist] = await Promise.all([
-    settingsClient.get([
-      "magicKey",
-      "blurKey",
-      "hints",
-      "stickyKey",
-      "actionKey",
-      "cancelKey",
-      "cycleKey",
-    ]),
-    settingsClient.matchBlacklist(location.href),
-  ]);
+  const [setting, matchedBlacklist] =
+    await settingsClient.getWithBlacklistMatch(
+      [
+        "magicKey",
+        "blurKey",
+        "hints",
+        "stickyKey",
+        "actionKey",
+        "cancelKey",
+        "cycleKey",
+      ],
+      location.href,
+    );
   keyboardHandler.setup(setting, matchedBlacklist);
   console.debug("settings loaded");
   document.documentElement.dataset.knaviReady = "1";

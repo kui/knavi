@@ -16,7 +16,7 @@ const hinter = new HinterContentRoot(rectAggregator, hinterView);
 const blurerView = new BlurView();
 const blurer = new BlurerContentRoot(blurerView);
 
-(async () => {
+async function loadSettings() {
   const { css, hints, cycleKey } = await settingsClient.get([
     "css",
     "hints",
@@ -25,9 +25,16 @@ const blurer = new BlurerContentRoot(blurerView);
   hinterView.setCss(css);
   hinterView.setCycleKey(cycleKey);
   hinter.setup(hints);
-})().catch(printError);
+}
+loadSettings().catch(printError);
 
 chrome.storage.onChanged.addListener((changes) => {
+  /* WHY: switching the storage area (the `_area` marker) changes every value
+     at once without a per-key change event, so reload them all. */
+  if ("_area" in changes) {
+    loadSettings().catch(printError);
+    return;
+  }
   if (changes.css) {
     hinterView.setCss(changes.css.newValue as Settings["css"]);
   }

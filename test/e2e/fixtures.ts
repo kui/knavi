@@ -69,24 +69,29 @@ export { expect };
 /**
  * Set extension settings via the background service worker.
  * Only pass the keys you want to change; others remain untouched.
+ * `area` defaults to sync, the area a fresh profile reads from.
  */
 export async function setSettings(
   context: BrowserContext,
   settings: Record<string, string>,
+  area: "sync" | "local" = "sync",
 ): Promise<void> {
   const sw = context.serviceWorkers()[0];
   // WHY: chrome is available at runtime in the service worker; not known to TS here.
   await sw.evaluate(
-    (s) =>
+    ([a, s]) =>
       new Promise<void>((resolve) => {
         interface SW {
           chrome: {
-            storage: { sync: { set(i: typeof s, cb: () => void): void } };
+            storage: Record<
+              string,
+              { set(i: Record<string, string>, cb: () => void): void }
+            >;
           };
         }
-        (globalThis as unknown as SW).chrome.storage.sync.set(s, resolve);
+        (globalThis as unknown as SW).chrome.storage[a].set(s, resolve);
       }),
-    settings,
+    [area, settings] as const,
   );
 }
 
