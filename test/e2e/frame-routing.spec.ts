@@ -79,6 +79,20 @@ test.describe("hints in iframes inside shadow roots", () => {
         .locator("button"),
     );
   });
+
+  test("a button in a cross-origin iframe inside a same-origin iframe", async ({
+    page,
+  }) => {
+    await gotoTest(page, "shadow-same-origin-iframe.html");
+    await hitButton(
+      page,
+      page
+        .locator("iframe")
+        .contentFrame()
+        .frameLocator("#grandchild")
+        .locator("button"),
+    );
+  });
 });
 
 test.describe("blur in cross-origin and shadow-root iframes", () => {
@@ -121,6 +135,17 @@ test.describe("blur in cross-origin and shadow-root iframes", () => {
           .locator("iframe >> nth=0")
           .contentFrame()
           .frameLocator("iframe")
+          .locator("button"),
+      true,
+    ],
+    [
+      "shadow-same-origin-iframe.html",
+      "cross-origin iframe inside a same-origin iframe in a shadow root",
+      (page) =>
+        page
+          .locator("iframe")
+          .contentFrame()
+          .frameLocator("#grandchild")
           .locator("button"),
       true,
     ],

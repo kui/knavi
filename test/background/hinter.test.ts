@@ -1,12 +1,22 @@
 import { describe, test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-const sentTypes: string[] = [];
+interface Sent {
+  type: string;
+  active?: boolean;
+}
+const sent: Sent[] = [];
+let attachFails = false;
 
 (globalThis as Record<string, unknown>).chrome = {
   tabs: {
-    sendMessage: (_tabId: number, message: { "@type": string }) => {
-      sentTypes.push(message["@type"]);
+    sendMessage: (
+      _tabId: number,
+      message: { "@type": string; active?: boolean },
+    ) => {
+      sent.push({ type: message["@type"], active: message.active });
+      if (message["@type"] === "AttachHintsInTab" && attachFails)
+        return Promise.reject(new Error("no receiver"));
       return Promise.resolve({ response: undefined });
     },
   },
@@ -34,50 +44,44 @@ function call(type: string, payload: Record<string, unknown> = {}) {
   });
 }
 
+const syncStates = () =>
+  sent.filter((m) => m.type === "SyncHintingState").map((m) => m.active);
+
 void describe("hint session and the frame path table", () => {
   beforeEach(() => {
-    sentTypes.length = 0;
+    sent.length = 0;
+    attachFails = false;
     framePaths.end(TAB);
   });
 
-  void test("AttachHints starts a new session", async () => {
-    framePaths.reset(TAB);
+  void test("AttachHints starts a session and tells every frame", async () => {
+    await call("AttachHints");
+    assert.deepEqual(syncStates(), [true]);
+    framePaths.report(TAB, ["0"], 9);
+    assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
+  });
+
+  void test("a second AttachHints drops what the first session reported", async () => {
+    await call("AttachHints");
     framePaths.report(TAB, ["0"], 9);
     await call("AttachHints");
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
-  });
-
-  void test("reports made after AttachHints are looked up", async () => {
-    await call("AttachHints");
-    framePaths.report(TAB, ["0"], 9);
-    assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
   });
 
   void test("RemoveHints ends the session and drops reports made after it", async () => {
     await call("AttachHints");
     framePaths.report(TAB, ["0"], 9);
     await call("RemoveHints", { options: {}, execute: false });
+    assert.deepEqual(syncStates(), [true, false]);
     framePaths.report(TAB, ["0"], 9);
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
   });
-});
 
-void describe("frame path lookups that are waiting", () => {
-  beforeEach(() => {
-    framePaths.end(TAB);
-  });
-
-  void test("resolve to undefined when a new session starts", async () => {
-    framePaths.reset(TAB);
-    const pending = framePaths.lookup(TAB, ["3"], 10_000);
-    framePaths.reset(TAB);
-    assert.equal(await pending, undefined);
-  });
-
-  void test("resolve to undefined when the session ends", async () => {
-    framePaths.reset(TAB);
-    const pending = framePaths.lookup(TAB, ["3"], 10_000);
-    framePaths.end(TAB);
-    assert.equal(await pending, undefined);
+  void test("a failed AttachHints ends the session", async () => {
+    attachFails = true;
+    await assert.rejects(call("AttachHints"));
+    assert.deepEqual(syncStates(), [true, false]);
+    framePaths.report(TAB, ["0"], 9);
+    assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
   });
 });

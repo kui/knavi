@@ -39,7 +39,7 @@ export class FramePath {
 
   /** The paths of direct child iframes; undefined for an unmappable one. */
   childPaths(iframes: readonly HTMLIFrameElement[]): (string[] | undefined)[] {
-    const own = this.sessionPath();
+    const own = this.sessionPath(computeOwnPath());
     let shadow: HTMLIFrameElement[] | undefined;
     return iframes.map((iframe) => {
       const w = iframe.contentWindow;
@@ -100,7 +100,7 @@ export class FramePath {
    * This frame's path as far as it is known for the current session. An
    * assignment kept from an earlier session may be stale.
    */
-  private sessionPath(computed = computeOwnPath()): string[] | undefined {
+  private sessionPath(computed: string[] | undefined): string[] | undefined {
     return computed ?? (this.assignedThisSession ? this.assigned : undefined);
   }
 
@@ -136,9 +136,12 @@ export class FramePath {
 
   /**
    * INVARIANT: a parent → child postMessage is only used for children that
-   * cannot compute their own path: cross-origin iframes in shadow roots, and
-   * every descendant of a frame whose own path was assigned (their chain to
-   * the top is broken at that frame).
+   * cannot compute their own path:
+   *   - cross-origin iframes in shadow roots;
+   *   - cross-origin children of a frame whose path has a shadow-root hop
+   *     (the child cannot read the `frameElement` that hop needs);
+   *   - every child of a frame whose own path was assigned (the chain to the
+   *     top is broken at that frame).
    */
   private assignToChildren(computed: string[] | undefined): void {
     const own = this.sessionPath(computed);
@@ -158,9 +161,18 @@ export class FramePath {
         post(iframe.contentWindow, encodeSegment(true, i));
       }
     });
-    if (computed) return;
-    for (let i = 0; i < window.frames.length; i++) {
-      post(window.frames[i], encodeSegment(false, i));
+    if (!computed) {
+      for (let i = 0; i < window.frames.length; i++) {
+        post(window.frames[i], encodeSegment(false, i));
+      }
+    } else if (computed.some((s) => parseSegment(s)?.shadow)) {
+      for (const iframe of document.getElementsByTagName("iframe")) {
+        const w = iframe.contentWindow;
+        const index = w ? indexInFrames(window, w) : -1;
+        if (index >= 0 && !iframe.contentDocument) {
+          post(w, encodeSegment(false, index));
+        }
+      }
     }
   }
 }
