@@ -26,16 +26,23 @@ function makeView() {
   let rendered = 0;
   const batches: HintedElement[][] = [];
   const hits: HintedElement[][] = [];
+  const badges: unknown[] = [];
+  let cycleSet: HintedElement[] | null = null;
   return {
     get rendered() {
       return rendered;
     },
     batches,
     hits,
-    computeCycleSet: () => [],
-    hit(changes: HintedElement[]) {
+    badges,
+    setCycleSet(set: HintedElement[]) {
+      cycleSet = set;
+    },
+    computeCycleSet: (hit: HintedElement) => cycleSet ?? [hit],
+    hit(changes: HintedElement[], _descriptions: unknown, badge: unknown) {
       if (!started) throw Error("Illegal state");
       hits.push([...changes]);
+      badges.push(badge);
     },
     isStarted: () => started,
     start() {
@@ -165,7 +172,7 @@ void describe("HinterContentRoot", () => {
     await attached;
   });
 
-  void test("a hit decided in an earlier batch is passed to the view again with later batches", async () => {
+  void test("later batches without a hit do not call view.hit again", async () => {
     hinter.setup("asdf");
     const attached = hinter.attachHints();
     await tick();
@@ -173,13 +180,53 @@ void describe("HinterContentRoot", () => {
 
     aggregator.handleRects(requestId + 1, RECTS);
     await tick();
-    const hit = view.batches[0][0];
-    assert.equal(hit.state, "hit");
+    assert.equal(view.hits.length, 1);
     aggregator.handleRects(requestId + 1, RECTS);
     await tick();
 
-    assert.equal(view.hits.length, 2);
-    assert.ok(view.hits[1].includes(hit));
+    assert.equal(view.hits.length, 1);
+    await hinter.removeHints(OPTIONS, false);
+    await attached;
+  });
+
+  void test("a later batch does not change the cycle badge of a cycled hit", async () => {
+    hinter.setup("asdf");
+    const attached = hinter.attachHints();
+    await tick();
+    hinter.hitHint("a" as SingleLetter);
+    aggregator.handleRects(requestId + 1, RECTS);
+    await tick();
+    const a = view.batches[0][0];
+    const b = { ...a, hint: "zz", state: "candidate" } as HintedElement;
+    view.setCycleSet([a, b]);
+    hinter.cycleHint();
+    const badge = view.badges.at(-1);
+    assert.deepEqual(badge, { count: 1, index: 2, total: 2 });
+    const calls = view.hits.length;
+
+    view.setCycleSet([a, b, { ...a }, { ...a }] as HintedElement[]);
+    aggregator.handleRects(requestId + 1, RECTS);
+    await tick();
+
+    assert.equal(view.hits.length, calls);
+    assert.deepEqual(view.badges.at(-1), badge);
+    await hinter.removeHints(OPTIONS, false);
+    await attached;
+  });
+
+  void test("letters typed after an empty first batch are applied to the next batch", async () => {
+    hinter.setup("asdf");
+    const attached = hinter.attachHints();
+    await tick();
+    aggregator.handleRects(requestId + 1, []);
+    await tick();
+    assert.equal(view.isStarted(), true);
+
+    hinter.hitHint("a" as SingleLetter);
+    aggregator.handleRects(requestId + 1, RECTS);
+    await tick();
+
+    assert.equal(view.batches[0][0].state, "hit");
     await hinter.removeHints(OPTIONS, false);
     await attached;
   });

@@ -10,10 +10,11 @@ let failAttach = false;
   runtime: {
     sendMessage: async (msg: { "@type": string; key?: string }) => {
       const fail = failAttach;
+      // WHY: record at send time so the order reflects when each message was sent.
+      sent.push(msg.key ? `${msg["@type"]}:${msg.key}` : msg["@type"]);
       if (msg["@type"] === "RemoveHints") {
         await new Promise<void>((resolve) => (releaseRemove = resolve));
       }
-      sent.push(msg.key ? `${msg["@type"]}:${msg.key}` : msg["@type"]);
       if (msg["@type"] === "AttachHints") {
         // WHY: the real AttachHints is answered only when the session ends.
         await new Promise<void>((resolve) => (releaseAttach = resolve));
@@ -57,7 +58,7 @@ void describe("HinterClient", () => {
       client.hitHint("s" as SingleLetter),
     ];
     await flush();
-    assert.deepEqual(sent, []);
+    assert.deepEqual(sent, ["RemoveHints"]);
 
     releaseRemove();
     await removing;
@@ -108,7 +109,7 @@ void describe("HinterClient", () => {
     const attaching = client.attachHints();
     const cycling = client.cycleHint();
     await flush();
-    assert.deepEqual(sent, []);
+    assert.deepEqual(sent, ["RemoveHints"]);
 
     releaseRemove();
     await removing;

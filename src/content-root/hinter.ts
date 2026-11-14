@@ -74,7 +74,11 @@ export class HinterContentRoot {
       const changes =
         context.inputSequence.length > 0 ? applyInput(context, targets) : [];
       this.view.render(targets);
-      if (changes.length > 0) this.showHit(context, changes);
+      /* WHY: a hit decided by the input sequence can only appear in a batch
+         when no earlier batch had one; other batches need no view.hit, which
+         would scan every chip again. */
+      if (changes.some((t) => t.state === "hit"))
+        this.showHit(context, changes);
     }
   }
 
@@ -128,7 +132,9 @@ export class HinterContentRoot {
 
     delete context.cycle;
 
-    const changes = [...updateContext(context, inputLetter)];
+    context.inputSequence.push(inputLetter);
+    delete context.hitTarget;
+    const changes = applyInput(context, context.targets);
     /* WHY: the view has no hints before the first rects arrive, so only
        record the letter; each rendered batch applies inputSequence. */
     if (!this.view.isStarted()) return;
@@ -136,19 +142,13 @@ export class HinterContentRoot {
   }
 
   private showHit(context: HintContext, changes: HintedElement[]) {
-    /* WHY: HintView.hit derives the active overlay from `changes`, so a hit
-       decided in an earlier batch must be passed again or its overlay and
-       cycle badge disappear. */
     const hit = context.hitTarget;
-    if (hit && !changes.includes(hit)) changes = [hit, ...changes];
-    const actionDescriptions = context.hitTarget?.descriptions ?? null;
-    const cycleBadge = context.hitTarget
-      ? cycleBadgeFor(
-          this.view.computeCycleSet(context.hitTarget),
-          context.hitTarget,
-        )
-      : null;
-    this.view.hit(changes, actionDescriptions, cycleBadge);
+    const cycleBadge = !hit
+      ? null
+      : context.cycle
+        ? cycleBadgeOf(context.cycle)
+        : cycleBadgeFor(this.view.computeCycleSet(hit), hit);
+    this.view.hit(changes, hit?.descriptions ?? null, cycleBadge);
   }
 
   cycleHint() {
@@ -174,11 +174,7 @@ export class HinterContentRoot {
     newHit.state = "hit";
     context.hitTarget = newHit;
 
-    this.view.hit([prevHit, newHit], newHit.descriptions, {
-      count: cycle.set.length - 1,
-      index: cycle.index + 1,
-      total: cycle.set.length,
-    });
+    this.view.hit([prevHit, newHit], newHit.descriptions, cycleBadgeOf(cycle));
   }
 
   async removeHints(options: ActionOptions, execute: boolean) {
@@ -213,16 +209,6 @@ function updateTargetState(target: HintedElement, input: string): boolean {
   return oldState !== target.state;
 }
 
-/** Return targets whose state is changed. */
-function* updateContext(
-  context: HintContext,
-  inputLetter: SingleLetter,
-): Generator<HintedElement> {
-  context.inputSequence.push(inputLetter);
-  delete context.hitTarget;
-  yield* applyInput(context, context.targets);
-}
-
 /** Apply the whole input sequence to targets; return those whose state changed. */
 function applyInput(
   context: HintContext,
@@ -236,6 +222,14 @@ function applyInput(
     changed.push(t);
   }
   return changed;
+}
+
+function cycleBadgeOf(cycle: { set: HintedElement[]; index: number }) {
+  return {
+    count: cycle.set.length - 1,
+    index: cycle.index + 1,
+    total: cycle.set.length,
+  };
 }
 
 function cycleBadgeFor(
