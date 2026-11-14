@@ -68,7 +68,17 @@ export class HinterContentRoot {
         ),
       ];
       context.targets.push(...targets);
+      /* WHY: letters typed before these targets existed are only in
+         inputSequence; without applying them here the targets stay "init" and
+         later letters match against a sequence that no chip reflects. */
+      const changes =
+        context.inputSequence.length > 0 ? applyInput(context, targets) : [];
       this.view.render(targets);
+      /* WHY: a hit decided by the input sequence can only appear in a batch
+         when no earlier batch had one; other batches need no view.hit, which
+         would scan every chip again. */
+      if (changes.some((t) => t.state === "hit"))
+        this.showHit(context, changes);
     }
   }
 
@@ -122,16 +132,20 @@ export class HinterContentRoot {
 
     delete context.cycle;
 
-    const changes = [...updateContext(context, inputLetter)];
+    context.inputSequence.push(inputLetter);
+    /* WHY: the view has no hints before the first rects arrive, so only
+       record the letter; each rendered batch applies inputSequence. */
+    if (!this.view.isStarted()) return;
+    delete context.hitTarget;
+    this.showHit(context, applyInput(context, context.targets));
+  }
 
-    const actionDescriptions = context.hitTarget?.descriptions ?? null;
-    const cycleBadge = context.hitTarget
-      ? cycleBadgeFor(
-          this.view.computeCycleSet(context.hitTarget),
-          context.hitTarget,
-        )
+  private showHit(context: HintContext, changes: HintedElement[]) {
+    const hit = context.hitTarget;
+    const cycleBadge = hit
+      ? cycleBadgeFor(this.view.computeCycleSet(hit), hit)
       : null;
-    this.view.hit(changes, actionDescriptions, cycleBadge);
+    this.view.hit(changes, hit?.descriptions ?? null, cycleBadge);
   }
 
   cycleHint() {
@@ -157,11 +171,7 @@ export class HinterContentRoot {
     newHit.state = "hit";
     context.hitTarget = newHit;
 
-    this.view.hit([prevHit, newHit], newHit.descriptions, {
-      count: cycle.set.length - 1,
-      index: cycle.index + 1,
-      total: cycle.set.length,
-    });
+    this.view.hit([prevHit, newHit], newHit.descriptions, cycleBadgeOf(cycle));
   }
 
   async removeHints(options: ActionOptions, execute: boolean) {
@@ -196,21 +206,27 @@ function updateTargetState(target: HintedElement, input: string): boolean {
   return oldState !== target.state;
 }
 
-/** Return targets whose state is changed. */
-function* updateContext(
+/** Apply the whole input sequence to targets; return those whose state changed. */
+function applyInput(
   context: HintContext,
-  inputLetter: SingleLetter,
-): Generator<HintedElement> {
-  context.inputSequence.push(inputLetter);
+  targets: HintedElement[],
+): HintedElement[] {
   const input = context.inputSequence.join("");
-  delete context.hitTarget;
-  for (const t of context.targets) {
-    const change = updateTargetState(t, input);
-    if (change) {
-      if (t.state === "hit") context.hitTarget = t;
-      yield t;
-    }
+  const changed: HintedElement[] = [];
+  for (const t of targets) {
+    if (!updateTargetState(t, input)) continue;
+    if (t.state === "hit") context.hitTarget = t;
+    changed.push(t);
   }
+  return changed;
+}
+
+function cycleBadgeOf(cycle: { set: HintedElement[]; index: number }) {
+  return {
+    count: cycle.set.length - 1,
+    index: cycle.index + 1,
+    total: cycle.set.length,
+  };
 }
 
 function cycleBadgeFor(
