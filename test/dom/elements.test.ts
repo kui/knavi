@@ -226,12 +226,8 @@ void describe("containsComposed", () => {
   void test("an element does not contain the shadow root of its sibling host", () =>
     assert.equal(contains(sibling, shadow), false));
 
-  void test("walks nodes that have no assignedSlot property", () => {
-    // WHY: Document, ShadowRoot and other non-Slottable nodes lack the property entirely.
-    assert.equal("assignedSlot" in document, false);
-    assert.equal("assignedSlot" in shadow, false);
-    assert.equal(contains(document, shadow), true);
-  });
+  void test("a document contains a shadow root in its tree", () =>
+    assert.equal(contains(document, shadow), true));
 
   void describe("slotted nodes", () => {
     // WHY: models <x-btn><span><b/></span></x-btn> whose shadow tree is <button><slot/></button>.
@@ -253,14 +249,19 @@ void describe("containsComposed", () => {
       assert.equal(contains(slot, span), true));
 
     void test("shadow element contains a node slotted through nested slots", () => {
-      const outerSlot = new FakeNode(
-        new FakeShadowRoot(new FakeNode(document)),
-      );
-      const outerHost = (outerSlot.parent as FakeShadowRoot).host;
-      const inner = new FakeNode(outerHost);
-      inner.assignedSlot = outerSlot;
-      outerSlot.assignedSlot = slot;
-      assert.equal(contains(shadowButton, inner), true);
+      // WHY: models <outer-x><span/></outer-x> whose shadow tree is <x-btn><slot/></x-btn>.
+      const outerHost = new FakeNode(document);
+      const nestedSpan = new FakeNode(outerHost);
+      const outerShadow = new FakeShadowRoot(outerHost);
+      const nestedBtnHost = new FakeNode(outerShadow);
+      const outerSlot = new FakeNode(nestedBtnHost);
+      const nestedBtnShadow = new FakeShadowRoot(nestedBtnHost);
+      const nestedButton = new FakeNode(nestedBtnShadow);
+      const nestedSlot = new FakeNode(nestedButton);
+      outerSlot.assignedSlot = nestedSlot;
+      nestedSpan.assignedSlot = outerSlot;
+      assert.equal(contains(nestedButton, nestedSpan), true);
+      assert.equal(contains(outerHost, nestedButton), true);
     });
 
     void test("host still contains the slotted node", () =>

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 class FakeNode {
   readonly parent: FakeNode | null;
+  assignedSlot?: FakeNode | null;
   constructor(parent: FakeNode | null = null) {
     this.parent = parent;
   }
@@ -77,6 +78,28 @@ void describe("dropNestedHeuristicDuplicates", () => {
     assert.deepEqual(survivors(candidate(host, true), candidate(inner, true)), [
       inner,
     ]));
+
+  void test("drops a heuristic slotted node inside a real shadow control", () => {
+    const slotHost = new FakeNode();
+    const slottedLabel = new FakeNode(slotHost);
+    const shadowButton = new FakeNode(new FakeShadowRoot(slotHost));
+    slottedLabel.assignedSlot = new FakeNode(shadowButton);
+    assert.deepEqual(
+      survivors(candidate(slottedLabel, true), candidate(shadowButton, false)),
+      [shadowButton],
+    );
+  });
+
+  void test("keeps a real slotted node inside a heuristic shadow control", () => {
+    const slotHost = new FakeNode();
+    const slottedLabel = new FakeNode(slotHost);
+    const shadowBox = new FakeNode(new FakeShadowRoot(slotHost));
+    slottedLabel.assignedSlot = new FakeNode(shadowBox);
+    assert.deepEqual(
+      survivors(candidate(shadowBox, true), candidate(slottedLabel, false)),
+      [slottedLabel],
+    );
+  });
 
   void test("keeps both when the rects differ", () =>
     assert.deepEqual(
