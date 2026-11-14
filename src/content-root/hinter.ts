@@ -71,15 +71,10 @@ export class HinterContentRoot {
       /* WHY: letters typed before these targets existed are only in
          inputSequence; without applying them here the targets stay "init" and
          later letters match against a sequence that no chip reflects. */
-      const input = context.inputSequence.join("");
-      if (input) {
-        for (const t of targets) {
-          updateTargetState(t, input);
-          if (t.state === "hit") context.hitTarget = t;
-        }
-      }
+      const changes =
+        context.inputSequence.length > 0 ? applyInput(context, targets) : [];
       this.view.render(targets);
-      if (input) this.showHit(context, targets);
+      if (changes.length > 0) this.showHit(context, changes);
     }
   }
 
@@ -135,12 +130,17 @@ export class HinterContentRoot {
 
     const changes = [...updateContext(context, inputLetter)];
     /* WHY: the view has no hints before the first rects arrive, so only
-       record the letter; the first render applies inputSequence. */
+       record the letter; each rendered batch applies inputSequence. */
     if (!this.view.isStarted()) return;
     this.showHit(context, changes);
   }
 
   private showHit(context: HintContext, changes: HintedElement[]) {
+    /* WHY: HintView.hit derives the active overlay from `changes`, so a hit
+       decided in an earlier batch must be passed again or its overlay and
+       cycle badge disappear. */
+    const hit = context.hitTarget;
+    if (hit && !changes.includes(hit)) changes = [hit, ...changes];
     const actionDescriptions = context.hitTarget?.descriptions ?? null;
     const cycleBadge = context.hitTarget
       ? cycleBadgeFor(
@@ -219,15 +219,23 @@ function* updateContext(
   inputLetter: SingleLetter,
 ): Generator<HintedElement> {
   context.inputSequence.push(inputLetter);
-  const input = context.inputSequence.join("");
   delete context.hitTarget;
-  for (const t of context.targets) {
-    const change = updateTargetState(t, input);
-    if (change) {
-      if (t.state === "hit") context.hitTarget = t;
-      yield t;
-    }
+  yield* applyInput(context, context.targets);
+}
+
+/** Apply the whole input sequence to targets; return those whose state changed. */
+function applyInput(
+  context: HintContext,
+  targets: HintedElement[],
+): HintedElement[] {
+  const input = context.inputSequence.join("");
+  const changed: HintedElement[] = [];
+  for (const t of targets) {
+    if (!updateTargetState(t, input)) continue;
+    if (t.state === "hit") context.hitTarget = t;
+    changed.push(t);
   }
+  return changed;
 }
 
 function cycleBadgeFor(

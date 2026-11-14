@@ -15,7 +15,7 @@ let failAttach = false;
       }
       sent.push(msg.key ? `${msg["@type"]}:${msg.key}` : msg["@type"]);
       if (msg["@type"] === "AttachHints") {
-        // WHY: the real AttachHints resolves only after all hints are rendered.
+        // WHY: the real AttachHints is answered only when the session ends.
         await new Promise<void>((resolve) => (releaseAttach = resolve));
         if (fail) return { error: new Error("attach failed") };
       }

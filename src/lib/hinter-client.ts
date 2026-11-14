@@ -43,9 +43,10 @@ export default class HinterClient {
        leaking to the page or being dropped. */
     this.hinting = true;
     const barrier = this.removeBarrier;
-    /* WHY: AttachHints resolves only after every hint is rendered, which can
-       take long and overlaps with hint input, so `ready` settles when the
-       message is dispatched, not when it is answered. */
+    /* WHY: AttachHints is answered only when the session ends, and ending it
+       needs RemoveHints. If `ready` waited for the answer, removeHints would
+       wait for the end of the session it is trying to end, so `ready` settles
+       when the message is dispatched. */
     let attach: Promise<void> | undefined;
     const dispatched = (async () => {
       if (barrier) await barrier;

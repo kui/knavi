@@ -164,4 +164,23 @@ void describe("HinterContentRoot", () => {
     await hinter.removeHints(OPTIONS, false);
     await attached;
   });
+
+  void test("a hit decided in an earlier batch is passed to the view again with later batches", async () => {
+    hinter.setup("asdf");
+    const attached = hinter.attachHints();
+    await tick();
+    hinter.hitHint("a" as SingleLetter);
+
+    aggregator.handleRects(requestId + 1, RECTS);
+    await tick();
+    const hit = view.batches[0][0];
+    assert.equal(hit.state, "hit");
+    aggregator.handleRects(requestId + 1, RECTS);
+    await tick();
+
+    assert.equal(view.hits.length, 2);
+    assert.ok(view.hits[1].includes(hit));
+    await hinter.removeHints(OPTIONS, false);
+    await attached;
+  });
 });
