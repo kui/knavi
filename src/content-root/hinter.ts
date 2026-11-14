@@ -133,21 +133,18 @@ export class HinterContentRoot {
     delete context.cycle;
 
     context.inputSequence.push(inputLetter);
-    delete context.hitTarget;
-    const changes = applyInput(context, context.targets);
     /* WHY: the view has no hints before the first rects arrive, so only
        record the letter; each rendered batch applies inputSequence. */
     if (!this.view.isStarted()) return;
-    this.showHit(context, changes);
+    delete context.hitTarget;
+    this.showHit(context, applyInput(context, context.targets));
   }
 
   private showHit(context: HintContext, changes: HintedElement[]) {
     const hit = context.hitTarget;
-    const cycleBadge = !hit
-      ? null
-      : context.cycle
-        ? cycleBadgeOf(context.cycle)
-        : cycleBadgeFor(this.view.computeCycleSet(hit), hit);
+    const cycleBadge = hit
+      ? cycleBadgeFor(this.view.computeCycleSet(hit), hit)
+      : null;
     this.view.hit(changes, hit?.descriptions ?? null, cycleBadge);
   }
 

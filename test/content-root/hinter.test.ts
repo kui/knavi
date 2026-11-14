@@ -168,6 +168,8 @@ void describe("HinterContentRoot", () => {
     await tick();
 
     assert.equal(view.batches[1][0].state, "hit");
+    assert.equal(view.hits.length, 1);
+    assert.ok(view.hits[0].includes(view.batches[1][0]));
     await hinter.removeHints(OPTIONS, false);
     await attached;
   });
@@ -189,7 +191,7 @@ void describe("HinterContentRoot", () => {
     await attached;
   });
 
-  void test("a later batch does not change the cycle badge of a cycled hit", async () => {
+  void test("a later batch does not call view.hit after the Cycle Key", async () => {
     hinter.setup("asdf");
     const attached = hinter.attachHints();
     await tick();
@@ -223,10 +225,13 @@ void describe("HinterContentRoot", () => {
     assert.equal(view.isStarted(), true);
 
     hinter.hitHint("a" as SingleLetter);
+    assert.equal(view.hits.length, 1);
     aggregator.handleRects(requestId + 1, RECTS);
     await tick();
 
     assert.equal(view.batches[0][0].state, "hit");
+    assert.equal(view.hits.length, 2);
+    assert.ok(view.hits[1].includes(view.batches[0][0]));
     await hinter.removeHints(OPTIONS, false);
     await attached;
   });
