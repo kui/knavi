@@ -2,10 +2,11 @@
  * The path → frameId table of the hint session running in each tab. Frames
  * report their path when a session starts (see FramePath in
  * content-all/frame-path.ts). The path is self-reported and a page can lie
- * about it; only the frameId (`sender.frameId`) is trusted. A report is
- * therefore accepted only if it cannot take over a path another frame holds:
- * the empty path belongs to frame 0, and a registered path never moves to a
- * different frameId within a session.
+ * about it;
+ * only the frameId (`sender.frameId`) is trusted. The first frame to report a
+ * path holds it for the session, and a later report of that path from another
+ * frame is dropped. The empty path belongs to frame 0. A path nobody has
+ * reported yet can be claimed by any frame.
  */
 
 const LOOKUP_TIMEOUT_MS = 300;

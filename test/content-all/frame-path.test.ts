@@ -193,6 +193,24 @@ void describe("FramePath.handleMessage", () => {
     assign(framePath, false);
     assert.equal(grandchild.posted.length, 2);
   });
+
+  void test("does not pass an assignment from an earlier session on to the children", async () => {
+    const { assign, grandchild } = setupAssignedChild();
+    const framePath = new FramePath();
+    assign(framePath, true);
+    framePath.handleHintingState(false);
+    grandchild.posted.length = 0;
+
+    // WHY: the parent's assignment for the new session has not arrived yet.
+    framePath.handleHintingState(true);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(grandchild.posted, []);
+
+    assign(framePath, true);
+    assert.deepEqual(grandchild.posted, [
+      { "@type": ASSIGNMENT, path: ["s0", "0"] },
+    ]);
+  });
 });
 
 void describe("FramePath.matches", () => {
@@ -209,14 +227,14 @@ void describe("FramePath.matches", () => {
   });
 });
 
-void describe("FramePath.childPath", () => {
+void describe("FramePath.childPaths", () => {
   void test("indexes a light-DOM iframe by its window.frames position", () => {
     const top = makeWindow();
     addChild(top);
     const child = addChild(top);
     setGlobals(top);
     const iframe = { contentWindow: child } as unknown as HTMLIFrameElement;
-    assert.deepEqual(new FramePath().childPath(iframe), ["1"]);
+    assert.deepEqual(new FramePath().childPaths([iframe])[0], ["1"]);
   });
 
   void test("names an iframe in a shadow root by its shadow index", () => {
@@ -224,7 +242,7 @@ void describe("FramePath.childPath", () => {
     const child = makeWindow(top);
     const iframe = { contentWindow: child } as unknown as HTMLIFrameElement;
     setGlobals(top, documentWithShadowIframes([{}, iframe]));
-    assert.deepEqual(new FramePath().childPath(iframe), ["s1"]);
+    assert.deepEqual(new FramePath().childPaths([iframe])[0], ["s1"]);
   });
 });
 

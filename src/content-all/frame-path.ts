@@ -52,20 +52,16 @@ export class FramePath {
     });
   }
 
-  childPath(iframe: HTMLIFrameElement): string[] | undefined {
-    return this.childPaths([iframe])[0];
-  }
-
   findChild(segment: string): HTMLIFrameElement | undefined {
     if (segment.startsWith("s")) {
       return [...listIframesInShadowRoots()][Number(segment.slice(1))];
     }
     const w = window.frames[Number(segment)] as Window | undefined;
     if (!w) return undefined;
-    for (const iframe of document.getElementsByTagName("iframe")) {
-      if (iframe.contentWindow === w) return iframe;
-    }
-    return undefined;
+    return [
+      ...document.getElementsByTagName("iframe"),
+      ...listIframesInShadowRoots(),
+    ].find((iframe) => iframe.contentWindow === w);
   }
 
   /**
@@ -131,8 +127,10 @@ export class FramePath {
    * every descendant of a frame whose own path was assigned (their chain to
    * the top is broken at that frame).
    */
-  assignToChildren(computed: string[] | undefined = computeOwnPath()): void {
-    const own = computed ?? this.assigned;
+  private assignToChildren(computed: string[] | undefined): void {
+    // WHY: an assignment kept from an earlier session may be stale.
+    const own =
+      computed ?? (this.assignedThisSession ? this.assigned : undefined);
     if (!own) return;
     const post = (w: Window | null, segment: string) =>
       w?.postMessage(
