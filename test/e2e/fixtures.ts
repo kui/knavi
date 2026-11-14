@@ -95,6 +95,25 @@ export async function setSettings(
   );
 }
 
+/** Read every extension setting stored in the given area. */
+export async function getSettings(
+  context: BrowserContext,
+  area: "sync" | "local" = "sync",
+): Promise<Record<string, string>> {
+  const sw = context.serviceWorkers()[0];
+  return sw.evaluate(async (a) => {
+    interface SW {
+      chrome: {
+        storage: Record<
+          string,
+          { get(k: null): Promise<Record<string, string>> }
+        >;
+      };
+    }
+    return (globalThis as unknown as SW).chrome.storage[a].get(null);
+  }, area);
+}
+
 /**
  * Navigate to a test page and wait until the root frame's content script is
  * ready.  "Ready" means the keyboard handler has finished loading settings

@@ -6,9 +6,9 @@ import { sendToRuntime } from "./chrome-messages";
    so loading a page or iframe does not start the service worker. Writes stay
    in the background to share its serialization queue. */
 
-/* WHY: re-resolve the active area (sync vs local) on every read because it can
-   be switched at runtime and this module has no storage listener of its own to
-   invalidate the memoized area. */
+/* WHY: re-resolve the active area (sync vs local) on every read instead of
+   trusting the memoized one: it can be switched at runtime, and the memo would
+   keep pointing at the area that was active when the content script loaded. */
 const resolveStorage = () => settings.getStorage(true);
 
 export default {
@@ -40,12 +40,8 @@ export default {
     url: string,
   ): Promise<[Pick<Settings, K>, string[]]> {
     const storage = await resolveStorage();
-    const raw = await storage.getRaw([...names, "blackList" as const]);
-    const [current, { blackList }] = await Promise.all([
-      storage.withDefaults(raw, names),
-      storage.withDefaults(raw, ["blackList"]),
-    ]);
-    return [current, new BlackList(blackList).match(url)];
+    const all = await storage.get([...names, "blackList" as const]);
+    return [all, new BlackList(all.blackList).match(url)];
   },
   /* WHY: stays a background message: it runs only when hints are requested,
      not on page load, and parsing in the background keeps JSON5 out of every
