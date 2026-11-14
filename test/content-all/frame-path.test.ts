@@ -151,7 +151,12 @@ void describe("FramePath.handleMessage", () => {
       },
     });
     const grandchild = addChild(frame);
-    setGlobals(frame);
+    setGlobals(frame, {
+      querySelectorAll: () => [],
+      getElementsByTagName: () => [
+        { contentWindow: grandchild, contentDocument: null },
+      ],
+    });
     const assign = (framePath: InstanceType<typeof FramePath>) =>
       framePath.handleMessage({
         data: { "@type": ASSIGNMENT, path: ["s0"] },
@@ -220,6 +225,25 @@ void describe("FramePath.handleMessage", () => {
     assert.equal(grandchild.posted.length, 1);
   });
 
+  void test("a frame with a computed path does not post its children again when it is assigned", async () => {
+    const top = makeWindow();
+    const frame = addChild(top);
+    const shadowChild = makeWindow(frame);
+    const iframe = {
+      contentWindow: shadowChild,
+      contentDocument: null,
+    } as unknown as HTMLIFrameElement;
+    setGlobals(frame, documentWithShadowIframes([iframe]));
+    const framePath = new FramePath();
+    framePath.handleHintingState(true);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    framePath.handleMessage({
+      data: { "@type": ASSIGNMENT, path: ["s0", "0"] },
+      source: top,
+    } as unknown as MessageEvent);
+    assert.equal(shadowChild.posted.length, 1);
+  });
+
   void test("ignores an assignment with an empty path", () => {
     const top = makeWindow();
     const frame = makeWindow(top);
@@ -268,6 +292,57 @@ void describe("FramePath.childPaths", () => {
     const iframe = { contentWindow: child } as unknown as HTMLIFrameElement;
     setGlobals(top, documentWithShadowIframes([{}, iframe]));
     assert.deepEqual(new FramePath().childPaths([iframe])[0], ["s1"]);
+  });
+});
+
+void describe("FramePath assignments to light-DOM children", () => {
+  beforeEach(() => {
+    sentToRuntime.length = 0;
+  });
+
+  /** A frame in a shadow root of top, computed through `frameElement`, with one light child. */
+  function setupShadowFrame(childContentDocument: unknown) {
+    const top = makeWindow();
+    const frame = makeWindow(top);
+    const shadowIframe: { ownerDocument?: unknown } = {};
+    shadowIframe.ownerDocument = documentWithShadowIframes([shadowIframe]);
+    frame.frameElement = shadowIframe;
+    const child = addChild(frame);
+    setGlobals(frame, {
+      querySelectorAll: () => [],
+      getElementsByTagName: () => [
+        { contentWindow: child, contentDocument: childContentDocument },
+      ],
+    });
+    return child;
+  }
+
+  void test("posts to a cross-origin child of a frame whose path has a shadow-root hop", async () => {
+    const child = setupShadowFrame(null);
+    await new FramePath().announce();
+    assert.deepEqual(child.posted, [
+      { "@type": ASSIGNMENT, path: ["s0", "0"] },
+    ]);
+  });
+
+  void test("does not post to a same-origin child", async () => {
+    const child = setupShadowFrame({});
+    await new FramePath().announce();
+    assert.deepEqual(child.posted, []);
+  });
+
+  void test("does not post to a cross-origin child when the path has no shadow-root hop", async () => {
+    const top = makeWindow();
+    const frame = addChild(top);
+    const child = addChild(frame);
+    setGlobals(frame, {
+      querySelectorAll: () => [],
+      getElementsByTagName: () => [
+        { contentWindow: child, contentDocument: null },
+      ],
+    });
+    await new FramePath().announce();
+    assert.deepEqual(child.posted, []);
   });
 });
 

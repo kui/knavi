@@ -90,9 +90,7 @@ export class FramePath {
    */
   async announce(): Promise<void> {
     const computed = computeOwnPath();
-    /* WHY: a frame with an assigned path passes the assignment on when it
-       receives it, so doing it here too would post it twice. */
-    if (computed) this.assignToChildren(computed);
+    this.assignToChildren(computed, "session-start");
     await this.reportPath(this.sessionPath(computed));
   }
 
@@ -129,21 +127,25 @@ export class FramePath {
     const computed = computeOwnPath();
     /* WHY: a child keeps its assignment across sessions, so it must hear this
        one again even when this frame's path did not change. */
-    this.assignToChildren(computed);
+    this.assignToChildren(computed, "assignment");
     // WHY: outside a hint session nothing consumes the report.
     if (this.hinting) this.reportPath(computed ?? path).catch(printError);
   }
 
   /**
-   * INVARIANT: a parent → child postMessage is only used for children that
-   * cannot compute their own path:
-   *   - cross-origin iframes in shadow roots;
-   *   - cross-origin children of a frame whose path has a shadow-root hop
-   *     (the child cannot read the `frameElement` that hop needs);
-   *   - every child of a frame whose own path was assigned (the chain to the
-   *     top is broken at that frame).
+   * Posts a path assignment to each child that cannot compute its own path
+   * (see `needsAssignment`).
+   *
+   * INVARIANT: each child gets one message per session. A frame with a
+   * computed path posts when the session starts, and a frame with an assigned
+   * path posts when its own assignment arrives, whichever of the two comes
+   * first.
    */
-  private assignToChildren(computed: string[] | undefined): void {
+  private assignToChildren(
+    computed: string[] | undefined,
+    trigger: "session-start" | "assignment",
+  ): void {
+    if ((trigger === "session-start") !== (computed != null)) return;
     const own = this.sessionPath(computed);
     if (!own) return;
     const post = (w: Window | null, segment: string) =>
@@ -156,25 +158,38 @@ export class FramePath {
       );
 
     shadowIframes().forEach((iframe, i) => {
-      // WHY: a same-origin child finds its own path through `frameElement`.
-      if (!computed || !iframe.contentDocument) {
+      if (needsAssignment(computed, iframe, true)) {
         post(iframe.contentWindow, encodeSegment(true, i));
       }
     });
-    if (!computed) {
-      for (let i = 0; i < window.frames.length; i++) {
-        post(window.frames[i], encodeSegment(false, i));
-      }
-    } else if (computed.some((s) => parseSegment(s)?.shadow)) {
-      for (const iframe of document.getElementsByTagName("iframe")) {
-        const w = iframe.contentWindow;
-        const index = w ? indexInFrames(window, w) : -1;
-        if (index >= 0 && !iframe.contentDocument) {
-          post(w, encodeSegment(false, index));
-        }
+    for (const iframe of document.getElementsByTagName("iframe")) {
+      const w = iframe.contentWindow;
+      const index = w ? indexInFrames(window, w) : -1;
+      if (index >= 0 && needsAssignment(computed, iframe, false)) {
+        post(w, encodeSegment(false, index));
       }
     }
   }
+}
+
+/**
+ * Whether a child iframe cannot compute its own path, so its parent has to
+ * assign it. `parentPath` is the parent's computed path, if it has one.
+ *   - Every child of a parent with an assigned path: the chain to the top is
+ *     broken at the parent.
+ *   - A child in a shadow root, or any child of a parent whose path has a
+ *     shadow-root hop: it needs the `frameElement` of a hop, which only a
+ *     same-origin frame can read. `contentDocument` is null for a
+ *     cross-origin child.
+ */
+function needsAssignment(
+  parentPath: string[] | undefined,
+  child: HTMLIFrameElement,
+  inShadowRoot: boolean,
+): boolean {
+  if (!parentPath) return true;
+  const hasShadowHop = parentPath.some((s) => parseSegment(s)?.shadow);
+  return (inShadowRoot || hasShadowHop) && !child.contentDocument;
 }
 
 function encodeSegment(shadow: boolean, index: number): string {

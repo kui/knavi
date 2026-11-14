@@ -10,12 +10,15 @@ export default class Blur {
   blur() {
     if (isDefaultActiveElement()) return false;
     if (!document.activeElement) return false;
-    const rect = getBoundingClientRect(document.activeElement);
     const path = this.framePath.current();
     if (!path) {
-      console.warn("Cannot blur: this frame's path is unknown");
-      return false;
+      /* WHY: a frame that does not know its path yet cannot relay the blur to
+         its parent, but the key is still ours. */
+      console.warn("Cannot relay blur: this frame's path is unknown");
+      (document.activeElement as Partial<HTMLElement>).blur?.();
+      return true;
     }
+    const rect = getBoundingClientRect(document.activeElement);
     sendToRuntime("BlurUp", { path, rect }).catch(printError);
     return true;
   }
