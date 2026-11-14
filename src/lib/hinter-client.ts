@@ -8,8 +8,10 @@ function noop() {
 export default class HinterClient {
   private hinting: boolean;
   /**
-   * WHY: attachHints() awaits this barrier so RemoveHintsInTab always reaches
-   * content-root before AttachHintsInTab, preventing session interleaving.
+   * WHY: the AttachHints dispatch waits for this barrier (and hint input waits
+   * for that dispatch via `ready`), so RemoveHintsInTab always reaches
+   * content-root before AttachHintsInTab. Without it, rapid action→sticky
+   * sequences interleave sessions and silently drop hitHint calls.
    * Always resolves, never rejects.
    */
   private removeBarrier: Promise<void> | null = null;
@@ -46,9 +48,6 @@ export default class HinterClient {
        message is dispatched, not when it is answered. */
     let attach: Promise<void> | undefined;
     const dispatched = (async () => {
-      /* WHY: without this barrier, rapid action→sticky sequences can
-         interleave sessions (RemoveHintsInTab arriving after AttachHintsInTab)
-         and silently drop hitHint calls. */
       if (barrier) await barrier;
       attach = sendToRuntime("AttachHints", undefined);
     })();

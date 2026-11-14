@@ -9,6 +9,7 @@ let failAttach = false;
 (globalThis as Record<string, unknown>).chrome = {
   runtime: {
     sendMessage: async (msg: { "@type": string; key?: string }) => {
+      const fail = failAttach;
       if (msg["@type"] === "RemoveHints") {
         await new Promise<void>((resolve) => (releaseRemove = resolve));
       }
@@ -16,7 +17,7 @@ let failAttach = false;
       if (msg["@type"] === "AttachHints") {
         // WHY: the real AttachHints resolves only after all hints are rendered.
         await new Promise<void>((resolve) => (releaseAttach = resolve));
-        if (failAttach) return { error: new Error("attach failed") };
+        if (fail) return { error: new Error("attach failed") };
       }
       return { response: undefined };
     },
@@ -96,5 +97,62 @@ void describe("HinterClient", () => {
     releaseRemove();
     await removing;
     assert.deepEqual(sent, ["AttachHints", "RemoveHints"]);
+  });
+
+  void test("cycleHint typed while the remove barrier is pending is sent after attach", async () => {
+    const client = new HinterClient();
+    client.syncHinting(true);
+    const removing = client.removeHints(options, true);
+    await flush();
+
+    const attaching = client.attachHints();
+    const cycling = client.cycleHint();
+    await flush();
+    assert.deepEqual(sent, []);
+
+    releaseRemove();
+    await removing;
+    await cycling;
+    releaseAttach();
+    await attaching;
+    assert.deepEqual(sent, ["RemoveHints", "AttachHints", "CycleHint"]);
+  });
+
+  void test("removeHints right after hitHint is sent after the queued key", async () => {
+    const client = new HinterClient();
+    const attaching = client.attachHints();
+    const hit = client.hitHint("a" as SingleLetter);
+    const removing = client.removeHints(options, false);
+    await flush();
+    releaseRemove();
+    await Promise.all([hit, removing]);
+    releaseAttach();
+    await attaching;
+    assert.deepEqual(sent, ["AttachHints", "HitHint:a", "RemoveHints"]);
+  });
+
+  void test("a late failure of an older attach does not reset a newer session", async () => {
+    failAttach = true;
+    const client = new HinterClient();
+    const first = client.attachHints().catch(() => undefined);
+    await flush();
+    const releaseFirst = releaseAttach;
+    failAttach = false;
+
+    const removing = client.removeHints(options, false);
+    await flush();
+    const second = client.attachHints();
+    assert.equal(client.isHinting, true);
+
+    releaseFirst();
+    await first;
+    assert.equal(client.isHinting, true);
+
+    releaseRemove();
+    await removing;
+    await flush();
+    releaseAttach();
+    await second;
+    assert.equal(client.isHinting, true);
   });
 });

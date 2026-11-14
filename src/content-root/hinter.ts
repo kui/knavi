@@ -68,7 +68,18 @@ export class HinterContentRoot {
         ),
       ];
       context.targets.push(...targets);
+      /* WHY: letters typed before these targets existed are only in
+         inputSequence; without applying them here the targets stay "init" and
+         later letters match against a sequence that no chip reflects. */
+      const input = context.inputSequence.join("");
+      if (input) {
+        for (const t of targets) {
+          updateTargetState(t, input);
+          if (t.state === "hit") context.hitTarget = t;
+        }
+      }
       this.view.render(targets);
+      if (input) this.showHit(context, targets);
     }
   }
 
@@ -123,7 +134,13 @@ export class HinterContentRoot {
     delete context.cycle;
 
     const changes = [...updateContext(context, inputLetter)];
+    /* WHY: the view has no hints before the first rects arrive, so only
+       record the letter; the first render applies inputSequence. */
+    if (!this.view.isStarted()) return;
+    this.showHit(context, changes);
+  }
 
+  private showHit(context: HintContext, changes: HintedElement[]) {
     const actionDescriptions = context.hitTarget?.descriptions ?? null;
     const cycleBadge = context.hitTarget
       ? cycleBadgeFor(

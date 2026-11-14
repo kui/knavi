@@ -14,6 +14,8 @@ import assert from "node:assert/strict";
   },
 };
 
+import type { SingleLetter } from "../../src/lib/strings.js";
+
 const { HinterContentRoot } = await import("../../src/content-root/hinter.js");
 const { RectAggregatorClient } =
   await import("../../src/content-root/rect-aggregator-client.js");
@@ -22,9 +24,18 @@ const { RectAggregatorClient } =
 function makeView() {
   let started = false;
   let rendered = 0;
+  const batches: HintedElement[][] = [];
+  const hits: HintedElement[][] = [];
   return {
     get rendered() {
       return rendered;
+    },
+    batches,
+    hits,
+    computeCycleSet: () => [],
+    hit(changes: HintedElement[]) {
+      if (!started) throw Error("Illegal state");
+      hits.push([...changes]);
     },
     isStarted: () => started,
     start() {
@@ -34,6 +45,7 @@ function makeView() {
     render(targets: unknown[]) {
       if (!started) throw Error("Illegal state");
       rendered += targets.length;
+      batches.push(targets as HintedElement[]);
     },
     remove() {
       if (!started) throw Error("Illegal state");
@@ -116,5 +128,40 @@ void describe("HinterContentRoot", () => {
     assert.equal(view.isStarted(), false);
     await attachAndRender();
     assert.equal(view.rendered, 1);
+  });
+
+  void test("letters typed before the first rects are applied to the first batch", async () => {
+    hinter.setup("asdf");
+    const attached = hinter.attachHints();
+    await tick();
+
+    assert.doesNotThrow(() => hinter.hitHint("a" as SingleLetter));
+    assert.equal(view.hits.length, 0);
+
+    aggregator.handleRects(requestId + 1, RECTS);
+    await tick();
+
+    assert.equal(view.batches[0][0].state, "hit");
+    assert.equal(view.hits.length, 1);
+    await hinter.removeHints(OPTIONS, false);
+    await attached;
+  });
+
+  void test("letters typed before the first rects are applied to later batches too", async () => {
+    hinter.setup("asdf");
+    const attached = hinter.attachHints();
+    await tick();
+    hinter.hitHint("s" as SingleLetter);
+
+    // WHY: the first batch holds hint "a", the second hint "s".
+    aggregator.handleRects(requestId + 1, RECTS);
+    await tick();
+    assert.equal(view.batches[0][0].state, "disabled");
+    aggregator.handleRects(requestId + 1, RECTS);
+    await tick();
+
+    assert.equal(view.batches[1][0].state, "hit");
+    await hinter.removeHints(OPTIONS, false);
+    await attached;
   });
 });
