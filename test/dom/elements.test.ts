@@ -24,6 +24,7 @@ class FakeTextarea implements EventTarget {
 /* eslint-enable @typescript-eslint/no-empty-function */
 class FakeNode {
   readonly parent: FakeNode | null;
+  declare assignedSlot?: FakeNode | null;
   constructor(parent: FakeNode | null = null) {
     this.parent = parent;
   }
@@ -212,6 +213,70 @@ void describe("containsComposed", () => {
 
   void test("does not contain null", () =>
     assert.equal(contains(wrapper, null), false));
+
+  void test("a shadow root contains an element in its tree", () =>
+    assert.equal(contains(shadow, innerHost), true));
+
+  void test("a shadow root contains an element in a nested shadow tree", () =>
+    assert.equal(contains(shadow, button), true));
+
+  void test("a host contains its own shadow root", () =>
+    assert.equal(contains(host, shadow), true));
+
+  void test("an element does not contain the shadow root of its sibling host", () =>
+    assert.equal(contains(sibling, shadow), false));
+
+  void test("a document contains a shadow root in its tree", () =>
+    assert.equal(contains(document, shadow), true));
+
+  void describe("slotted nodes", () => {
+    // WHY: models <x-btn><span><b/></span></x-btn> whose shadow tree is <button><slot/></button>.
+    const btnHost = new FakeNode(document);
+    const span = new FakeNode(btnHost);
+    const bold = new FakeNode(span);
+    const btnShadow = new FakeShadowRoot(btnHost);
+    const shadowButton = new FakeNode(btnShadow);
+    const slot = new FakeNode(shadowButton);
+    span.assignedSlot = slot;
+
+    void test("shadow element contains a node slotted into it", () =>
+      assert.equal(contains(shadowButton, span), true));
+
+    void test("shadow element contains a descendant of a slotted node", () =>
+      assert.equal(contains(shadowButton, bold), true));
+
+    void test("slot contains its assigned node", () =>
+      assert.equal(contains(slot, span), true));
+
+    void test("shadow element contains a node slotted through nested slots", () => {
+      // WHY: models <outer-x><span/></outer-x> whose shadow tree is <x-btn><slot/></x-btn>.
+      const outerHost = new FakeNode(document);
+      const nestedSpan = new FakeNode(outerHost);
+      const outerShadow = new FakeShadowRoot(outerHost);
+      const nestedBtnHost = new FakeNode(outerShadow);
+      const outerSlot = new FakeNode(nestedBtnHost);
+      const nestedBtnShadow = new FakeShadowRoot(nestedBtnHost);
+      const nestedButton = new FakeNode(nestedBtnShadow);
+      const nestedSlot = new FakeNode(nestedButton);
+      outerSlot.assignedSlot = nestedSlot;
+      nestedSpan.assignedSlot = outerSlot;
+      assert.equal(contains(nestedButton, nestedSpan), true);
+      assert.equal(contains(outerHost, nestedButton), true);
+    });
+
+    void test("host still contains the slotted node", () =>
+      assert.equal(contains(btnHost, span), true));
+
+    void test("unrelated shadow element does not contain a slotted node", () => {
+      const otherShadow = new FakeShadowRoot(new FakeNode(document));
+      assert.equal(contains(new FakeNode(otherShadow), span), false);
+    });
+
+    void test("a shadow element does not contain the light node it is not assigned", () => {
+      const unassigned = new FakeNode(btnHost);
+      assert.equal(contains(shadowButton, unassigned), false);
+    });
+  });
 });
 
 void describe("traverseComposedParent", () => {
