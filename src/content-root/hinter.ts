@@ -74,9 +74,11 @@ export class HinterContentRoot {
       const changes =
         context.inputSequence.length > 0 ? applyInput(context, targets) : [];
       this.view.render(targets);
-      /* WHY: a hit decided by the input sequence can only appear in a batch
-         when no earlier batch had one; other batches need no view.hit, which
-         would scan every chip again. */
+      /* WHY: HintView.hit hides the active overlay and clears the cycle badge
+         unless `changes` contains the hit, so calling it for a batch without
+         one would erase the hit shown for an earlier batch. A hit decided by
+         the input sequence can only appear in a batch when no earlier batch
+         had one. */
       if (changes.some((t) => t.state === "hit"))
         this.showHit(context, changes);
     }
@@ -171,7 +173,11 @@ export class HinterContentRoot {
     newHit.state = "hit";
     context.hitTarget = newHit;
 
-    this.view.hit([prevHit, newHit], newHit.descriptions, cycleBadgeOf(cycle));
+    this.view.hit(
+      [prevHit, newHit],
+      newHit.descriptions,
+      cycleBadgeFor(cycle.set, newHit),
+    );
   }
 
   async removeHints(options: ActionOptions, execute: boolean) {
@@ -219,14 +225,6 @@ function applyInput(
     changed.push(t);
   }
   return changed;
-}
-
-function cycleBadgeOf(cycle: { set: HintedElement[]; index: number }) {
-  return {
-    count: cycle.set.length - 1,
-    index: cycle.index + 1,
-    total: cycle.set.length,
-  };
 }
 
 function cycleBadgeFor(

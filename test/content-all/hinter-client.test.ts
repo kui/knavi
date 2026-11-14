@@ -156,4 +156,26 @@ void describe("HinterClient", () => {
     await second;
     assert.equal(client.isHinting, true);
   });
+
+  void test("a removeHints typed while attach waits for the barrier is sent after AttachHints", async () => {
+    const client = new HinterClient();
+    client.syncHinting(true);
+    const first = client.removeHints(options, true);
+    await flush();
+    const attaching = client.attachHints();
+    const second = client.removeHints(options, true);
+    await flush();
+    assert.deepEqual(sent, ["RemoveHints"]);
+
+    releaseRemove();
+    await first;
+    await flush();
+    assert.deepEqual(sent, ["RemoveHints", "AttachHints", "RemoveHints"]);
+
+    releaseRemove();
+    await second;
+    releaseAttach();
+    await attaching;
+    assert.equal(client.isHinting, false);
+  });
 });

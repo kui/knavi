@@ -8,9 +8,13 @@ import assert from "node:assert/strict";
   body: {},
   documentElement: { clientWidth: 800, clientHeight: 600 },
 };
+const sentTypes: string[] = [];
 (globalThis as Record<string, unknown>).chrome = {
   runtime: {
-    sendMessage: () => Promise.resolve({ response: undefined }),
+    sendMessage: (msg: { "@type": string }) => {
+      sentTypes.push(msg["@type"]);
+      return Promise.resolve({ response: undefined });
+    },
   },
 };
 
@@ -234,5 +238,19 @@ void describe("HinterContentRoot", () => {
     assert.ok(view.hits[1].includes(view.batches[0][0]));
     await hinter.removeHints(OPTIONS, false);
     await attached;
+  });
+
+  void test("a Cycle Key and an Action Key before the first rects call neither view.hit nor an action", async () => {
+    hinter.setup("asdf");
+    const attached = hinter.attachHints();
+    await tick();
+    sentTypes.length = 0;
+
+    hinter.cycleHint();
+    await hinter.removeHints(OPTIONS, true);
+    await attached;
+
+    assert.equal(view.hits.length, 0);
+    assert.ok(!sentTypes.includes("ExecuteAction"));
   });
 });
