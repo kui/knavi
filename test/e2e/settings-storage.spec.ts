@@ -40,12 +40,10 @@ test.describe("settings read directly from storage", () => {
     await setSettings(context, { blackList: url });
     await gotoTest(page, "input.html");
     await page.keyboard.down("Space");
-    // WHY: the blacklisted page must stay hint-free; allow time for any hint to render.
     await expect(page.locator(".hint")).toHaveCount(0, { timeout: 1_000 });
     await page.keyboard.up("Space");
 
     await setSettings(context, { blackList: "" });
-    // WHY: content-all re-reads settings after a debounce, so retry until it applies.
     await expect(async () => {
       await page.keyboard.down("Space");
       await expect(page.locator(".hint").first()).toBeVisible({

@@ -37,9 +37,6 @@ export const test = base.extend<Fixtures>({
     if (ctx.serviceWorkers().length === 0) {
       await ctx.waitForEvent("serviceworker", { timeout: 10_000 });
     }
-    /* WHY: onInstalled back-fills defaults asynchronously. Content scripts read
-       storage directly and only fall back to a background message while the
-       defaults are missing, so wait for them to keep page loads deterministic. */
     await ctx.serviceWorkers()[0].evaluate(async () => {
       interface SW {
         chrome: {
