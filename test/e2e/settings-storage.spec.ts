@@ -57,3 +57,24 @@ test.describe("settings read directly from storage", () => {
     await page.keyboard.up("Space");
   });
 });
+
+test.describe("settings missing from storage", () => {
+  test("hints get the default CSS before it is back-filled", async ({
+    context,
+    page,
+  }) => {
+    await context.serviceWorkers()[0].evaluate(async () => {
+      interface SW {
+        chrome: { storage: { sync: { remove(k: string): Promise<void> } } };
+      }
+      await (globalThis as unknown as SW).chrome.storage.sync.remove("css");
+    });
+    await gotoTest(page, "input.html");
+    await attachHints(page);
+    await expect(page.locator("#overlay").first()).toHaveCSS(
+      "background-color",
+      "rgb(153, 153, 153)",
+    );
+    await page.keyboard.up("Space");
+  });
+});
