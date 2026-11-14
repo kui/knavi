@@ -246,6 +246,55 @@ void describe("FramePath.childPaths", () => {
   });
 });
 
+void describe("FramePath.findChild", () => {
+  /** Whether every kind of iframe is a child of `top`, as `window.frames` and the DOM see it. */
+  function setupTop() {
+    const top = makeWindow();
+    const light = addChild(top);
+    const shadow = makeWindow(top); // WHY: not in top.frames
+    const lightIframe = {
+      contentWindow: light,
+    } as unknown as HTMLIFrameElement;
+    const shadowIframe = {
+      contentWindow: shadow,
+    } as unknown as HTMLIFrameElement;
+    setGlobals(top, {
+      querySelectorAll: () => [
+        { shadowRoot: { querySelectorAll: () => [{}, shadowIframe] } },
+      ],
+      getElementsByTagName: () => [lightIframe],
+    });
+    return { lightIframe, shadowIframe };
+  }
+
+  void test("resolves a numeric segment to a light-DOM iframe", () => {
+    const { lightIframe } = setupTop();
+    assert.equal(new FramePath().findChild("0"), lightIframe);
+  });
+
+  void test("resolves an s<n> segment to an iframe in a shadow root", () => {
+    const { shadowIframe } = setupTop();
+    assert.equal(new FramePath().findChild("s1"), shadowIframe);
+  });
+
+  void test("resolves the segments that childPaths produced", () => {
+    const { lightIframe, shadowIframe } = setupTop();
+    const framePath = new FramePath();
+    for (const iframe of [lightIframe, shadowIframe]) {
+      const [path] = framePath.childPaths([iframe]);
+      assert.equal(framePath.findChild(path!.at(-1)!), iframe);
+    }
+  });
+
+  void test("resolves nothing for an unknown or malformed segment", () => {
+    setupTop();
+    const framePath = new FramePath();
+    for (const segment of ["5", "s2", "s", "", "x", "-1", "1.5"]) {
+      assert.equal(framePath.findChild(segment), undefined, segment);
+    }
+  });
+});
+
 void describe("FramePath.reportAtStartup", () => {
   beforeEach(() => {
     sentToRuntime.length = 0;

@@ -17,10 +17,9 @@ interface FramePathAssignment {
  * The top frame's path is `[]`.
  *
  * Chrome has no content-script API that maps a Window or iframe element to a
- * frameId (`runtime.getFrameId` is Firefox-only; see #90), and the old
- * child → parent postMessage handshake broke pages that listen to `message`
- * events (#146). Paths replace it: each frame computes its own path and
- * reports it to the background, which maps it to `sender.frameId`.
+ * frameId, and a message from a child to its parent page can break pages that
+ * listen to `message` events. So each frame computes its own path and reports
+ * it to the background, which maps it to `sender.frameId`.
  */
 export class FramePath {
   private assigned: string[] | undefined;
@@ -40,28 +39,30 @@ export class FramePath {
   /** The paths of direct child iframes; undefined for an unmappable one. */
   childPaths(iframes: readonly HTMLIFrameElement[]): (string[] | undefined)[] {
     const own = this.current();
-    let shadowIframes: HTMLIFrameElement[] | undefined;
+    let shadow: HTMLIFrameElement[] | undefined;
     return iframes.map((iframe) => {
       const w = iframe.contentWindow;
       if (!own || !w) return undefined;
       const index = indexInFrames(window, w);
-      if (index >= 0) return [...own, String(index)];
-      shadowIframes ??= [...listIframesInShadowRoots()];
-      const shadowIndex = shadowIframes.indexOf(iframe);
-      return shadowIndex >= 0 ? [...own, `s${shadowIndex}`] : undefined;
+      if (index >= 0) return [...own, encodeSegment(false, index)];
+      shadow ??= shadowIframes();
+      const shadowIndex = shadow.indexOf(iframe);
+      return shadowIndex >= 0
+        ? [...own, encodeSegment(true, shadowIndex)]
+        : undefined;
     });
   }
 
   findChild(segment: string): HTMLIFrameElement | undefined {
-    if (segment.startsWith("s")) {
-      return [...listIframesInShadowRoots()][Number(segment.slice(1))];
-    }
-    const w = window.frames[Number(segment)] as Window | undefined;
+    const parsed = parseSegment(segment);
+    if (!parsed) return undefined;
+    if (parsed.shadow) return shadowIframes()[parsed.index];
+    const w = window.frames[parsed.index] as Window | undefined;
     if (!w) return undefined;
-    return [
-      ...document.getElementsByTagName("iframe"),
-      ...listIframesInShadowRoots(),
-    ].find((iframe) => iframe.contentWindow === w);
+    for (const iframe of document.getElementsByTagName("iframe")) {
+      if (iframe.contentWindow === w) return iframe;
+    }
+    return shadowIframes().find((iframe) => iframe.contentWindow === w);
   }
 
   /**
@@ -141,19 +142,33 @@ export class FramePath {
         "*",
       );
 
-    let shadowIndex = 0;
-    for (const iframe of listIframesInShadowRoots()) {
+    shadowIframes().forEach((iframe, i) => {
       // WHY: a same-origin child finds its own path through `frameElement`.
       if (!computed || !iframe.contentDocument) {
-        post(iframe.contentWindow, `s${shadowIndex}`);
+        post(iframe.contentWindow, encodeSegment(true, i));
       }
-      shadowIndex++;
-    }
+    });
     if (computed) return;
     for (let i = 0; i < window.frames.length; i++) {
-      post(window.frames[i], String(i));
+      post(window.frames[i], encodeSegment(false, i));
     }
   }
+}
+
+function encodeSegment(shadow: boolean, index: number): string {
+  return `${shadow ? "s" : ""}${index}`;
+}
+
+function parseSegment(
+  segment: string,
+): { shadow: boolean; index: number } | undefined {
+  const m = /^(s?)(\d+)$/.exec(segment);
+  return m ? { shadow: m[1] === "s", index: Number(m[2]) } : undefined;
+}
+
+/** The iframes in shadow roots of `doc`, in the order segments count them. */
+function shadowIframes(doc: Document = document): HTMLIFrameElement[] {
+  return [...listIframesInShadowRoots(doc)];
 }
 
 function samePath(a: readonly string[], b: readonly string[]): boolean {
@@ -170,15 +185,15 @@ function indexInFrames(parentWindow: Window, child: Window): number {
 
 function segmentInParent(child: Window): string | undefined {
   const index = indexInFrames(child.parent, child);
-  if (index >= 0) return String(index);
+  if (index >= 0) return encodeSegment(false, index);
   try {
     const iframe = child.frameElement;
     if (!iframe) return undefined;
     // WHY: the parent's elements belong to another realm, so `instanceof` is false.
-    const shadowIndex = [
-      ...listIframesInShadowRoots(iframe.ownerDocument),
-    ].indexOf(iframe as HTMLIFrameElement);
-    return shadowIndex >= 0 ? `s${shadowIndex}` : undefined;
+    const shadowIndex = shadowIframes(iframe.ownerDocument).indexOf(
+      iframe as HTMLIFrameElement,
+    );
+    return shadowIndex >= 0 ? encodeSegment(true, shadowIndex) : undefined;
   } catch {
     return undefined;
   }
