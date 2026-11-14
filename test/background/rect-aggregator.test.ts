@@ -141,6 +141,38 @@ void describe("background AllRectsRequest routing", () => {
     assert.equal(await framePaths.lookup(TAB, ["7"], 10), undefined);
   });
 
+  void test("ignores a report from another frame for the top frame's path", async () => {
+    await report([], 5);
+    assert.equal(await framePaths.lookup(TAB, [], 10), 0);
+  });
+
+  void test("keeps the first frame that reported a path", async () => {
+    await report(["0"], 9);
+    await report(["0"], 4);
+    assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
+  });
+
+  void test("accepts the same frame reporting a path again", async () => {
+    await report(["0"], 9);
+    await report(["0"], 9);
+    assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
+  });
+
+  void test("ignores a report made outside a session", async () => {
+    framePaths.end(TAB);
+    await report(["0"], 9);
+    framePaths.reset(TAB);
+    assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
+  });
+
+  void test("does not create a session when looking up", async () => {
+    framePaths.end(TAB);
+    assert.equal(await framePaths.lookup(TAB, [], 10), undefined);
+    await report(["0"], 9);
+    framePaths.reset(TAB);
+    assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
+  });
+
   void test("forgets reports of the previous hint session", async () => {
     await report(["0"], 9);
     framePaths.reset(TAB);

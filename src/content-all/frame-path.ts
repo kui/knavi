@@ -1,5 +1,6 @@
 import { listIframesInShadowRoots } from "../dom/elements";
 import { sendToRuntime } from "../lib/chrome-messages";
+import { printError } from "../lib/errors";
 
 const ASSIGNMENT_TYPE = "com.github.kui.knavi.FramePathAssignment";
 
@@ -34,20 +35,23 @@ export class FramePath {
     return own != null && samePath(own, path);
   }
 
-  /** The path segment of a direct child iframe, as seen from this frame. */
-  childSegment(iframe: HTMLIFrameElement): string | undefined {
-    const w = iframe.contentWindow;
-    if (!w) return undefined;
-    const index = indexInFrames(window, w);
-    if (index >= 0) return String(index);
-    const shadowIndex = [...listIframesInShadowRoots()].indexOf(iframe);
-    return shadowIndex >= 0 ? `s${shadowIndex}` : undefined;
+  /** The paths of direct child iframes; undefined for an unmappable one. */
+  childPaths(iframes: readonly HTMLIFrameElement[]): (string[] | undefined)[] {
+    const own = this.current();
+    let shadowIframes: HTMLIFrameElement[] | undefined;
+    return iframes.map((iframe) => {
+      const w = iframe.contentWindow;
+      if (!own || !w) return undefined;
+      const index = indexInFrames(window, w);
+      if (index >= 0) return [...own, String(index)];
+      shadowIframes ??= [...listIframesInShadowRoots()];
+      const shadowIndex = shadowIframes.indexOf(iframe);
+      return shadowIndex >= 0 ? [...own, `s${shadowIndex}`] : undefined;
+    });
   }
 
   childPath(iframe: HTMLIFrameElement): string[] | undefined {
-    const own = this.current();
-    const segment = this.childSegment(iframe);
-    return own && segment != null ? [...own, segment] : undefined;
+    return this.childPaths([iframe])[0];
   }
 
   findChild(segment: string): HTMLIFrameElement | undefined {
@@ -63,33 +67,58 @@ export class FramePath {
   }
 
   /**
-   * Reports this frame's path to the background and assigns the paths of the
-   * children that cannot work out theirs. Called when a hint session starts.
+   * Reports the path of a frame whose content script starts after the hint
+   * session did, so it missed the SyncHintingState broadcast (#95, #109).
+   * The background ignores the report when no session is running.
    */
-  async announce(): Promise<void> {
-    this.assignToChildren();
-    await this.report();
+  async reportAtStartup(): Promise<void> {
+    await this.reportPath(computeOwnPath());
   }
 
-  async report(): Promise<void> {
-    const path = this.current();
+  /** Handles the SyncHintingState broadcast. */
+  handleHintingState(active: boolean): void {
+    if (active) this.announce().catch(printError);
+  }
+
+  /**
+   * Reports this frame's computed path to the background and assigns the
+   * paths of the children that cannot work out theirs. Called when a hint
+   * session starts. A frame that only has an assigned path reports it when
+   * the assignment arrives instead: an assignment kept from a previous
+   * session may be stale.
+   */
+  async announce(): Promise<void> {
+    const computed = computeOwnPath();
+    this.assignToChildren(computed);
+    await this.reportPath(computed);
+  }
+
+  private async reportPath(path: string[] | undefined): Promise<void> {
     if (path) await sendToRuntime("ReportFramePath", { path });
   }
 
   /**
    * Handles a path assignment from the parent frame. Returns true if this
-   * frame's path changed and should be announced.
+   * frame's assigned path changed. A valid assignment is always passed on to
+   * the children, and reported while a hint session is running.
    */
-  readonly handleMessage = (e: MessageEvent): boolean => {
+  handleMessage(e: MessageEvent, isHinting: boolean): boolean {
     const data = e.data as Partial<FramePathAssignment> | null | undefined;
     if (data?.["@type"] !== ASSIGNMENT_TYPE) return false;
     if (parent === window || e.source !== parent) return false;
     const { path } = data;
     if (!Array.isArray(path) || !path.every((s) => typeof s === "string"))
       return false;
+    const changed = this.assigned == null || !samePath(this.assigned, path);
     this.assigned = path;
-    return true;
-  };
+    const computed = computeOwnPath();
+    /* WHY: a child keeps its assignment across sessions, so it must hear this
+       one again even when this frame's path did not change. */
+    this.assignToChildren(computed);
+    // WHY: outside a hint session nothing consumes the report.
+    if (isHinting) this.reportPath(computed ?? path).catch(printError);
+    return changed;
+  }
 
   /**
    * INVARIANT: a parent → child postMessage is only used for children that
@@ -97,10 +126,9 @@ export class FramePath {
    * every descendant of a frame whose own path was assigned (their chain to
    * the top is broken at that frame).
    */
-  assignToChildren(): void {
-    const own = this.current();
+  assignToChildren(computed: string[] | undefined = computeOwnPath()): void {
+    const own = computed ?? this.assigned;
     if (!own) return;
-    const ownIsComputed = computeOwnPath() != null;
     const post = (w: Window | null, segment: string) =>
       w?.postMessage(
         {
@@ -113,12 +141,12 @@ export class FramePath {
     let shadowIndex = 0;
     for (const iframe of listIframesInShadowRoots()) {
       // WHY: a same-origin child finds its own path through `frameElement`.
-      if (!ownIsComputed || !iframe.contentDocument) {
+      if (!computed || !iframe.contentDocument) {
         post(iframe.contentWindow, `s${shadowIndex}`);
       }
       shadowIndex++;
     }
-    if (ownIsComputed) return;
+    if (computed) return;
     for (let i = 0; i < window.frames.length; i++) {
       post(window.frames[i], String(i));
     }

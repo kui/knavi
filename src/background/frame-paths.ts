@@ -1,8 +1,11 @@
 /**
  * The path → frameId table of the hint session running in each tab. Frames
  * report their path when a session starts (see FramePath in
- * content-all/frame-path.ts); `sender.frameId` is the trusted side of the
- * mapping, so a page cannot register another frame's id.
+ * content-all/frame-path.ts). The path is self-reported and a page can lie
+ * about it; only the frameId (`sender.frameId`) is trusted. A report is
+ * therefore accepted only if it cannot take over a path another frame holds:
+ * the empty path belongs to frame 0, and a registered path never moves to a
+ * different frameId within a session.
  */
 
 const LOOKUP_TIMEOUT_MS = 300;
@@ -42,14 +45,24 @@ export function end(tabId: number): void {
   sessions.delete(tabId);
 }
 
+/** Ignored outside a hint session, so a late report cannot leak a table. */
 export function report(
   tabId: number,
   path: readonly string[],
   frameId: number,
 ): void {
-  let session = sessions.get(tabId);
-  if (!session) sessions.set(tabId, (session = newSession()));
+  const session = sessions.get(tabId);
+  if (!session) return;
+  if (path.length === 0 && frameId !== 0) {
+    console.debug("Frame", frameId, "reported the top frame's path");
+    return;
+  }
   const k = key(path);
+  const registered = session.frames.get(k);
+  if (registered != null && registered !== frameId) {
+    console.debug("Frame", frameId, "reported", path, "held by", registered);
+    return;
+  }
   session.frames.set(k, frameId);
   const waiters = session.waiters.get(k);
   session.waiters.delete(k);
@@ -66,8 +79,8 @@ export function lookup(
   path: readonly string[],
   timeoutMs = LOOKUP_TIMEOUT_MS,
 ): Promise<number | undefined> {
-  let session = sessions.get(tabId);
-  if (!session) sessions.set(tabId, (session = newSession()));
+  const session = sessions.get(tabId);
+  if (!session) return Promise.resolve(undefined);
   const k = key(path);
   const known = session.frames.get(k);
   if (known != null) return Promise.resolve(known);
@@ -76,7 +89,8 @@ export function lookup(
   const waiters = session.waiters.get(k) ?? [];
   session.waiters.set(k, waiters);
   const timer = setTimeout(() => {
-    waiters.splice(waiters.indexOf(settle), 1);
+    const i = waiters.indexOf(settle);
+    if (i >= 0) waiters.splice(i, 1);
     resolve(undefined);
   }, timeoutMs);
   function settle(frameId: number | undefined) {

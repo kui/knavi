@@ -14,11 +14,9 @@ globalThis.KNAVI_FILE = "content-all";
 
 const framePath = new FramePath();
 window.addEventListener("message", (e) => {
-  if (!framePath.handleMessage(e)) return;
-  framePath.assignToChildren();
-  // WHY: outside a hint session nothing consumes the report.
-  if (hinterClient.isHinting) framePath.report().catch(printError);
+  framePath.handleMessage(e, hinterClient.isHinting);
 });
+framePath.reportAtStartup().catch(printError);
 
 const blurerClient = new BlurerClient(framePath);
 const hinterClient = new HinterClient();
@@ -103,7 +101,7 @@ chrome.runtime.onMessage.addListener(
     })
     .add("SyncHintingState", ({ active }) => {
       hinterClient.syncHinting(active);
-      if (active) framePath.announce().catch(printError);
+      framePath.handleHintingState(active);
     })
     .buildListener(),
 );

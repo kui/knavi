@@ -154,3 +154,46 @@ test.describe("page-visible messages", () => {
     ).toEqual([]);
   });
 });
+
+test.describe("hints in an iframe whose content script starts late", () => {
+  test.afterEach(async ({ page }) => {
+    await page.keyboard.up("Space").catch(() => void 0);
+  });
+
+  test("a button in a cross-origin iframe inserted as hinting begins", async ({
+    page,
+  }) => {
+    /* WHY: an init script registers its listener before the extension's
+       content script does, so the iframe is inserted before the extension
+       handles the Space keydown. Its content script then starts after the
+       SyncHintingState broadcast of the session. */
+    await page.addInitScript(() => {
+      window.addEventListener(
+        "keydown",
+        (e) => {
+          if (e.code !== "Space" || document.querySelector("iframe")) return;
+          const otherHost =
+            location.hostname === "localhost" ? "127.0.0.1" : "localhost";
+          const iframe = document.createElement("iframe");
+          iframe.id = "child";
+          iframe.style.cssText = "width: 500px; height: 200px";
+          iframe.src = `${location.protocol}//${otherHost}:${location.port}/tests/cross-origin-iframe-child.html`;
+          document.body.appendChild(iframe);
+        },
+        true,
+      );
+    });
+    await gotoTest(page, "cross-origin-iframe-late.html");
+    await expect(page.locator("#child")).toHaveCount(0);
+
+    await page.keyboard.down("Space");
+    const button = page.frameLocator("#child").locator("#child-button");
+    await expect(button).toBeVisible();
+    const box = await button.boundingBox();
+    expect(box).toBeTruthy();
+    const hint = await findHintNear(page, box!);
+    for (const ch of hint) await page.keyboard.press(ch);
+    await page.keyboard.up("Space");
+    await expect(button).toHaveText("clicked", { timeout: 3_000 });
+  });
+});

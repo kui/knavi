@@ -70,10 +70,13 @@ export class RectAggregatorContentAll {
       rects: this.elements,
     });
 
-    for (const { element, rects } of this.elements) {
-      if (element instanceof HTMLIFrameElement)
-        this.propagateMessage(element, rects[0], context);
-    }
+    const iframes = this.elements.flatMap(({ element, rects }) =>
+      element instanceof HTMLIFrameElement ? [{ element, rect: rects[0] }] : [],
+    );
+    const childPaths = this.framePath.childPaths(iframes.map((i) => i.element));
+    iframes.forEach(({ element, rect }, i) =>
+      this.propagateMessage(element, rect, childPaths[i], context),
+    );
   }
 
   private async aggregateRects({
@@ -125,6 +128,7 @@ export class RectAggregatorContentAll {
   private propagateMessage(
     frame: HTMLIFrameElement,
     rect: Rect<"element-border", "root-viewport"> | null,
+    childPath: string[] | undefined,
     {
       requestId,
       frameOffsets,
@@ -139,7 +143,6 @@ export class RectAggregatorContentAll {
       return;
     }
 
-    const childPath = this.framePath.childPath(frame);
     if (!childPath) {
       console.debug("iframe has no frame path, skipping propagation", frame);
       return;

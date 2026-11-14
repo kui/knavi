@@ -21,6 +21,7 @@ export const router = Router.newRuntimeInstance()
       });
     } catch (e) {
       syncHintingState(tabId, false);
+      framePaths.end(tabId);
       throw e;
     }
   })

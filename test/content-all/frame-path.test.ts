@@ -118,10 +118,13 @@ void describe("FramePath.current", () => {
     });
     setGlobals(child);
     const framePath = new FramePath();
-    const changed = framePath.handleMessage({
-      data: { "@type": ASSIGNMENT, path: ["0", "s2"] },
-      source: top,
-    } as unknown as MessageEvent);
+    const changed = framePath.handleMessage(
+      {
+        data: { "@type": ASSIGNMENT, path: ["0", "s2"] },
+        source: top,
+      } as unknown as MessageEvent,
+      false,
+    );
     assert.equal(changed, true);
     assert.deepEqual(framePath.current(), ["0", "s2"]);
   });
@@ -131,12 +134,73 @@ void describe("FramePath.current", () => {
     const child = addChild(top);
     setGlobals(child);
     const framePath = new FramePath();
-    const changed = framePath.handleMessage({
-      data: { "@type": ASSIGNMENT, path: ["5"] },
-      source: makeWindow(),
-    } as unknown as MessageEvent);
+    const changed = framePath.handleMessage(
+      {
+        data: { "@type": ASSIGNMENT, path: ["5"] },
+        source: makeWindow(),
+      } as unknown as MessageEvent,
+      false,
+    );
     assert.equal(changed, false);
     assert.deepEqual(framePath.current(), ["0"]);
+  });
+});
+
+void describe("FramePath.handleMessage", () => {
+  beforeEach(() => {
+    sentToRuntime.length = 0;
+  });
+
+  function setupAssignedChild() {
+    const top = makeWindow();
+    const frame = makeWindow(top);
+    Object.defineProperty(frame, "frameElement", {
+      get() {
+        throw new Error("SecurityError");
+      },
+    });
+    const grandchild = addChild(frame);
+    setGlobals(frame);
+    const assign = (
+      framePath: InstanceType<typeof FramePath>,
+      hinting: boolean,
+    ) =>
+      framePath.handleMessage(
+        {
+          data: { "@type": ASSIGNMENT, path: ["s0"] },
+          source: top,
+        } as unknown as MessageEvent,
+        hinting,
+      );
+    return { grandchild, assign };
+  }
+
+  void test("returns true only when the assigned path changed", () => {
+    const { assign } = setupAssignedChild();
+    const framePath = new FramePath();
+    assert.equal(assign(framePath, false), true);
+    assert.equal(assign(framePath, false), false);
+  });
+
+  void test("reports the assigned path while hinting, even if unchanged", async () => {
+    const { assign } = setupAssignedChild();
+    const framePath = new FramePath();
+    assign(framePath, false);
+    assert.equal(sentToRuntime.length, 0);
+    assign(framePath, true);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(sentToRuntime.length, 1);
+    assert.deepEqual((sentToRuntime[0].payload as { path: string[] }).path, [
+      "s0",
+    ]);
+  });
+
+  void test("passes the assignment on to the children even if unchanged", () => {
+    const { assign, grandchild } = setupAssignedChild();
+    const framePath = new FramePath();
+    assign(framePath, false);
+    assign(framePath, false);
+    assert.equal(grandchild.posted.length, 2);
   });
 });
 
@@ -170,6 +234,35 @@ void describe("FramePath.childPath", () => {
     const iframe = { contentWindow: child } as unknown as HTMLIFrameElement;
     setGlobals(top, documentWithShadowIframes([{}, iframe]));
     assert.deepEqual(new FramePath().childPath(iframe), ["s1"]);
+  });
+});
+
+void describe("FramePath.reportAtStartup", () => {
+  beforeEach(() => {
+    sentToRuntime.length = 0;
+  });
+
+  void test("reports a computable path", async () => {
+    const top = makeWindow();
+    const child = addChild(top);
+    setGlobals(child);
+    await new FramePath().reportAtStartup();
+    assert.deepEqual((sentToRuntime[0].payload as { path: string[] }).path, [
+      "0",
+    ]);
+  });
+
+  void test("reports nothing when the path is unknown", async () => {
+    const top = makeWindow();
+    const child = makeWindow(top);
+    Object.defineProperty(child, "frameElement", {
+      get() {
+        throw new Error("SecurityError");
+      },
+    });
+    setGlobals(child);
+    await new FramePath().reportAtStartup();
+    assert.equal(sentToRuntime.length, 0);
   });
 });
 
@@ -218,6 +311,27 @@ void describe("FramePath.announce", () => {
     assert.deepEqual(shadowChild.posted, []);
   });
 
+  void test("does not report a stale assigned path", async () => {
+    const top = makeWindow();
+    const frame = makeWindow(top);
+    Object.defineProperty(frame, "frameElement", {
+      get() {
+        throw new Error("SecurityError");
+      },
+    });
+    setGlobals(frame);
+    const framePath = new FramePath();
+    framePath.handleMessage(
+      {
+        data: { "@type": ASSIGNMENT, path: ["s0"] },
+        source: top,
+      } as unknown as MessageEvent,
+      false,
+    );
+    await framePath.announce();
+    assert.equal(sentToRuntime.length, 0);
+  });
+
   void test("a frame with an assigned path assigns its children's paths", async () => {
     const top = makeWindow();
     const frame = makeWindow(top);
@@ -229,10 +343,14 @@ void describe("FramePath.announce", () => {
     const grandchild = addChild(frame);
     setGlobals(frame);
     const framePath = new FramePath();
-    framePath.handleMessage({
-      data: { "@type": ASSIGNMENT, path: ["s0"] },
-      source: top,
-    } as unknown as MessageEvent);
+    framePath.handleMessage(
+      {
+        data: { "@type": ASSIGNMENT, path: ["s0"] },
+        source: top,
+      } as unknown as MessageEvent,
+      false,
+    );
+    grandchild.posted.length = 0;
     await framePath.announce();
     assert.deepEqual(grandchild.posted, [
       { "@type": ASSIGNMENT, path: ["s0", "0"] },
