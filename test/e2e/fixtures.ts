@@ -47,7 +47,11 @@ export const test = base.extend<Fixtures>({
         };
       }
       const { chrome } = globalThis as unknown as SW;
+      const deadline = Date.now() + 10_000;
       while (!(await chrome.storage.sync.get("css")).css) {
+        if (Date.now() > deadline) {
+          throw new Error("onInstalled back-fill did not write css in 10 s");
+        }
         await new Promise((r) => setTimeout(r, 50));
       }
     });

@@ -11,15 +11,16 @@ export default {
        be switched at runtime and this module has no storage listener of its
        own to invalidate the memoized area. */
     const storage = await settings.getStorage(true);
-    try {
-      return await storage.get(names);
-    } catch (e) {
-      /* WHY: before the onInstalled back-fill has written `css`, the default
-         comes from the extension's own file, which a content script cannot
-         fetch. Ask the background in that rare case. */
-      if (!names.includes("css" as never)) throw e;
+    /* WHY: the default css comes from a file in the extension, which a content
+       script cannot fetch. Until the onInstalled back-fill has stored it, ask
+       the background (which can) instead of reading storage here. */
+    if (
+      names.includes("css" as K) &&
+      (await storage.storage.get("css")).css == null
+    ) {
       return sendToRuntime("GetSettings", { names });
     }
+    return storage.get(names);
   },
   async matchBlacklist(url: string): Promise<string[]> {
     const storage = await settings.getStorage(true);
