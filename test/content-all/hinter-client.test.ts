@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 const sent: string[] = [];
 let releaseRemove: () => void = () => undefined;
+let releaseAttach: () => void = () => undefined;
 (globalThis as Record<string, unknown>).chrome = {
   runtime: {
     sendMessage: async (msg: { "@type": string; key?: string }) => {
@@ -10,6 +11,10 @@ let releaseRemove: () => void = () => undefined;
         await new Promise<void>((resolve) => (releaseRemove = resolve));
       }
       sent.push(msg.key ? `${msg["@type"]}:${msg.key}` : msg["@type"]);
+      if (msg["@type"] === "AttachHints") {
+        // WHY: the real AttachHints resolves only after all hints are rendered.
+        await new Promise<void>((resolve) => (releaseAttach = resolve));
+      }
       return { response: undefined };
     },
   },
@@ -43,7 +48,10 @@ void describe("HinterClient", () => {
     assert.deepEqual(sent, []);
 
     releaseRemove();
-    await Promise.all([removing, attaching, ...hits]);
+    await removing;
+    await Promise.all(hits);
+    releaseAttach();
+    await attaching;
     assert.deepEqual(sent, [
       "RemoveHints",
       "AttachHints",

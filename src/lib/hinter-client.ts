@@ -13,7 +13,7 @@ export default class HinterClient {
    * Always resolves, never rejects.
    */
   private removeBarrier: Promise<void> | null = null;
-  /** Settles once AttachHintsInTab has been sent; hint input waits on it. */
+  /** Settles once AttachHints has been dispatched; hint input waits on it. */
   private ready: Promise<void> = Promise.resolve();
 
   constructor() {
@@ -41,18 +41,23 @@ export default class HinterClient {
        leaking to the page or being dropped. */
     this.hinting = true;
     const barrier = this.removeBarrier;
-    const attach = (async () => {
+    /* WHY: AttachHints resolves only after every hint is rendered, which can
+       take long and overlaps with hint input, so `ready` settles when the
+       message is dispatched, not when it is answered. */
+    let attach: Promise<void> | undefined;
+    const dispatched = (async () => {
       /* WHY: without this barrier, rapid action→sticky sequences can
          interleave sessions (RemoveHintsInTab arriving after AttachHintsInTab)
          and silently drop hitHint calls. */
       if (barrier) await barrier;
-      await sendToRuntime("AttachHints", undefined);
+      attach = sendToRuntime("AttachHints", undefined);
     })();
-    this.ready = attach;
+    this.ready = dispatched;
     try {
+      await dispatched;
       await attach;
     } catch (e) {
-      if (this.ready === attach) this.hinting = false;
+      if (this.ready === dispatched) this.hinting = false;
       throw e;
     }
   }
