@@ -53,15 +53,19 @@ export interface RuntimeMessages {
   AllRectsRequest: {
     payload: {
       id: number;
-      targetFrameId: number;
+      targetPath: string[];
       viewport: RectJSON<"actual-viewport", "root-viewport">;
       offsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
     };
     response: void;
   };
+  ReportFramePath: {
+    payload: { path: string[] };
+    response: void;
+  };
   BlurUp: {
     payload: {
-      parentFrameId: number;
+      path: string[];
       rect: RectJSON<"element-border", "layout-viewport"> | null;
     };
     response: void;
@@ -120,7 +124,7 @@ export interface TabMessages {
   AllRectsRequest: {
     payload: {
       id: number;
-      targetFrameId: number;
+      targetPath: string[];
       viewport: RectJSON<"actual-viewport", "root-viewport">;
       offsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
     };
@@ -128,7 +132,8 @@ export interface TabMessages {
   };
   BlurRelay: {
     payload: {
-      childFrameId: number;
+      targetPath: string[];
+      childSegment: string;
       rect: RectJSON<"element-border", "layout-viewport"> | null;
     };
     response: void;

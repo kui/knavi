@@ -8,7 +8,7 @@ import { RectDetector } from "./rect-detector";
 import { Coordinates, Rect } from "../dom/rects";
 import settingsClient from "../lib/settings-client";
 import { printError } from "../lib/errors";
-import { FrameRegistry } from "./frame-registration";
+import { FramePath } from "./frame-path";
 import { dropNestedHeuristicDuplicates } from "./hint-dedupe";
 
 interface ElementProfile {
@@ -36,7 +36,7 @@ export class RectAggregatorContentAll {
   private elements: ElementProfile[] = [];
   private readonly frameIdPromise = sendToRuntime("GetFrameId", undefined);
 
-  constructor(private readonly frameRegistry: FrameRegistry) {}
+  constructor(private readonly framePath: FramePath) {}
 
   async handleAllRectsRequest(
     requestId: number,
@@ -70,12 +70,12 @@ export class RectAggregatorContentAll {
       rects: this.elements,
     });
 
-    await Promise.all(
-      flatMap(this.elements, ({ element, rects }) =>
-        element instanceof HTMLIFrameElement
-          ? [this.propagateMessage(element, rects[0], context)]
-          : [],
-      ),
+    const iframes = this.elements.flatMap(({ element, rects }) =>
+      element instanceof HTMLIFrameElement ? [{ element, rect: rects[0] }] : [],
+    );
+    const childPaths = this.framePath.childPaths(iframes.map((i) => i.element));
+    iframes.forEach(({ element, rect }, i) =>
+      this.propagateMessage(element, rect, childPaths[i], context),
     );
   }
 
@@ -125,9 +125,10 @@ export class RectAggregatorContentAll {
     return dropNestedHeuristicDuplicates(bondByActualTarget(elementProfiles));
   }
 
-  private async propagateMessage(
+  private propagateMessage(
     frame: HTMLIFrameElement,
     rect: Rect<"element-border", "root-viewport"> | null,
+    childPath: string[] | undefined,
     {
       requestId,
       frameOffsets,
@@ -142,22 +143,8 @@ export class RectAggregatorContentAll {
       return;
     }
 
-    /* WHY: polls until the child frame has completed its FrameIdAnnouncement
-       handshake. Under CI load the postMessage round-trip can arrive after
-       AllRectsRequest fan-out, so wait up to 300 ms before giving up. */
-    let childFrameId = this.frameRegistry.getFrameId(frame);
-    if (childFrameId == null) {
-      for (let i = 0; i < 30; i++) {
-        await new Promise<void>((r) => setTimeout(r, 10));
-        childFrameId = this.frameRegistry.getFrameId(frame);
-        if (childFrameId != null) break;
-      }
-    }
-    if (childFrameId == null) {
-      console.debug(
-        "iframe not registered after retries, skipping propagation",
-        frame,
-      );
+    if (!childPath) {
+      console.debug("iframe has no frame path, skipping propagation", frame);
       return;
     }
 
@@ -182,7 +169,7 @@ export class RectAggregatorContentAll {
 
     sendToRuntime("AllRectsRequest", {
       id: requestId,
-      targetFrameId: childFrameId,
+      targetPath: childPath,
       viewport: iframeViewport,
       offsets: { ...contentRect, type: "layout-viewport" as const },
     }).catch(printError);
