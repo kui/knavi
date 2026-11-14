@@ -55,7 +55,8 @@ let debounceController: AbortController | null = null;
 
 chrome.storage.onChanged.addListener((changes) => {
   (async () => {
-    if (!RELEVANT_KEYS.some((k) => k in changes)) return;
+    if (!RELEVANT_KEYS.some((k) => k in changes) && !("_area" in changes))
+      return;
     debounceController?.abort();
     debounceController = new AbortController();
     const { signal } = debounceController;

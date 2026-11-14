@@ -154,7 +154,7 @@ export default {
 };
 
 async function fetchCss() {
-  const r = await fetch("./default-style.css");
+  const r = await fetch(chrome.runtime.getURL("default-style.css"));
   return await r.text();
 }
 

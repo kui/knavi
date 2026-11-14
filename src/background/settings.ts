@@ -1,5 +1,5 @@
 import settings from "../lib/settings";
-import { BlackList, togglePattern } from "../lib/blacklist";
+import { togglePattern } from "../lib/blacklist";
 import { AdditionalSelectors } from "../lib/additional-selectors";
 import { Router } from "../lib/chrome-messages";
 import { printError } from "../lib/errors";
@@ -26,11 +26,6 @@ export const router = Router.newRuntimeInstance()
   .add("GetSettings", async (message) => {
     const storage = await settings.getStorage();
     return storage.get(message.names);
-  })
-  .add("MatchBlacklist", async (message) => {
-    const storage = await settings.getStorage();
-    const blacklist = new BlackList(await storage.getSingle("blackList"));
-    return blacklist.match(message.url);
   })
   .add("MatchAdditionalSelectors", async (message) => {
     const storage = await settings.getStorage();

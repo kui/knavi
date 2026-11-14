@@ -37,6 +37,20 @@ export const test = base.extend<Fixtures>({
     if (ctx.serviceWorkers().length === 0) {
       await ctx.waitForEvent("serviceworker", { timeout: 10_000 });
     }
+    /* WHY: onInstalled back-fills defaults asynchronously. Content scripts read
+       storage directly and only fall back to a background message while the
+       defaults are missing, so wait for them to keep page loads deterministic. */
+    await ctx.serviceWorkers()[0].evaluate(async () => {
+      interface SW {
+        chrome: {
+          storage: { sync: { get(k: string): Promise<{ css?: string }> } };
+        };
+      }
+      const { chrome } = globalThis as unknown as SW;
+      while (!(await chrome.storage.sync.get("css")).css) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    });
     await use(ctx);
     await ctx.close();
     rmSync(userDataDir, { recursive: true, force: true });
