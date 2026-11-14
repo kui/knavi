@@ -104,18 +104,17 @@ export class FramePath {
   }
 
   /**
-   * Handles a path assignment from the parent frame. Returns true if this
-   * frame's assigned path changed. A valid assignment is always passed on to
-   * the children, and reported while a hint session is running.
+   * Handles a path assignment from the parent frame. A valid assignment is
+   * always passed on to the children, and reported while a hint session is
+   * running.
    */
-  handleMessage(e: MessageEvent, isHinting: boolean): boolean {
+  handleMessage(e: MessageEvent, isHinting: boolean): void {
     const data = e.data as Partial<FramePathAssignment> | null | undefined;
-    if (data?.["@type"] !== ASSIGNMENT_TYPE) return false;
-    if (parent === window || e.source !== parent) return false;
+    if (data?.["@type"] !== ASSIGNMENT_TYPE) return;
+    if (parent === window || e.source !== parent) return;
     const { path } = data;
     if (!Array.isArray(path) || !path.every((s) => typeof s === "string"))
-      return false;
-    const changed = this.assigned == null || !samePath(this.assigned, path);
+      return;
     this.assigned = path;
     this.assignedThisSession = true;
     const computed = computeOwnPath();
@@ -124,7 +123,6 @@ export class FramePath {
     this.assignToChildren(computed);
     // WHY: outside a hint session nothing consumes the report.
     if (isHinting) this.reportPath(computed ?? path).catch(printError);
-    return changed;
   }
 
   /**

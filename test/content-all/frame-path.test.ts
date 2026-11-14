@@ -118,14 +118,13 @@ void describe("FramePath.current", () => {
     });
     setGlobals(child);
     const framePath = new FramePath();
-    const changed = framePath.handleMessage(
+    framePath.handleMessage(
       {
         data: { "@type": ASSIGNMENT, path: ["0", "s2"] },
         source: top,
       } as unknown as MessageEvent,
       false,
     );
-    assert.equal(changed, true);
     assert.deepEqual(framePath.current(), ["0", "s2"]);
   });
 
@@ -134,14 +133,13 @@ void describe("FramePath.current", () => {
     const child = addChild(top);
     setGlobals(child);
     const framePath = new FramePath();
-    const changed = framePath.handleMessage(
+    framePath.handleMessage(
       {
         data: { "@type": ASSIGNMENT, path: ["5"] },
         source: makeWindow(),
       } as unknown as MessageEvent,
       false,
     );
-    assert.equal(changed, false);
     assert.deepEqual(framePath.current(), ["0"]);
   });
 });
@@ -174,13 +172,6 @@ void describe("FramePath.handleMessage", () => {
       );
     return { grandchild, assign };
   }
-
-  void test("returns true only when the assigned path changed", () => {
-    const { assign } = setupAssignedChild();
-    const framePath = new FramePath();
-    assert.equal(assign(framePath, false), true);
-    assert.equal(assign(framePath, false), false);
-  });
 
   void test("reports the assigned path while hinting, even if unchanged", async () => {
     const { assign } = setupAssignedChild();
