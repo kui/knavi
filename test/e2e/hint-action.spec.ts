@@ -116,6 +116,10 @@ test.describe("slotted content in a shadow control", () => {
     expect(await countHintsFor(page, "x-btn")).toBe(1);
     expect(await page.locator(".hint").count()).toBe(1);
 
+    expect(
+      await page.evaluate(() => (window as { clicked?: boolean }).clicked),
+    ).toBeUndefined();
+
     const hintText = await findHintFor(page, "x-btn");
     for (const ch of hintText) await page.keyboard.press(ch);
     await page.keyboard.up("Space");
