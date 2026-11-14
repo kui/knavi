@@ -14,7 +14,7 @@ globalThis.KNAVI_FILE = "content-all";
 
 const framePath = new FramePath();
 window.addEventListener("message", (e) => {
-  framePath.handleMessage(e, hinterClient.isHinting);
+  framePath.handleMessage(e);
 });
 framePath.reportAtStartup().catch(printError);
 

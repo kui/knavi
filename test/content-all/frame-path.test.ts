@@ -87,7 +87,6 @@ void describe("FramePath.current", () => {
   void test("is unknown for a cross-origin iframe in a shadow root", () => {
     const top = makeWindow();
     const child = makeWindow(top); // WHY: not in top.frames
-    child.frameElement = undefined;
     Object.defineProperty(child, "frameElement", {
       get() {
         throw new Error("SecurityError");
@@ -101,7 +100,7 @@ void describe("FramePath.current", () => {
     const top = makeWindow();
     const child = makeWindow(top);
     const other = {};
-    const iframe = { ownerDocument: documentWithShadowIframes([other]) };
+    const iframe: { ownerDocument?: unknown } = {};
     iframe.ownerDocument = documentWithShadowIframes([other, iframe]);
     child.frameElement = iframe;
     setGlobals(child);
@@ -118,13 +117,10 @@ void describe("FramePath.current", () => {
     });
     setGlobals(child);
     const framePath = new FramePath();
-    framePath.handleMessage(
-      {
-        data: { "@type": ASSIGNMENT, path: ["0", "s2"] },
-        source: top,
-      } as unknown as MessageEvent,
-      false,
-    );
+    framePath.handleMessage({
+      data: { "@type": ASSIGNMENT, path: ["0", "s2"] },
+      source: top,
+    } as unknown as MessageEvent);
     assert.deepEqual(framePath.current(), ["0", "s2"]);
   });
 
@@ -133,13 +129,10 @@ void describe("FramePath.current", () => {
     const child = addChild(top);
     setGlobals(child);
     const framePath = new FramePath();
-    framePath.handleMessage(
-      {
-        data: { "@type": ASSIGNMENT, path: ["5"] },
-        source: makeWindow(),
-      } as unknown as MessageEvent,
-      false,
-    );
+    framePath.handleMessage({
+      data: { "@type": ASSIGNMENT, path: ["5"] },
+      source: makeWindow(),
+    } as unknown as MessageEvent);
     assert.deepEqual(framePath.current(), ["0"]);
   });
 });
@@ -159,45 +152,42 @@ void describe("FramePath.handleMessage", () => {
     });
     const grandchild = addChild(frame);
     setGlobals(frame);
-    const assign = (
-      framePath: InstanceType<typeof FramePath>,
-      hinting: boolean,
-    ) =>
-      framePath.handleMessage(
-        {
-          data: { "@type": ASSIGNMENT, path: ["s0"] },
-          source: top,
-        } as unknown as MessageEvent,
-        hinting,
-      );
+    const assign = (framePath: InstanceType<typeof FramePath>) =>
+      framePath.handleMessage({
+        data: { "@type": ASSIGNMENT, path: ["s0"] },
+        source: top,
+      } as unknown as MessageEvent);
     return { grandchild, assign };
   }
 
   void test("reports the assigned path while hinting, even if unchanged", async () => {
     const { assign } = setupAssignedChild();
     const framePath = new FramePath();
-    assign(framePath, false);
+    assign(framePath);
     assert.equal(sentToRuntime.length, 0);
-    assign(framePath, true);
+    framePath.handleHintingState(true);
     await new Promise<void>((resolve) => setImmediate(resolve));
     assert.equal(sentToRuntime.length, 1);
-    assert.deepEqual((sentToRuntime[0].payload as { path: string[] }).path, [
-      "s0",
-    ]);
+    assign(framePath);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(
+      sentToRuntime.map((m) => (m.payload as { path: string[] }).path),
+      [["s0"], ["s0"]],
+    );
   });
 
   void test("passes the assignment on to the children even if unchanged", () => {
     const { assign, grandchild } = setupAssignedChild();
     const framePath = new FramePath();
-    assign(framePath, false);
-    assign(framePath, false);
+    assign(framePath);
+    assign(framePath);
     assert.equal(grandchild.posted.length, 2);
   });
 
   void test("does not pass an assignment from an earlier session on to the children", async () => {
     const { assign, grandchild } = setupAssignedChild();
     const framePath = new FramePath();
-    assign(framePath, true);
+    assign(framePath);
     framePath.handleHintingState(false);
     grandchild.posted.length = 0;
 
@@ -206,10 +196,45 @@ void describe("FramePath.handleMessage", () => {
     await new Promise<void>((resolve) => setImmediate(resolve));
     assert.deepEqual(grandchild.posted, []);
 
-    assign(framePath, true);
+    assign(framePath);
     assert.deepEqual(grandchild.posted, [
       { "@type": ASSIGNMENT, path: ["s0", "0"] },
     ]);
+  });
+
+  void test("posts the assignment to a grandchild once when the assignment arrives before hinting starts", async () => {
+    const { assign, grandchild } = setupAssignedChild();
+    const framePath = new FramePath();
+    assign(framePath);
+    framePath.handleHintingState(true);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(grandchild.posted.length, 1);
+  });
+
+  void test("posts the assignment to a grandchild once when hinting starts before the assignment arrives", async () => {
+    const { assign, grandchild } = setupAssignedChild();
+    const framePath = new FramePath();
+    framePath.handleHintingState(true);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assign(framePath);
+    assert.equal(grandchild.posted.length, 1);
+  });
+
+  void test("ignores an assignment with an empty path", () => {
+    const top = makeWindow();
+    const frame = makeWindow(top);
+    Object.defineProperty(frame, "frameElement", {
+      get() {
+        throw new Error("SecurityError");
+      },
+    });
+    setGlobals(frame);
+    const framePath = new FramePath();
+    framePath.handleMessage({
+      data: { "@type": ASSIGNMENT, path: [] },
+      source: top,
+    } as unknown as MessageEvent);
+    assert.equal(framePath.current(), undefined);
   });
 });
 
@@ -246,8 +271,33 @@ void describe("FramePath.childPaths", () => {
   });
 });
 
+void describe("FramePath.childPaths and stale assignments", () => {
+  void test("does not build child paths from an assignment of an earlier session", () => {
+    const top = makeWindow();
+    const frame = makeWindow(top);
+    Object.defineProperty(frame, "frameElement", {
+      get() {
+        throw new Error("SecurityError");
+      },
+    });
+    const child = addChild(frame);
+    setGlobals(frame);
+    const iframe = { contentWindow: child } as unknown as HTMLIFrameElement;
+    const framePath = new FramePath();
+    framePath.handleMessage({
+      data: { "@type": ASSIGNMENT, path: ["s0"] },
+      source: top,
+    } as unknown as MessageEvent);
+    assert.deepEqual(framePath.childPaths([iframe])[0], ["s0", "0"]);
+
+    framePath.handleHintingState(false);
+    assert.equal(framePath.childPaths([iframe])[0], undefined);
+    assert.deepEqual(framePath.current(), ["s0"]);
+  });
+});
+
 void describe("FramePath.findChild", () => {
-  /** Whether every kind of iframe is a child of `top`, as `window.frames` and the DOM see it. */
+  /** A top frame with one light-DOM iframe and one iframe in a shadow root. */
   function setupTop() {
     const top = makeWindow();
     const light = addChild(top);
@@ -379,13 +429,10 @@ void describe("FramePath.announce", () => {
     });
     setGlobals(frame);
     const framePath = new FramePath();
-    framePath.handleMessage(
-      {
-        data: { "@type": ASSIGNMENT, path: ["s0"] },
-        source: top,
-      } as unknown as MessageEvent,
-      false,
-    );
+    framePath.handleMessage({
+      data: { "@type": ASSIGNMENT, path: ["s0"] },
+      source: top,
+    } as unknown as MessageEvent);
     framePath.handleHintingState(false);
     await framePath.announce();
     assert.equal(sentToRuntime.length, 0);
@@ -402,42 +449,14 @@ void describe("FramePath.announce", () => {
     setGlobals(frame);
     const framePath = new FramePath();
     framePath.handleHintingState(false);
-    framePath.handleMessage(
-      {
-        data: { "@type": ASSIGNMENT, path: ["s0"] },
-        source: top,
-      } as unknown as MessageEvent,
-      false,
-    );
+    framePath.handleMessage({
+      data: { "@type": ASSIGNMENT, path: ["s0"] },
+      source: top,
+    } as unknown as MessageEvent);
     await framePath.announce();
     assert.deepEqual(
       sentToRuntime.map((m) => (m.payload as { path: string[] }).path),
       [["s0"]],
     );
-  });
-
-  void test("a frame with an assigned path assigns its children's paths", async () => {
-    const top = makeWindow();
-    const frame = makeWindow(top);
-    Object.defineProperty(frame, "frameElement", {
-      get() {
-        throw new Error("SecurityError");
-      },
-    });
-    const grandchild = addChild(frame);
-    setGlobals(frame);
-    const framePath = new FramePath();
-    framePath.handleMessage(
-      {
-        data: { "@type": ASSIGNMENT, path: ["s0"] },
-        source: top,
-      } as unknown as MessageEvent,
-      false,
-    );
-    grandchild.posted.length = 0;
-    await framePath.announce();
-    assert.deepEqual(grandchild.posted, [
-      { "@type": ASSIGNMENT, path: ["s0", "0"] },
-    ]);
   });
 });

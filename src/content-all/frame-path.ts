@@ -25,6 +25,7 @@ export class FramePath {
   private assigned: string[] | undefined;
   /** Whether `assigned` arrived after the last hint session ended. */
   private assignedThisSession = false;
+  private hinting = false;
 
   /** This frame's path, or undefined if it cannot be determined (yet). */
   current(): string[] | undefined {
@@ -38,7 +39,7 @@ export class FramePath {
 
   /** The paths of direct child iframes; undefined for an unmappable one. */
   childPaths(iframes: readonly HTMLIFrameElement[]): (string[] | undefined)[] {
-    const own = this.current();
+    const own = this.sessionPath();
     let shadow: HTMLIFrameElement[] | undefined;
     return iframes.map((iframe) => {
       const w = iframe.contentWindow;
@@ -62,7 +63,7 @@ export class FramePath {
     for (const iframe of document.getElementsByTagName("iframe")) {
       if (iframe.contentWindow === w) return iframe;
     }
-    return shadowIframes().find((iframe) => iframe.contentWindow === w);
+    return undefined;
   }
 
   /**
@@ -74,8 +75,8 @@ export class FramePath {
     await this.reportPath(computeOwnPath());
   }
 
-  /** Handles the SyncHintingState broadcast. */
   handleHintingState(active: boolean): void {
+    this.hinting = active;
     if (active) this.announce().catch(printError);
     else this.assignedThisSession = false;
   }
@@ -89,11 +90,18 @@ export class FramePath {
    */
   async announce(): Promise<void> {
     const computed = computeOwnPath();
-    this.assignToChildren(computed);
-    /* WHY: the parent's assignment for this session can arrive before this
-       frame's own SyncHintingState, while it is not hinting yet. */
-    const assigned = this.assignedThisSession ? this.assigned : undefined;
-    await this.reportPath(computed ?? assigned);
+    /* WHY: a frame with an assigned path passes the assignment on when it
+       receives it, so doing it here too would post it twice. */
+    if (computed) this.assignToChildren(computed);
+    await this.reportPath(this.sessionPath(computed));
+  }
+
+  /**
+   * This frame's path as far as it is known for the current session. An
+   * assignment kept from an earlier session may be stale.
+   */
+  private sessionPath(computed = computeOwnPath()): string[] | undefined {
+    return computed ?? (this.assignedThisSession ? this.assigned : undefined);
   }
 
   private async reportPath(path: string[] | undefined): Promise<void> {
@@ -105,12 +113,16 @@ export class FramePath {
    * always passed on to the children, and reported while a hint session is
    * running.
    */
-  handleMessage(e: MessageEvent, isHinting: boolean): void {
+  handleMessage(e: MessageEvent): void {
     const data = e.data as Partial<FramePathAssignment> | null | undefined;
     if (data?.["@type"] !== ASSIGNMENT_TYPE) return;
     if (parent === window || e.source !== parent) return;
     const { path } = data;
-    if (!Array.isArray(path) || !path.every((s) => typeof s === "string"))
+    if (
+      !Array.isArray(path) ||
+      path.length === 0 ||
+      !path.every((s) => typeof s === "string")
+    )
       return;
     this.assigned = path;
     this.assignedThisSession = true;
@@ -119,7 +131,7 @@ export class FramePath {
        one again even when this frame's path did not change. */
     this.assignToChildren(computed);
     // WHY: outside a hint session nothing consumes the report.
-    if (isHinting) this.reportPath(computed ?? path).catch(printError);
+    if (this.hinting) this.reportPath(computed ?? path).catch(printError);
   }
 
   /**
@@ -129,9 +141,7 @@ export class FramePath {
    * the top is broken at that frame).
    */
   private assignToChildren(computed: string[] | undefined): void {
-    // WHY: an assignment kept from an earlier session may be stale.
-    const own =
-      computed ?? (this.assignedThisSession ? this.assigned : undefined);
+    const own = this.sessionPath(computed);
     if (!own) return;
     const post = (w: Window | null, segment: string) =>
       w?.postMessage(
