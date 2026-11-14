@@ -106,12 +106,12 @@ export function containsComposed(ancestor: Node, node: Node | null): boolean {
 }
 
 function flatParent(node: Node): Node | null {
+  if (node instanceof ShadowRoot) return node.host;
   // WHY: a slotted node renders inside its slot, not under its light-DOM parent.
   // SAFETY: only Element and Text are Slottable, so the property is absent on other nodes.
   const slot = (node as Partial<Slottable>).assignedSlot;
   if (slot) return slot;
-  const parent = node.parentNode;
-  return parent instanceof ShadowRoot ? parent.host : parent;
+  return node.parentNode;
 }
 
 export function* traverseFirstChild(

@@ -24,7 +24,7 @@ class FakeTextarea implements EventTarget {
 /* eslint-enable @typescript-eslint/no-empty-function */
 class FakeNode {
   readonly parent: FakeNode | null;
-  assignedSlot: FakeNode | null = null;
+  declare assignedSlot?: FakeNode | null;
   constructor(parent: FakeNode | null = null) {
     this.parent = parent;
   }
@@ -213,6 +213,25 @@ void describe("containsComposed", () => {
 
   void test("does not contain null", () =>
     assert.equal(contains(wrapper, null), false));
+
+  void test("a shadow root contains an element in its tree", () =>
+    assert.equal(contains(shadow, innerHost), true));
+
+  void test("a shadow root contains an element in a nested shadow tree", () =>
+    assert.equal(contains(shadow, button), true));
+
+  void test("a host contains its own shadow root", () =>
+    assert.equal(contains(host, shadow), true));
+
+  void test("an element does not contain the shadow root of its sibling host", () =>
+    assert.equal(contains(sibling, shadow), false));
+
+  void test("walks nodes that have no assignedSlot property", () => {
+    // WHY: Document, ShadowRoot and other non-Slottable nodes lack the property entirely.
+    assert.equal("assignedSlot" in document, false);
+    assert.equal("assignedSlot" in shadow, false);
+    assert.equal(contains(document, shadow), true);
+  });
 
   void describe("slotted nodes", () => {
     // WHY: models <x-btn><span><b/></span></x-btn> whose shadow tree is <button><slot/></button>.
