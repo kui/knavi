@@ -1,4 +1,5 @@
 import { Router, sendToTab } from "../lib/chrome-messages";
+import * as framePaths from "./frame-paths";
 import { requireFrameId, requireTabId } from "./sender-guards";
 
 export const router = Router.newRuntimeInstance()
@@ -19,30 +20,42 @@ export const router = Router.newRuntimeInstance()
     );
   })
 
+  .add("ReportFramePath", ({ path }, sender) => {
+    framePaths.report(requireTabId(sender), path, requireFrameId(sender));
+  })
+
   .add(
     "AllRectsRequest",
-    async ({ id, targetFrameId, viewport, offsets }, sender) => {
+    async ({ id, targetPath, viewport, offsets }, sender) => {
       const tabId = requireTabId(sender);
+      const frameId = await framePaths.lookup(tabId, targetPath);
+      if (frameId == null) {
+        console.debug("No frame reported its path as", targetPath);
+        return;
+      }
       await sendToTab(
         tabId,
         "AllRectsRequest",
-        { id, targetFrameId, viewport, offsets },
-        { frameId: targetFrameId },
+        { id, targetPath, viewport, offsets },
+        { frameId },
       );
     },
   )
 
-  .add("BlurUp", async ({ parentFrameId, rect }, sender) => {
+  .add("BlurUp", async ({ path, rect }, sender) => {
     const tabId = requireTabId(sender);
-    const senderFrameId = requireFrameId(sender);
-    if (parentFrameId === 0 && senderFrameId === 0) {
+    if (path.length === 0) {
+      // INVARIANT: only the top frame has the empty path.
+      if (requireFrameId(sender) !== 0) throw Error("Only frame 0 is the top");
       await sendToTab(tabId, "BlurRoot", { rect }, { frameId: 0 });
       return;
     }
-    await sendToTab(
-      tabId,
-      "BlurRelay",
-      { childFrameId: senderFrameId, rect },
-      { frameId: parentFrameId },
-    );
+    /* WHY: the table only lives during a hint session but blur happens
+       outside one, so the parent is found by its path: every frame gets the
+       message and only the one with that path handles it. */
+    await sendToTab(tabId, "BlurRelay", {
+      targetPath: path.slice(0, -1),
+      childSegment: path[path.length - 1],
+      rect,
+    });
   });

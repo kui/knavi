@@ -1,5 +1,6 @@
 import { Router, sendToTab } from "../lib/chrome-messages";
 import { printError } from "../lib/errors";
+import * as framePaths from "./frame-paths";
 import { requireTabId } from "./sender-guards";
 
 /* WHY: fire-and-forget; a sync failure must not fail the RPC the initiating
@@ -11,6 +12,7 @@ function syncHintingState(tabId: number, active: boolean) {
 export const router = Router.newRuntimeInstance()
   .add("AttachHints", async (_msg, sender) => {
     const tabId = requireTabId(sender);
+    framePaths.reset(tabId);
     /* WHY: dispatch before awaiting; see SyncHintingState in chrome-messages.ts. */
     syncHintingState(tabId, true);
     try {
@@ -40,6 +42,7 @@ export const router = Router.newRuntimeInstance()
   .add("RemoveHints", async ({ options, execute }, sender) => {
     const tabId = requireTabId(sender);
     syncHintingState(tabId, false);
+    framePaths.end(tabId);
     return await sendToTab(
       tabId,
       "RemoveHintsInTab",

@@ -26,7 +26,7 @@ export class RectAggregatorClient {
 
     sendToRuntime("AllRectsRequest", {
       id: ++this.requestIndex,
-      targetFrameId: 0,
+      targetPath: [],
       viewport: {
         type: "actual-viewport",
         origin: "root-viewport",

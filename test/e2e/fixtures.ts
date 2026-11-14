@@ -188,6 +188,22 @@ export async function countHintsFor(
   return (await hints(page)).filter((h) => isNear(h, target)).length;
 }
 
+/**
+ * Wait until a hint is placed at `target` and return its text. Hints from
+ * frames arrive one fragment at a time, so this polls.
+ */
+export async function findHintNear(page: Page, target: Point): Promise<string> {
+  let found: string | undefined;
+  await expect
+    .poll(
+      async () =>
+        (found = (await hints(page)).find((h) => isNear(h, target))?.hint),
+      { message: `hint near (${target.x}, ${target.y})`, timeout: 5_000 },
+    )
+    .toBeDefined();
+  return found!;
+}
+
 export async function expectHintAt(page: Page, expected: Point): Promise<void> {
   const points = (await hints(page)).map(({ x, y }) => ({ x, y }));
   expect(

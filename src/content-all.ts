@@ -8,18 +8,23 @@ import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
 import { Coordinates, Rect } from "./dom/rects";
-import { FrameRegistry } from "./content-all/frame-registration";
+import { FramePath } from "./content-all/frame-path";
 
 globalThis.KNAVI_FILE = "content-all";
 
-const frameRegistry = new FrameRegistry();
-window.addEventListener("message", frameRegistry.handleMessage);
+const framePath = new FramePath();
+window.addEventListener("message", (e) => {
+  if (!framePath.handleMessage(e)) return;
+  framePath.assignToChildren();
+  // WHY: outside a hint session nothing consumes the report.
+  if (hinterClient.isHinting) framePath.report().catch(printError);
+});
 
-const blurerClient = new BlurerClient(frameRegistry);
+const blurerClient = new BlurerClient(framePath);
 const hinterClient = new HinterClient();
 const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
-const rectAggregator = new RectAggregator(frameRegistry);
-const blurer = new Blurer(frameRegistry);
+const rectAggregator = new RectAggregator(framePath);
+const blurer = new Blurer(framePath);
 
 async function setupKeyboardHandler() {
   const [setting, matchedBlacklist] = await Promise.all([
@@ -81,17 +86,25 @@ chrome.runtime.onMessage.addListener(
     .add("ExecuteActionInFrame", ({ id, options }) =>
       rectAggregator.handleExecuteAction(id.index, options),
     )
-    .add("AllRectsRequest", async ({ id, viewport, offsets }) => {
+    .add("AllRectsRequest", async ({ id, targetPath, viewport, offsets }) => {
+      if (!framePath.matches(targetPath)) {
+        // WHY: the frame tree changed after the path was reported.
+        console.warn("AllRectsRequest for another frame:", targetPath);
+        return;
+      }
       await rectAggregator.handleAllRectsRequest(
         id,
         new Rect(viewport),
         new Coordinates(offsets),
       );
     })
-    .add("BlurRelay", ({ childFrameId, rect }) => {
-      blurer.handleBlurRelay(childFrameId, rect);
+    .add("BlurRelay", ({ targetPath, childSegment, rect }) => {
+      blurer.handleBlurRelay(targetPath, childSegment, rect);
     })
-    .add("SyncHintingState", ({ active }) => hinterClient.syncHinting(active))
+    .add("SyncHintingState", ({ active }) => {
+      hinterClient.syncHinting(active);
+      if (active) framePath.announce().catch(printError);
+    })
     .buildListener(),
 );
 
@@ -127,4 +140,7 @@ window.addEventListener(
 );
 window.addEventListener("blur", () => {
   keyboardHandler.handleBlur();
+  /* WHY: focus has probably moved into a child frame; a child that cannot
+     count its own path needs it from here before its blur key is pressed. */
+  framePath.assignToChildren();
 });
