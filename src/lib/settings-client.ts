@@ -2,9 +2,8 @@ import settings from "./settings";
 import { BlackList } from "./blacklist";
 import { sendToRuntime } from "./chrome-messages";
 
-/* WHY: Reads go straight to chrome.storage instead of messaging the background,
-   so loading a page or iframe does not start the service worker. Writes stay
-   in the background to share its serialization queue. */
+/* WHY: Reads go straight to chrome.storage, so loading a page or iframe sends
+   no message to the background for settings or the blacklist. */
 
 /* WHY: re-resolve the active area (sync vs local) on every read instead of
    trusting the memoized one: it can be switched at runtime, and the memo would
@@ -45,6 +44,7 @@ export default {
   matchAdditionalSelectors(url: string): Promise<string[]> {
     return sendToRuntime("MatchAdditionalSelectors", { url });
   },
+  /* WHY: writes stay in the background to share its serialization queue. */
   toggleBlacklist(pattern: string): Promise<{ added: boolean }> {
     return sendToRuntime("ToggleBlacklist", { pattern });
   },

@@ -11,9 +11,9 @@ export class SettingsLoader {
     private readonly apply: (settings: RootSettings) => void,
   ) {}
 
-  /* INVARIANT: a result is applied only if no later load has been applied
-     already. A slow older read cannot overwrite newer values, and an older
-     read that succeeds still applies when the newer one fails. */
+  /* WHY: `started` and `applied` are separate so an older read that succeeds
+     still applies when a newer read fails; a single "latest" counter would
+     drop it. */
   async load(): Promise<void> {
     const generation = ++this.started;
     const settings = await this.read();
