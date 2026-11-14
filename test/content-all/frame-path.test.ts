@@ -311,7 +311,7 @@ void describe("FramePath.announce", () => {
     assert.deepEqual(shadowChild.posted, []);
   });
 
-  void test("does not report a stale assigned path", async () => {
+  void test("does not report an assigned path kept from a previous session", async () => {
     const top = makeWindow();
     const frame = makeWindow(top);
     Object.defineProperty(frame, "frameElement", {
@@ -328,8 +328,34 @@ void describe("FramePath.announce", () => {
       } as unknown as MessageEvent,
       false,
     );
+    framePath.handleHintingState(false);
     await framePath.announce();
     assert.equal(sentToRuntime.length, 0);
+  });
+
+  void test("reports a path assigned for this session before it started hinting", async () => {
+    const top = makeWindow();
+    const frame = makeWindow(top);
+    Object.defineProperty(frame, "frameElement", {
+      get() {
+        throw new Error("SecurityError");
+      },
+    });
+    setGlobals(frame);
+    const framePath = new FramePath();
+    framePath.handleHintingState(false);
+    framePath.handleMessage(
+      {
+        data: { "@type": ASSIGNMENT, path: ["s0"] },
+        source: top,
+      } as unknown as MessageEvent,
+      false,
+    );
+    await framePath.announce();
+    assert.deepEqual(
+      sentToRuntime.map((m) => (m.payload as { path: string[] }).path),
+      [["s0"]],
+    );
   });
 
   void test("a frame with an assigned path assigns its children's paths", async () => {

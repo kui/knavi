@@ -138,7 +138,4 @@ window.addEventListener(
 );
 window.addEventListener("blur", () => {
   keyboardHandler.handleBlur();
-  /* WHY: focus has probably moved into a child frame; a child that cannot
-     count its own path needs it from here before its blur key is pressed. */
-  framePath.assignToChildren();
 });

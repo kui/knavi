@@ -90,23 +90,28 @@ test.describe("blur in cross-origin and shadow-root iframes", () => {
     await setSettings(context, { blurKey: "" });
   });
 
-  const cases: [string, string, (page: Page) => Locator][] = [
+  /* WHY: a cross-origin iframe in a shadow root gets its path only when a
+     hint session starts, so its blur key works only after one has run. */
+  const cases: [string, string, (page: Page) => Locator, boolean][] = [
     [
       "cross-origin-iframe.html",
       "cross-origin iframe",
       (page) => page.frameLocator("#child").locator("#child-button"),
+      false,
     ],
     [
       "cross-origin-iframe.html",
       "iframe nested in a cross-origin iframe",
       (page) =>
         page.frameLocator("#child").frameLocator("iframe").locator("button"),
+      false,
     ],
     [
       "shadow-iframe.html",
       "cross-origin iframe in a shadow root",
       (page) =>
         page.locator("iframe >> nth=0").contentFrame().locator("#child-button"),
+      true,
     ],
     [
       "shadow-iframe.html",
@@ -117,11 +122,16 @@ test.describe("blur in cross-origin and shadow-root iframes", () => {
           .contentFrame()
           .frameLocator("iframe")
           .locator("button"),
+      true,
     ],
   ];
-  for (const [file, name, button] of cases) {
+  for (const [file, name, button, afterHinting] of cases) {
     test(`blur key blurs a button in an ${name}`, async ({ page }) => {
       await gotoTest(page, file);
+      if (afterHinting) {
+        await attachHints(page);
+        await page.keyboard.up("Space");
+      }
       const target = button(page);
       await target.click();
       await expect(target).toBeFocused();
@@ -151,6 +161,28 @@ test.describe("page-visible messages", () => {
       await page.evaluate(
         () => (window as unknown as { received: unknown[] }).received,
       ),
+    ).toEqual([]);
+  });
+
+  test("moving focus into a cross-origin iframe in a shadow root posts nothing to it", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const w = window as unknown as { received: unknown[] };
+      w.received = [];
+      window.addEventListener("message", (e) => w.received.push(e.data));
+    });
+    await gotoTest(page, "shadow-iframe.html");
+    const child = page.locator("iframe >> nth=0").contentFrame();
+    await child.locator("#child-button").click();
+    await page.locator("body").click({ position: { x: 1, y: 1 } });
+    await child.locator("#child-button").click();
+    expect(
+      await child
+        .locator("body")
+        .evaluate(
+          () => (window as unknown as { received: unknown[] }).received,
+        ),
     ).toEqual([]);
   });
 });

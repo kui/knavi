@@ -24,6 +24,8 @@ interface FramePathAssignment {
  */
 export class FramePath {
   private assigned: string[] | undefined;
+  /** Whether `assigned` arrived after the last hint session ended. */
+  private assignedThisSession = false;
 
   /** This frame's path, or undefined if it cannot be determined (yet). */
   current(): string[] | undefined {
@@ -78,19 +80,23 @@ export class FramePath {
   /** Handles the SyncHintingState broadcast. */
   handleHintingState(active: boolean): void {
     if (active) this.announce().catch(printError);
+    else this.assignedThisSession = false;
   }
 
   /**
-   * Reports this frame's computed path to the background and assigns the
-   * paths of the children that cannot work out theirs. Called when a hint
-   * session starts. A frame that only has an assigned path reports it when
-   * the assignment arrives instead: an assignment kept from a previous
-   * session may be stale.
+   * Reports this frame's path to the background and assigns the paths of the
+   * children that cannot work out theirs. Called when a hint session starts.
+   * An assigned path is reported only if it arrived for this session: one
+   * kept from a previous session may be stale, and the fresh one is reported
+   * when it arrives.
    */
   async announce(): Promise<void> {
     const computed = computeOwnPath();
     this.assignToChildren(computed);
-    await this.reportPath(computed);
+    /* WHY: the parent's assignment for this session can arrive before this
+       frame's own SyncHintingState, while it is not hinting yet. */
+    const assigned = this.assignedThisSession ? this.assigned : undefined;
+    await this.reportPath(computed ?? assigned);
   }
 
   private async reportPath(path: string[] | undefined): Promise<void> {
@@ -111,6 +117,7 @@ export class FramePath {
       return false;
     const changed = this.assigned == null || !samePath(this.assigned, path);
     this.assigned = path;
+    this.assignedThisSession = true;
     const computed = computeOwnPath();
     /* WHY: a child keeps its assignment across sessions, so it must hear this
        one again even when this frame's path did not change. */
@@ -177,7 +184,6 @@ function segmentInParent(child: Window): string | undefined {
     ].indexOf(iframe as HTMLIFrameElement);
     return shadowIndex >= 0 ? `s${shadowIndex}` : undefined;
   } catch {
-    // WHY: `frameElement` throws SecurityError when the parent is cross-origin.
     return undefined;
   }
 }
