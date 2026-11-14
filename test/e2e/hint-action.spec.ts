@@ -1,4 +1,12 @@
-import { test, expect, gotoTest, hit, attachHints } from "./fixtures";
+import {
+  test,
+  expect,
+  gotoTest,
+  hit,
+  attachHints,
+  countHintsFor,
+  findHintFor,
+} from "./fixtures";
 
 test.describe("hint actions", () => {
   test.afterEach(async ({ page }) => {
@@ -92,5 +100,30 @@ test.describe("editable elements inside clickable elements", () => {
       "data-clicked",
       "editor-link",
     );
+  });
+});
+
+test.describe("slotted content in a shadow control", () => {
+  test.afterEach(async ({ page }) => {
+    await page.keyboard.up("Space").catch(() => void 0);
+  });
+
+  test("shadow button with only slotted content: one hint, hitting it clicks the shadow button", async ({
+    page,
+  }) => {
+    await gotoTest(page, "slotted-shadow-button.html");
+    await attachHints(page);
+    expect(await countHintsFor(page, "x-btn")).toBe(1);
+    expect(await page.locator(".hint").count()).toBe(1);
+
+    const hintText = await findHintFor(page, "x-btn");
+    for (const ch of hintText) await page.keyboard.press(ch);
+    await page.keyboard.up("Space");
+
+    await expect
+      .poll(() =>
+        page.evaluate(() => (window as { clicked?: boolean }).clicked),
+      )
+      .toBe(true);
   });
 });

@@ -93,18 +93,25 @@ function composedParent(element: Element): Element | null {
 }
 
 /**
- * Like `ancestor.contains(node)`, but also returns true when `node` lives in
- * a shadow tree hosted (possibly through nested shadow roots) by `ancestor`
- * or one of its descendants.
+ * Like `ancestor.contains(node)`, but follows the flat tree: it also returns
+ * true when `node` lives in a shadow tree hosted (possibly through nested
+ * shadow roots) by `ancestor` or one of its descendants, or when `node` is
+ * assigned to a `<slot>` inside `ancestor`.
  */
 export function containsComposed(ancestor: Node, node: Node | null): boolean {
-  let n = node;
-  while (n) {
-    if (ancestor.contains(n)) return true;
-    const root = n.getRootNode();
-    n = root instanceof ShadowRoot ? root.host : null;
+  for (let n = node; n; n = flatParent(n)) {
+    if (n === ancestor) return true;
   }
   return false;
+}
+
+function flatParent(node: Node): Node | null {
+  // WHY: a slotted node renders inside its slot, not under its light-DOM parent.
+  // SAFETY: only Element and Text are Slottable, so the property is absent on other nodes.
+  const slot = (node as Partial<Slottable>).assignedSlot;
+  if (slot) return slot;
+  const parent = node.parentNode;
+  return parent instanceof ShadowRoot ? parent.host : parent;
 }
 
 export function* traverseFirstChild(

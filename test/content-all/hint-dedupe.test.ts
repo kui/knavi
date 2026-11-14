@@ -6,6 +6,9 @@ class FakeNode {
   constructor(parent: FakeNode | null = null) {
     this.parent = parent;
   }
+  get parentNode(): FakeNode | null {
+    return this.parent;
+  }
   contains(other: FakeNode | null): boolean {
     for (let n = other; n; n = n.parent) if (n === this) return true;
     return false;
