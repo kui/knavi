@@ -2,6 +2,7 @@ import { RectAggregatorContentAll as RectAggregator } from "./content-all/rect-a
 import { KeyboardHandlerContentAll as KeyboardHandler } from "./content-all/keyboard-handler";
 import { BlurerContentAll as Blurer } from "./content-all/blurer";
 import settingsClient from "./lib/settings-client";
+import { isRelevantChange } from "./lib/settings-change";
 import { printError } from "./lib/errors";
 import { wait } from "./lib/promises";
 import BlurerClient from "./content-all/blurer-client";
@@ -56,8 +57,7 @@ let debounceController: AbortController | null = null;
 
 chrome.storage.onChanged.addListener((changes) => {
   (async () => {
-    if (!RELEVANT_KEYS.some((k) => k in changes) && !("_area" in changes))
-      return;
+    if (!isRelevantChange(changes, RELEVANT_KEYS)) return;
     debounceController?.abort();
     debounceController = new AbortController();
     const { signal } = debounceController;

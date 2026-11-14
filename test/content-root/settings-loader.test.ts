@@ -2,7 +2,6 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   SettingsLoader,
-  isRelevantChange,
   type RootSettings,
 } from "../../src/content-root/settings-loader";
 
@@ -12,47 +11,55 @@ const settings = (hints: string): RootSettings => ({
   cycleKey: "Tab",
 });
 
-void describe("SettingsLoader", () => {
-  void it("drops the result of a load superseded by a later one", async () => {
-    const resolvers: ((s: RootSettings) => void)[] = [];
-    const applied: string[] = [];
-    const loader = new SettingsLoader(
-      () => new Promise((resolve) => resolvers.push(resolve)),
-      (s) => applied.push(s.hints),
-    );
+interface Deferred {
+  resolve(s: RootSettings): void;
+  reject(e: Error): void;
+}
 
+function deferredLoader() {
+  const pending: Deferred[] = [];
+  const applied: string[] = [];
+  const loader = new SettingsLoader(
+    () =>
+      new Promise<RootSettings>((resolve, reject) =>
+        pending.push({ resolve, reject }),
+      ),
+    (s) => applied.push(s.hints),
+  );
+  return { loader, pending, applied };
+}
+
+void describe("SettingsLoader", () => {
+  void it("does not let an older load overwrite a newer applied one", async () => {
+    const { loader, pending, applied } = deferredLoader();
     const first = loader.load();
     const second = loader.load();
-    resolvers[1](settings("new"));
+    pending[1].resolve(settings("new"));
     await second;
-    resolvers[0](settings("old"));
+    pending[0].resolve(settings("old"));
     await first;
-
     assert.deepEqual(applied, ["new"]);
   });
 
+  void it("applies an older load that succeeds when the newer one fails", async () => {
+    const { loader, pending, applied } = deferredLoader();
+    const first = loader.load();
+    const second = loader.load();
+    pending[1].reject(new Error("read failed"));
+    await assert.rejects(second, /read failed/);
+    pending[0].resolve(settings("old"));
+    await first;
+    assert.deepEqual(applied, ["old"]);
+  });
+
   void it("applies each load when they do not overlap", async () => {
-    const applied: string[] = [];
-    let next = "a";
-    const loader = new SettingsLoader(
-      () => Promise.resolve(settings(next)),
-      (s) => applied.push(s.hints),
-    );
-    await loader.load();
-    next = "b";
-    await loader.load();
+    const { loader, pending, applied } = deferredLoader();
+    const first = loader.load();
+    pending[0].resolve(settings("a"));
+    await first;
+    const second = loader.load();
+    pending[1].resolve(settings("b"));
+    await second;
     assert.deepEqual(applied, ["a", "b"]);
-  });
-});
-
-void describe("isRelevantChange", () => {
-  void it("accepts the settings content-root renders and the area marker", () => {
-    for (const key of ["css", "hints", "cycleKey", "_area"]) {
-      assert.equal(isRelevantChange({ [key]: {} }), true, key);
-    }
-  });
-
-  void it("ignores other keys", () => {
-    assert.equal(isRelevantChange({ blackList: {} }), false);
   });
 });

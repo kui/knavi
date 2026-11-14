@@ -3,10 +3,8 @@ import { HinterContentRoot } from "./content-root/hinter";
 import { BlurerContentRoot } from "./content-root/blurer";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
 import { RectAggregatorClient } from "./content-root/rect-aggregator-client";
-import {
-  SettingsLoader,
-  isRelevantChange,
-} from "./content-root/settings-loader";
+import { SettingsLoader, ROOT_KEYS } from "./content-root/settings-loader";
+import { isRelevantChange } from "./lib/settings-change";
 import { HintView } from "./content-root/hinter-view";
 import BlurView from "./content-root/blurer-view";
 import { printError } from "./lib/errors";
@@ -21,7 +19,7 @@ const blurerView = new BlurView();
 const blurer = new BlurerContentRoot(blurerView);
 
 const settingsLoader = new SettingsLoader(
-  () => settingsClient.get(["css", "hints", "cycleKey"]),
+  () => settingsClient.get([...ROOT_KEYS]),
   ({ css, hints, cycleKey }) => {
     hinterView.setCss(css);
     hinterView.setCycleKey(cycleKey);
@@ -31,7 +29,8 @@ const settingsLoader = new SettingsLoader(
 settingsLoader.load().catch(printError);
 
 chrome.storage.onChanged.addListener((changes) => {
-  if (isRelevantChange(changes)) settingsLoader.load().catch(printError);
+  if (isRelevantChange(changes, ROOT_KEYS))
+    settingsLoader.load().catch(printError);
 });
 
 chrome.runtime.onMessage.addListener(

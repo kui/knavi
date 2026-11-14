@@ -68,9 +68,6 @@ class Storage {
     }
   }
 
-  /**
-   * Returns the stored values as they are; a key never written is absent.
-   */
   getRaw<K extends keyof Settings>(
     names: K[],
   ): Promise<Partial<Pick<Settings, K>>> {

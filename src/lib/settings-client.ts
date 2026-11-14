@@ -11,6 +11,15 @@ import { sendToRuntime } from "./chrome-messages";
    keep pointing at the area that was active when the content script loaded. */
 const resolveStorage = () => settings.getStorage(true);
 
+async function readWithBlacklistMatch<K extends Exclude<keyof Settings, "css">>(
+  names: K[],
+  url: string,
+): Promise<[Pick<Settings, K>, string[]]> {
+  const storage = await resolveStorage();
+  const all = await storage.get([...names, "blackList" as const]);
+  return [all, new BlackList(all.blackList).match(url)];
+}
+
 export default {
   async get<K extends keyof Settings>(names: K[]): Promise<Pick<Settings, K>> {
     const storage = await resolveStorage();
@@ -27,22 +36,9 @@ export default {
     return storage.withDefaults(raw, names);
   },
   async matchBlacklist(url: string): Promise<string[]> {
-    const storage = await resolveStorage();
-    const { blackList } = await storage.get(["blackList"]);
-    return new BlackList(blackList).match(url);
+    return (await readWithBlacklistMatch([], url))[1];
   },
-  /**
-   * Reads `names` and matches `url` against the blacklist with one area
-   * resolution and one storage read. `names` must not include `css`.
-   */
-  async getWithBlacklistMatch<K extends Exclude<keyof Settings, "css">>(
-    names: K[],
-    url: string,
-  ): Promise<[Pick<Settings, K>, string[]]> {
-    const storage = await resolveStorage();
-    const all = await storage.get([...names, "blackList" as const]);
-    return [all, new BlackList(all.blackList).match(url)];
-  },
+  getWithBlacklistMatch: readWithBlacklistMatch,
   /* WHY: stays a background message: it runs only when hints are requested,
      not on page load, and parsing in the background keeps JSON5 out of every
      content script bundle. */
