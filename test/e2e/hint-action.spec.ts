@@ -108,26 +108,30 @@ test.describe("slotted content in a shadow control", () => {
     await page.keyboard.up("Space").catch(() => void 0);
   });
 
-  test("shadow button with only slotted content: one hint, hitting it clicks the shadow button", async ({
-    page,
-  }) => {
-    await gotoTest(page, "slotted-shadow-button.html");
-    await attachHints(page);
-    expect(await countHintsFor(page, "x-btn")).toBe(1);
-    expect(await page.locator(".hint").count()).toBe(1);
+  for (const fixture of [
+    "slotted-shadow-button.html",
+    "slotted-shadow-button-pointer.html",
+  ])
+    test(`${fixture}: one hint, hitting it clicks the shadow button`, async ({
+      page,
+    }) => {
+      await gotoTest(page, fixture);
+      await attachHints(page);
+      expect(await countHintsFor(page, "x-btn")).toBe(1);
+      expect(await page.locator(".hint").count()).toBe(1);
 
-    expect(
-      await page.evaluate(() => (window as { clicked?: boolean }).clicked),
-    ).toBeUndefined();
+      expect(
+        await page.evaluate(() => (window as { clicked?: boolean }).clicked),
+      ).toBeUndefined();
 
-    const hintText = await findHintFor(page, "x-btn");
-    for (const ch of hintText) await page.keyboard.press(ch);
-    await page.keyboard.up("Space");
+      const hintText = await findHintFor(page, "x-btn");
+      for (const ch of hintText) await page.keyboard.press(ch);
+      await page.keyboard.up("Space");
 
-    await expect
-      .poll(() =>
-        page.evaluate(() => (window as { clicked?: boolean }).clicked),
-      )
-      .toBe(true);
-  });
+      await expect
+        .poll(() =>
+          page.evaluate(() => (window as { clicked?: boolean }).clicked),
+        )
+        .toBe(true);
+    });
 });

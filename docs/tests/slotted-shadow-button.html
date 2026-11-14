@@ -10,7 +10,7 @@
         constructor() {
           super();
           this.attachShadow({ mode: "open" }).innerHTML =
-            '<button style="display: block; width: 100%; padding: 0; border: 0; cursor: pointer" onclick="window.clicked = true"><slot></slot></button>';
+            '<button style="display: block; width: 100%; padding: 0; border: 0" onclick="window.clicked = true"><slot></slot></button>';
         }
       },
     );
