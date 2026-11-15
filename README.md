@@ -22,43 +22,18 @@ Prefer not to hold a key down? Bind a Sticky Key in options to show hints with a
 
 The Peek Key, Sticky Key, hint letters, and per-site selectors are all configurable in options.
 
-## Build
+## Build from source
 
-Tool versions are managed by [mise](https://mise.jdx.dev/). Run `mise install`
-and `npm ci` first to set up the build environment.
-
-Debug build:
+To try the latest code before it reaches the Chrome Web Store, install
+[mise](https://mise.jdx.dev/), then run:
 
 ```sh
+mise install
+npm ci
 npm run build
 ```
 
-Interactive debug build:
+Open `chrome://extensions`, turn on Developer mode, click "Load unpacked", and
+select the `build/` directory.
 
-```sh
-npm run watch
-```
-
-zip for production build:
-
-```sh
-npm run zip
-```
-
-## Development note
-
-For a user-visible change, add a changelog fragment as described in
-[changelog/unreleased/README.md](changelog/unreleased/README.md).
-
-## Release
-
-1. Check the version in [package.json](package.json)
-2. Run `npm run changelog` to combine the fragments in `changelog/unreleased/`
-   into `changelog/<Version>.md`, and replace the TODO on its line 3 with a
-   one-line digest of the release. Reorder entries within a section if needed
-3. Open a pull request with them and merge it
-4. Create and push the release tag by either:
-   - Running the [tag-for-release workflow](https://github.com/kui/knavi/actions/workflows/tag-for-release.yaml)
-     on GitHub Actions ("Run workflow" button, or `gh workflow run tag-for-release.yaml`)
-   - Executing `scripts/tag_for_release.bash` locally and pushing the tag
-5. Bump minor version in [package.json](package.json) for next release
+For development, see [dev-docs/development.md](dev-docs/development.md).
