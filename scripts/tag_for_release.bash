@@ -9,8 +9,9 @@ if [[ ! -f "$f" ]]; then
   echo "$f does not exist; run 'npm run changelog' in a release PR first" >&2
   exit 1
 fi
-if sed -n 3p "$f" | grep -q '^TODO:'; then
-  echo "$f still has the TODO digest on line 3" >&2
+# WHY: line 3 becomes the tag subject (GitHub release title), so it must be a hand-written digest, not the placeholder, a bullet, or empty.
+if ! sed -n 3p "$f" | grep -qv -e '^TODO:' -e '^-' -e '^$'; then
+  echo "$f: write a one-line release digest on line 3" >&2
   exit 1
 fi
 if find changelog/unreleased -name '*.md' ! -name README.md 2>/dev/null | grep -q .; then
