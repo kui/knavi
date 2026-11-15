@@ -1,0 +1,65 @@
+# Development
+
+## Setup
+
+Tool versions are managed by [mise](https://mise.jdx.dev/). Run `mise install`
+and `npm ci` first.
+
+## Build
+
+| Command         | Output                                                              |
+| --------------- | ------------------------------------------------------------------- |
+| `npm run build` | Debug build in `build/`                                             |
+| `npm run watch` | Rebuilds `build/` on changes in `src/` and serves `docs/` over HTTP |
+| `npm run zip`   | Minified build in `build/`, packed into `knavi-<version>.zip`       |
+
+Load `build/` with "Load unpacked" on `chrome://extensions` (Developer mode).
+
+## Checks
+
+- `npm run lint`: ESLint, Prettier, `tsc`, the changelog fragment check, and
+  ast-grep. `npm run fix` applies the ESLint and Prettier fixes.
+- `npm run test`: unit tests under `test/` (except `test/e2e/`), run with
+  `node:test`.
+- `npm run check`: both of the above, as CI runs them.
+- `npm run test:e2e`: Playwright tests in `test/e2e/` against the extension in
+  `build/`, so run `npm run build` first. The first run needs
+  `npx playwright install chromium`. The test pages are in `docs/tests/`,
+  served at `http://127.0.0.1:8787/tests/` during the run.
+
+## Code conventions
+
+- Event-hook wiring (`window.addEventListener`,
+  `chrome.runtime.onMessage.addListener`,
+  `chrome.storage.onChanged.addListener`, etc.) belongs in the entry-point
+  files (`src/background.ts`, `src/content-all.ts`, `src/content-root.ts`).
+  Logic implementation belongs in the corresponding `src/{name}/*.ts` modules,
+  which export handler functions or objects to be wired up by the entry point.
+- An ast-grep rule (`require-comment-rationale`) requires every source comment
+  to either start with `WHY:` / `HACK:` / `SAFETY:` / `INVARIANT:`, or qualify
+  for one of the built-in exemptions (JSDoc blocks, tooling directives, etc.;
+  see [ast-grep/rules/README.md](../ast-grep/rules/README.md)). This exists to
+  stop comments that merely restate what the code already says.
+- A rationale prefix does not make a comment worth keeping. Do not write
+  comments that explain what an API, manifest key, or platform feature does
+  (e.g. what `match_origin_as_fallback` covers): that belongs to its
+  documentation. Comment only on project-specific reasons the code and the
+  docs cannot convey; otherwise write no comment.
+
+## Changelog
+
+For a user-visible change, add a changelog fragment as described in
+[changelog/unreleased/README.md](../changelog/unreleased/README.md).
+
+## Release
+
+1. Check the version in [package.json](../package.json)
+2. Run `npm run changelog` to combine the fragments in `changelog/unreleased/`
+   into `changelog/<Version>.md`, and replace the TODO on its line 3 with a
+   one-line digest of the release. Reorder entries within a section if needed
+3. Open a pull request with them and merge it
+4. Create and push the release tag by either:
+   - Running the [tag-for-release workflow](https://github.com/kui/knavi/actions/workflows/tag-for-release.yaml)
+     on GitHub Actions ("Run workflow" button, or `gh workflow run tag-for-release.yaml`)
+   - Executing `scripts/tag_for_release.bash` locally and pushing the tag
+5. Bump minor version in [package.json](../package.json) for next release
