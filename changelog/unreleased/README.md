@@ -3,7 +3,8 @@
 Every pull request with a user-visible change adds one file here per change.
 At release time, `npm run changelog` combines them into
 `changelog/<version>.md` and deletes them. Each pull request gets its own
-file, so pull requests do not conflict over the changelog.
+file, so pull requests do not conflict over the changelog. Within a section,
+entries are ordered by file name; the release pull request may reorder them.
 
 Do not edit `changelog/<version>.md` or its digest line (line 3) outside a
 release pull request.

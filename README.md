@@ -55,7 +55,7 @@ For a user-visible change, add a changelog fragment as described in
 1. Check the version in [package.json](package.json)
 2. Run `npm run changelog` to combine the fragments in `changelog/unreleased/`
    into `changelog/<Version>.md`, and replace the TODO on its line 3 with a
-   one-line digest of the release
+   one-line digest of the release. Reorder entries within a section if needed
 3. Open a pull request with them and merge it
 4. Create and push the release tag by either:
    - Running the [tag-for-release workflow](https://github.com/kui/knavi/actions/workflows/tag-for-release.yaml)
