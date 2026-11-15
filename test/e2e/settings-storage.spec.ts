@@ -36,7 +36,7 @@ async function expectHintLetters(page: Page, letters: string): Promise<void> {
 }
 
 test.describe("settings read directly from storage", () => {
-  test("a page load sends only GetFrameId, and hinting sends no settings message", async ({
+  test("a page load sends only frame messages, and hinting sends no settings message", async ({
     context,
     page,
   }) => {
@@ -70,8 +70,12 @@ test.describe("settings read directly from storage", () => {
     await gotoTest(page, "input.html");
     // WHY: positive control: proves the spy receives messages from the content scripts. GetFrameId can arrive after `knaviReady`, so poll.
     await expect.poll(readSeen).toContain("GetFrameId");
-    // WHY: rect-aggregator fetches its frame id on startup, which is outside the settings reads this test covers.
-    expect((await readSeen()).filter((t) => t !== "GetFrameId")).toEqual([]);
+    /* WHY: every frame still sends GetFrameId and ReportFramePath on startup
+       (#172), which is outside the settings reads this test covers. */
+    const startupFrameMessages = ["GetFrameId", "ReportFramePath"];
+    expect(
+      (await readSeen()).filter((t) => !startupFrameMessages.includes(t)),
+    ).toEqual([]);
 
     /* WHY: showing hints needs content-root's settings, which load
        independently of content-all's `knaviReady`, so a settings message from
