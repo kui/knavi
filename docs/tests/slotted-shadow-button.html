@@ -1,0 +1,18 @@
+<!-- WHY: gotoTest() clicks the body corner; the padding keeps that click off the button so only the hint can set window.clicked and the host does not become the focused element. -->
+<body style="margin: 0; padding: 40px">
+  <x-btn style="display: block; width: 200px">
+    <span style="display: block; height: 40px">slotted label</span>
+  </x-btn>
+  <script>
+    customElements.define(
+      "x-btn",
+      class extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: "open" }).innerHTML =
+            '<button style="display: block; width: 100%; padding: 0; border: 0" onclick="window.clicked = true"><slot></slot></button>';
+        }
+      },
+    );
+  </script>
+</body>

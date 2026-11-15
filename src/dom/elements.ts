@@ -73,7 +73,8 @@ export function* traverseParent(
 
 /**
  * Like `traverseParent()`, but steps from a shadow root to its host instead of
- * stopping at the shadow boundary.
+ * stopping at the shadow boundary. Unlike `containsComposed()`, it does not
+ * follow slot assignment: a slotted node steps to its light-DOM parent.
  */
 export function* traverseComposedParent(
   element: Element,
@@ -93,18 +94,23 @@ function composedParent(element: Element): Element | null {
 }
 
 /**
- * Like `ancestor.contains(node)`, but also returns true when `node` lives in
- * a shadow tree hosted (possibly through nested shadow roots) by `ancestor`
- * or one of its descendants.
+ * Like `ancestor.contains(node)`, but follows the flat tree: it also returns
+ * true when `node` lives in a shadow tree hosted (possibly through nested
+ * shadow roots) by `ancestor` or one of its descendants, or when `node` is
+ * assigned to a `<slot>` inside `ancestor`.
  */
 export function containsComposed(ancestor: Node, node: Node | null): boolean {
-  let n = node;
-  while (n) {
-    if (ancestor.contains(n)) return true;
-    const root = n.getRootNode();
-    n = root instanceof ShadowRoot ? root.host : null;
+  for (let n = node; n; n = flatParent(n)) {
+    if (n === ancestor) return true;
   }
   return false;
+}
+
+function flatParent(node: Node): Node | null {
+  if (node instanceof ShadowRoot) return node.host;
+  const slot = (node as Partial<Slottable>).assignedSlot;
+  if (slot) return slot;
+  return node.parentNode;
 }
 
 export function* traverseFirstChild(
