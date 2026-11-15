@@ -30,7 +30,8 @@ A pull request with changes of two types adds two files, such as
 ## Content
 
 One Markdown bullet, written for users of the extension. Indent continuation
-lines and sub-bullets by two spaces.
+lines and sub-bullets by two spaces, and do not use blank lines. Keep the
+entry short; link the issue or pull request for a longer explanation.
 
 ```markdown
 - Fix hint letters reaching the page when typed right after the previous hint
@@ -38,4 +39,14 @@ lines and sub-bullets by two spaces.
   action.
 ```
 
-`npm run lint` checks the file name and that the content is a single bullet.
+`npm run lint` checks the file name and that the content is a single bullet
+with no blank lines.
+
+## Fragments added after the release changelog was built
+
+If a pull request with a fragment merges after the release pull request ran
+`npm run changelog`, `npm run changelog` refuses to run again and tagging
+fails. In the release pull request, move the bullet by hand into
+`changelog/<version>.md` under its section (add the section if it is missing,
+keeping the order Add, Change, Fix, Performance), indented by two spaces, and
+delete the fragment.

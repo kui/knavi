@@ -51,10 +51,15 @@ void describe("parseFragment", () => {
     }
   });
 
+  void it("rejects blank lines", () => {
+    assert.match(errorOf("a.fix.md", "- one\n\n  - Sub.\n"), /blank lines/);
+    assert.match(errorOf("a.fix.md", "\n- one\n"), /start with/);
+  });
+
   void it("rejects a body that is not one bullet", () => {
     assert.match(errorOf("a.fix.md", "Fix x\n"), /start with/);
     assert.match(errorOf("a.fix.md", "- one\n- two\n"), /single bullet/);
-    assert.match(errorOf("a.fix.md", "- one\n\n## Heading\n"), /single bullet/);
+    assert.match(errorOf("a.fix.md", "- one\n## Heading\n"), /single bullet/);
   });
 });
 

@@ -50,8 +50,12 @@ export function parseFragment(
   if (!lines[0]?.startsWith("- ")) {
     return `${where}: must start with "- ". ${FORMAT_HINT}`;
   }
+  // WHY: one blank line makes the whole combined list loose, so Prettier rewrites the release changelog and GitHub renders every entry as paragraphs; long explanations belong in the linked issue or PR.
+  if (lines.includes("")) {
+    return `${where}: must not contain blank lines; link an issue or PR for details. ${FORMAT_HINT}`;
+  }
   // WHY: an unindented line would end the bullet, so the fragment would no longer nest under its section heading.
-  if (lines.slice(1).some((l) => l !== "" && !l.startsWith(" "))) {
+  if (lines.slice(1).some((l) => !l.startsWith(" "))) {
     return `${where}: must be a single bullet; indent continuation lines and sub-bullets. ${FORMAT_HINT}`;
   }
   return { fileName, type, body };
@@ -104,7 +108,7 @@ export function renderChangelog(
 function indent(body: string): string {
   return body
     .split("\n")
-    .map((l) => (l === "" ? l : `  ${l}`))
+    .map((l) => `  ${l}`)
     .join("\n");
 }
 
@@ -113,7 +117,9 @@ export function buildChangelog(version: string, root = ROOT): string {
   const file = versionFile(version);
   const absFile = path.join(root, file);
   if (existsSync(absFile)) {
-    throw new Error(`${file} already exists; remove it to rebuild`);
+    throw new Error(
+      `${file} already exists; to add fragments merged since it was built, see "Fragments added after the release changelog was built" in ${FRAGMENT_DIR}/README.md`,
+    );
   }
   const { fragments, errors } = readFragments(root);
   if (errors.length > 0) throw new Error(errors.join("\n"));
@@ -147,7 +153,9 @@ export function checkRelease(version: string, root = ROOT): string[] {
   }
   const { fragments, errors: fragmentErrors } = readFragments(root);
   if (fragments.length > 0 || fragmentErrors.length > 0) {
-    errors.push(`${FRAGMENT_DIR} has entries not built into ${file}`);
+    errors.push(
+      `${FRAGMENT_DIR} has entries not built into ${file}; see "Fragments added after the release changelog was built" in ${FRAGMENT_DIR}/README.md`,
+    );
   }
   return errors;
 }
