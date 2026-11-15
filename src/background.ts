@@ -3,6 +3,7 @@ import * as hinter from "./background/hinter";
 import * as settings from "./background/settings";
 import * as migration from "./background/migration";
 import * as actionIcon from "./background/action-icon";
+import * as framePaths from "./background/frame-paths";
 import libSettings from "./lib/settings";
 
 globalThis.KNAVI_FILE = "background";
@@ -16,3 +17,5 @@ chrome.runtime.onMessage.addListener(
     .merge(settings.router)
     .buildListener(),
 );
+
+chrome.tabs.onRemoved.addListener((tabId) => framePaths.end(tabId));

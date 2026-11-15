@@ -1,0 +1,9 @@
+<div id="host"></div>
+
+<script>
+  const root = document.getElementById("host").attachShadow({ mode: "open" });
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "width: 500px; height: 200px";
+  iframe.src = "shadow-same-origin-iframe-child.html";
+  root.appendChild(iframe);
+</script>

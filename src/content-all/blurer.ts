@@ -2,32 +2,33 @@ import { sendToRuntime } from "../lib/chrome-messages";
 import { getContentRects } from "../dom/elements";
 import { Rect } from "../dom/rects";
 import { printError } from "../lib/errors";
-import { FrameRegistry } from "./frame-registration";
+import { FramePath } from "./frame-path";
 
 export class BlurerContentAll {
-  constructor(private readonly frameRegistry: FrameRegistry) {}
+  constructor(private readonly framePath: FramePath) {}
 
-  /** Handles BlurRelay from background: transform rect to parent coords and send BlurUp. */
+  /**
+   * Handles BlurRelay from background, which is delivered to every frame:
+   * ignores it unless this frame is the parent at `targetPath`, then
+   * transforms the rect to this frame's coords and sends BlurUp.
+   */
   handleBlurRelay(
-    childFrameId: number,
+    targetPath: string[],
+    childSegment: string,
     rectJson: RectJSON<"element-border", "layout-viewport"> | null,
   ) {
-    const frame = this.frameRegistry.getIframe(childFrameId);
+    if (!this.framePath.matches(targetPath)) return;
+    const frame = this.framePath.findChild(childSegment);
     if (!frame) {
-      console.warn("Unknown childFrameId for BlurRelay:", childFrameId);
+      console.warn("Unknown child for BlurRelay:", childSegment);
       return;
     }
     if (!frame.isConnected) {
-      // WHY: the iframe was removed from DOM; its entry will be ignored next lookup.
       console.debug("BlurRelay: iframe no longer connected, skipping", frame);
       return;
     }
     const rect = buildBlurRect(frame, rectJson);
-    this.frameRegistry.parentFrameId
-      .then((parentFrameId) =>
-        sendToRuntime("BlurUp", { parentFrameId: parentFrameId ?? 0, rect }),
-      )
-      .catch(printError);
+    sendToRuntime("BlurUp", { path: targetPath, rect }).catch(printError);
   }
 }
 

@@ -1,0 +1,19 @@
+<style>
+  iframe {
+    width: 300px;
+    height: 80px;
+  }
+</style>
+
+<button id="same-origin-button" onclick="this.textContent = 'clicked'">
+  same-origin
+</button>
+<iframe id="grandchild"></iframe>
+
+<script>
+  // WHY: localhost and 127.0.0.1 are different origins on the same server.
+  const otherHost =
+    location.hostname === "localhost" ? "127.0.0.1" : "localhost";
+  document.getElementById("grandchild").src =
+    `${location.protocol}//${otherHost}:${location.port}/tests/cross-origin-iframe-grandchild.html`;
+</script>

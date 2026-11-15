@@ -14,16 +14,19 @@ const sentToRuntime: { type: string; payload: unknown }[] = [];
   },
 };
 
-const fakeWindow = {};
-(globalThis as Record<string, unknown>).window = fakeWindow;
-(globalThis as Record<string, unknown>).parent = fakeWindow;
-
 const { BlurerContentAll } = await import("../../src/content-all/blurer.js");
-const { FrameRegistry } =
-  await import("../../src/content-all/frame-registration.js");
+type FramePath = ConstructorParameters<typeof BlurerContentAll>[0];
 
-function makeRegistry(): InstanceType<typeof FrameRegistry> {
-  return new FrameRegistry();
+const PARENT_PATH = ["2"];
+
+function makeFramePath(
+  iframe: HTMLIFrameElement | undefined,
+  ownPath = PARENT_PATH,
+): FramePath {
+  return {
+    matches: (p: string[]) => p.join() === ownPath.join(),
+    findChild: () => iframe,
+  } as unknown as FramePath;
 }
 
 function makeRectJson(
@@ -46,35 +49,16 @@ void describe("BlurerContentAll.handleBlurRelay", () => {
   });
 
   void test("propagates null rect as-is when input rect is null", async () => {
-    const registry = makeRegistry();
-
-    const fakeSource = { window: {} } as unknown as Window;
-    const fakeIframe = {
+    const iframe = {
       tagName: "IFRAME",
-      contentWindow: fakeSource,
       isConnected: true,
     } as unknown as HTMLIFrameElement;
 
-    (globalThis as Record<string, unknown>).document = {
-      getElementsByTagName: () => [fakeIframe],
-      querySelectorAll: () => [],
-    };
-
-    registry.handleMessage({
-      data: {
-        "@type": "com.github.kui.knavi.FrameIdAnnouncement",
-        frameId: 5,
-      },
-      source: fakeSource,
-    } as MessageEvent);
-
-    // WHY: clear GetFrameId messages recorded during registry setup.
-    sentToRuntime.length = 0;
-
-    const blurer = new BlurerContentAll(registry);
-    blurer.handleBlurRelay(5, null);
-
-    // WHY: wait for the async sendToRuntime call.
+    new BlurerContentAll(makeFramePath(iframe)).handleBlurRelay(
+      PARENT_PATH,
+      "0",
+      null,
+    );
     await new Promise<void>((resolve) => setImmediate(resolve));
 
     assert.equal(sentToRuntime.length, 1);
@@ -82,39 +66,26 @@ void describe("BlurerContentAll.handleBlurRelay", () => {
     assert.equal(sent.type, "BlurUp");
     // INVARIANT: null rect must be forwarded, not swallowed
     assert.equal((sent.payload as Record<string, unknown>).rect, null);
+    assert.deepEqual(
+      (sent.payload as Record<string, unknown>).path,
+      PARENT_PATH,
+    );
   });
 
   void test("propagates null rect when iframe has no renderable content rect", async () => {
-    const registry = makeRegistry();
-
-    const fakeSource = { window: {} } as unknown as Window;
     // WHY: getClientRects returns an empty iterable (zero-size / display:none iframe).
-    const fakeIframe = {
+    const iframe = {
       tagName: "IFRAME",
-      contentWindow: fakeSource,
       isConnected: true,
       getClientRects: () => [] as DOMRect[],
       computedStyleMap: () => ({ get: () => undefined }),
     } as unknown as HTMLIFrameElement;
 
-    (globalThis as Record<string, unknown>).document = {
-      getElementsByTagName: () => [fakeIframe],
-      querySelectorAll: () => [],
-    };
-
-    registry.handleMessage({
-      data: {
-        "@type": "com.github.kui.knavi.FrameIdAnnouncement",
-        frameId: 6,
-      },
-      source: fakeSource,
-    } as MessageEvent);
-
-    sentToRuntime.length = 0;
-
-    const blurer = new BlurerContentAll(registry);
-    blurer.handleBlurRelay(6, makeRectJson());
-
+    new BlurerContentAll(makeFramePath(iframe)).handleBlurRelay(
+      PARENT_PATH,
+      "0",
+      makeRectJson(),
+    );
     await new Promise<void>((resolve) => setImmediate(resolve));
 
     assert.equal(sentToRuntime.length, 1);
@@ -123,5 +94,21 @@ void describe("BlurerContentAll.handleBlurRelay", () => {
       (sentToRuntime[0].payload as Record<string, unknown>).rect,
       null,
     );
+  });
+
+  void test("ignores a relay addressed to another frame's path", async () => {
+    const iframe = {
+      tagName: "IFRAME",
+      isConnected: true,
+    } as unknown as HTMLIFrameElement;
+
+    new BlurerContentAll(makeFramePath(iframe)).handleBlurRelay(
+      ["3"],
+      "0",
+      null,
+    );
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    assert.equal(sentToRuntime.length, 0);
   });
 });

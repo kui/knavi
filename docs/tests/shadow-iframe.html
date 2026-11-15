@@ -1,0 +1,25 @@
+<style>
+  iframe {
+    width: 500px;
+    height: 200px;
+  }
+</style>
+
+<button id="top-button" onclick="this.textContent = 'clicked'">top</button>
+<div id="host"></div>
+
+<script>
+  const root = document.getElementById("host").attachShadow({ mode: "open" });
+  // A cross-origin iframe with a descendant, and a same-origin one.
+  // WHY: localhost and 127.0.0.1 are different origins on the same server.
+  const otherHost =
+    location.hostname === "localhost" ? "127.0.0.1" : "localhost";
+  for (const src of [
+    `${location.protocol}//${otherHost}:${location.port}/tests/cross-origin-iframe-child.html`,
+    "cross-origin-iframe-grandchild.html",
+  ]) {
+    const iframe = document.createElement("iframe");
+    iframe.src = src;
+    root.appendChild(iframe);
+  }
+</script>

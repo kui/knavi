@@ -1,0 +1,17 @@
+<style>
+  iframe {
+    width: 300px;
+    height: 80px;
+  }
+</style>
+
+<button id="child-button" onclick="this.textContent = 'clicked'">child</button>
+<iframe id="grandchild"></iframe>
+
+<script>
+  // WHY: the grandchild is on yet another origin than its parent.
+  const otherHost =
+    location.hostname === "localhost" ? "127.0.0.1" : "localhost";
+  document.getElementById("grandchild").src =
+    `${location.protocol}//${otherHost}:${location.port}/tests/cross-origin-iframe-grandchild.html`;
+</script>
