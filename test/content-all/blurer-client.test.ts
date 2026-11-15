@@ -16,12 +16,14 @@ const { default: BlurerClient } =
   await import("../../src/content-all/blurer-client.js");
 type FramePath = ConstructorParameters<typeof BlurerClient>[0];
 
+const body = {};
+
 function setGlobals(activeElement: unknown) {
   const g = globalThis as Record<string, unknown>;
   const fakeWindow = {};
   g.window = fakeWindow;
   g.parent = {}; // WHY: not the top frame
-  g.document = { activeElement, body: {} };
+  g.document = { activeElement, body };
 }
 
 void describe("BlurerClient.blur", () => {
@@ -40,6 +42,16 @@ void describe("BlurerClient.blur", () => {
     await new Promise<void>((resolve) => setImmediate(resolve));
 
     assert.equal(blurred, true);
+    assert.equal(sentToRuntime.length, 0);
+  });
+
+  void test("leaves the key to the page when the path is unknown and nothing has focus", () => {
+    setGlobals(body);
+    const client = new BlurerClient({
+      current: () => undefined,
+    } as unknown as FramePath);
+
+    assert.equal(client.blur(), false);
     assert.equal(sentToRuntime.length, 0);
   });
 });

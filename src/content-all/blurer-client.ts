@@ -13,8 +13,9 @@ export default class Blur {
     const path = this.framePath.current();
     if (!path) {
       /* WHY: a frame that does not know its path yet cannot relay the blur to
-         its parent, but the key is still ours. */
+         its parent. Nothing to blur here means the key is not ours. */
       console.warn("Cannot relay blur: this frame's path is unknown");
+      if (document.activeElement === document.body) return false;
       (document.activeElement as Partial<HTMLElement>).blur?.();
       return true;
     }
