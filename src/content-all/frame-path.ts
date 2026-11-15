@@ -23,8 +23,6 @@ interface FramePathAssignment {
  */
 export class FramePath {
   private assigned: string[] | undefined;
-  /** Whether `assigned` arrived after the last hint session ended. */
-  private assignedThisSession = false;
   private hinting = false;
 
   /** This frame's path, or undefined if it cannot be determined (yet). */
@@ -39,7 +37,7 @@ export class FramePath {
 
   /** The paths of direct child iframes; undefined for an unmappable one. */
   childPaths(iframes: readonly HTMLIFrameElement[]): (string[] | undefined)[] {
-    const own = this.sessionPath(computeOwnPath());
+    const own = computeOwnPath() ?? this.assigned;
     let shadow: HTMLIFrameElement[] | undefined;
     return iframes.map((iframe) => {
       const w = iframe.contentWindow;
@@ -78,28 +76,16 @@ export class FramePath {
   handleHintingState(active: boolean): void {
     this.hinting = active;
     if (active) this.announce().catch(printError);
-    else this.assignedThisSession = false;
   }
 
   /**
    * Reports this frame's path to the background and assigns the paths of the
    * children that cannot work out theirs. Called when a hint session starts.
-   * An assigned path is reported only if it arrived for this session: one
-   * kept from a previous session may be stale, and the fresh one is reported
-   * when it arrives.
    */
   async announce(): Promise<void> {
     const computed = computeOwnPath();
     this.assignToChildren(computed, "session-start");
-    await this.reportPath(this.sessionPath(computed));
-  }
-
-  /**
-   * This frame's path as far as it is known for the current session. An
-   * assignment kept from an earlier session may be stale.
-   */
-  private sessionPath(computed: string[] | undefined): string[] | undefined {
-    return computed ?? (this.assignedThisSession ? this.assigned : undefined);
+    await this.reportPath(computed ?? this.assigned);
   }
 
   private async reportPath(path: string[] | undefined): Promise<void> {
@@ -123,7 +109,6 @@ export class FramePath {
     )
       return;
     this.assigned = path;
-    this.assignedThisSession = true;
     const computed = computeOwnPath();
     /* WHY: a child keeps its assignment across sessions, so it must hear this
        one again even when this frame's path did not change. */
@@ -146,7 +131,7 @@ export class FramePath {
     trigger: "session-start" | "assignment",
   ): void {
     if ((trigger === "session-start") !== (computed != null)) return;
-    const own = this.sessionPath(computed);
+    const own = computed ?? this.assigned;
     if (!own) return;
     const post = (w: Window | null, segment: string) =>
       w?.postMessage(

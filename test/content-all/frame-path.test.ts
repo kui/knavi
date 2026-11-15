@@ -189,24 +189,6 @@ void describe("FramePath.handleMessage", () => {
     assert.equal(grandchild.posted.length, 2);
   });
 
-  void test("does not pass an assignment from an earlier session on to the children", async () => {
-    const { assign, grandchild } = setupAssignedChild();
-    const framePath = new FramePath();
-    assign(framePath);
-    framePath.handleHintingState(false);
-    grandchild.posted.length = 0;
-
-    // WHY: the parent's assignment for the new session has not arrived yet.
-    framePath.handleHintingState(true);
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    assert.deepEqual(grandchild.posted, []);
-
-    assign(framePath);
-    assert.deepEqual(grandchild.posted, [
-      { "@type": ASSIGNMENT, path: ["s0", "0"] },
-    ]);
-  });
-
   void test("posts the assignment to a grandchild once when the assignment arrives before hinting starts", async () => {
     const { assign, grandchild } = setupAssignedChild();
     const framePath = new FramePath();
@@ -346,31 +328,6 @@ void describe("FramePath assignments to light-DOM children", () => {
   });
 });
 
-void describe("FramePath.childPaths and stale assignments", () => {
-  void test("does not build child paths from an assignment of an earlier session", () => {
-    const top = makeWindow();
-    const frame = makeWindow(top);
-    Object.defineProperty(frame, "frameElement", {
-      get() {
-        throw new Error("SecurityError");
-      },
-    });
-    const child = addChild(frame);
-    setGlobals(frame);
-    const iframe = { contentWindow: child } as unknown as HTMLIFrameElement;
-    const framePath = new FramePath();
-    framePath.handleMessage({
-      data: { "@type": ASSIGNMENT, path: ["s0"] },
-      source: top,
-    } as unknown as MessageEvent);
-    assert.deepEqual(framePath.childPaths([iframe])[0], ["s0", "0"]);
-
-    framePath.handleHintingState(false);
-    assert.equal(framePath.childPaths([iframe])[0], undefined);
-    assert.deepEqual(framePath.current(), ["s0"]);
-  });
-});
-
 void describe("FramePath.findChild", () => {
   /** A top frame with one light-DOM iframe and one iframe in a shadow root. */
   function setupTop() {
@@ -494,26 +451,7 @@ void describe("FramePath.announce", () => {
     assert.deepEqual(shadowChild.posted, []);
   });
 
-  void test("does not report an assigned path kept from a previous session", async () => {
-    const top = makeWindow();
-    const frame = makeWindow(top);
-    Object.defineProperty(frame, "frameElement", {
-      get() {
-        throw new Error("SecurityError");
-      },
-    });
-    setGlobals(frame);
-    const framePath = new FramePath();
-    framePath.handleMessage({
-      data: { "@type": ASSIGNMENT, path: ["s0"] },
-      source: top,
-    } as unknown as MessageEvent);
-    framePath.handleHintingState(false);
-    await framePath.announce();
-    assert.equal(sentToRuntime.length, 0);
-  });
-
-  void test("reports a path assigned for this session before it started hinting", async () => {
+  void test("reports a path assigned before hinting started, when hinting starts", async () => {
     const top = makeWindow();
     const frame = makeWindow(top);
     Object.defineProperty(frame, "frameElement", {
