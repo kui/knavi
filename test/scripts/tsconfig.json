@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "erasableSyntaxOnly": true,
+    "lib": ["ESNext"],
+    "types": ["node"]
+  },
+  "include": ["./*.ts"],
+  "references": [{ "path": "../../scripts/tsconfig.json" }]
+}

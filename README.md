@@ -47,13 +47,16 @@ npm run zip
 
 ## Development note
 
-Edit changelog in `changelog/<CurrentVersion>.md`. It will be used for release note.
+For a user-visible change, add a changelog fragment as described in
+[changelog/unreleased/README.md](changelog/unreleased/README.md).
 
 ## Release
 
 1. Check the version in [package.json](package.json)
-2. Confirm `changelog/<Version>.md`
-3. Commit and push them
+2. Run `npm run changelog` to combine the fragments in `changelog/unreleased/`
+   into `changelog/<Version>.md`, and replace the TODO on its line 3 with a
+   one-line digest of the release. Reorder entries within a section if needed
+3. Open a pull request with them and merge it
 4. Create and push the release tag by either:
    - Running the [tag-for-release workflow](https://github.com/kui/knavi/actions/workflows/tag-for-release.yaml)
      on GitHub Actions ("Run workflow" button, or `gh workflow run tag-for-release.yaml`)
