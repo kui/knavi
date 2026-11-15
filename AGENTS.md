@@ -1,4 +1,5 @@
 - Read `dev-docs/development.md` before changing code. It has the build and test commands and the code conventions (event-hook wiring, source comments) that apply to every change.
+- Do not implement handling for DOM changes after hinting starts (hints misplaced, missing, or on empty space because elements or iframes were added, removed, or moved). It is intended behavior; see "DOM changes after hinting starts" in `dev-docs/development.md`. Mark review findings of this kind as Dismissed.
 - Run `npm run lint && npm run test` **once** after all code changes are complete and before delivering the final response. Do not run it repeatedly during iterative work or before asking the user a question unless new changes were made since the last run.
 - Write all PR, code, and commit comments in English.
 - Use mise to manage tool versions. Ensure `mise install` is run before building.

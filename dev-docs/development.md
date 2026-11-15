@@ -46,6 +46,17 @@ Load `build/` with "Load unpacked" on `chrome://extensions` (Developer mode).
   documentation. Comment only on project-specific reasons the code and the
   docs cannot convey; otherwise write no comment.
 
+## DOM changes after hinting starts
+
+Hints are a snapshot of the DOM taken when hinting starts. If the DOM changes
+while hints are shown or after they are removed (elements or iframes added,
+removed, reordered, or moved), hints may be misplaced, point at empty space,
+or be missing. This is the intended behavior; do not add code to handle it.
+
+Following DOM changes would mean tracking targets, hints, and frames as they
+change, which adds a lot of state to manage for little benefit: hinting
+sessions are short, and starting a new one picks up the current DOM.
+
 ## Changelog
 
 For a user-visible change, add a changelog fragment as described in
