@@ -68,13 +68,21 @@ class Storage {
     }
   }
 
+  getRaw<K extends keyof Settings>(
+    names: K[],
+  ): Promise<Partial<Pick<Settings, K>>> {
+    return this.storage.get<Partial<Pick<Settings, K>>>(names);
+  }
+
   /**
    * WHY: substitutes the default value for any key still missing in storage
    * so reads stay correct even before the onInstalled back-fill has run
    * (e.g. right after a fresh install). Read-only, so no read-modify-write race.
    */
-  async get<K extends keyof Settings>(names: K[]): Promise<Pick<Settings, K>> {
-    const current = await this.storage.get<Pick<Settings, K>>(names);
+  async withDefaults<K extends keyof Settings>(
+    current: Partial<Pick<Settings, K>>,
+    names: K[],
+  ): Promise<Pick<Settings, K>> {
     const result: Partial<Pick<Settings, K>> = {};
     for (const name of names) {
       const value = current[name];
@@ -87,6 +95,10 @@ class Storage {
       }
     }
     return result as Pick<Settings, K>;
+  }
+
+  async get<K extends keyof Settings>(names: K[]): Promise<Pick<Settings, K>> {
+    return this.withDefaults(await this.getRaw(names), names);
   }
 
   async getSingle<K extends keyof Settings>(name: K): Promise<Settings[K]> {
@@ -154,7 +166,7 @@ export default {
 };
 
 async function fetchCss() {
-  const r = await fetch("./default-style.css");
+  const r = await fetch(chrome.runtime.getURL("default-style.css"));
   return await r.text();
 }
 

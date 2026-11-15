@@ -2,6 +2,7 @@ import { RectAggregatorContentAll as RectAggregator } from "./content-all/rect-a
 import { KeyboardHandlerContentAll as KeyboardHandler } from "./content-all/keyboard-handler";
 import { BlurerContentAll as Blurer } from "./content-all/blurer";
 import settingsClient from "./lib/settings-client";
+import { isRelevantChange } from "./lib/settings-change";
 import { printError } from "./lib/errors";
 import { wait } from "./lib/promises";
 import BlurerClient from "./content-all/blurer-client";
@@ -22,18 +23,19 @@ const rectAggregator = new RectAggregator(frameRegistry);
 const blurer = new Blurer(frameRegistry);
 
 async function setupKeyboardHandler() {
-  const [setting, matchedBlacklist] = await Promise.all([
-    settingsClient.get([
-      "magicKey",
-      "blurKey",
-      "hints",
-      "stickyKey",
-      "actionKey",
-      "cancelKey",
-      "cycleKey",
-    ]),
-    settingsClient.matchBlacklist(location.href),
-  ]);
+  const [setting, matchedBlacklist] =
+    await settingsClient.getWithBlacklistMatch(
+      [
+        "magicKey",
+        "blurKey",
+        "hints",
+        "stickyKey",
+        "actionKey",
+        "cancelKey",
+        "cycleKey",
+      ],
+      location.href,
+    );
   keyboardHandler.setup(setting, matchedBlacklist);
   console.debug("settings loaded");
   document.documentElement.dataset.knaviReady = "1";
@@ -55,7 +57,7 @@ let debounceController: AbortController | null = null;
 
 chrome.storage.onChanged.addListener((changes) => {
   (async () => {
-    if (!RELEVANT_KEYS.some((k) => k in changes)) return;
+    if (!isRelevantChange(changes, RELEVANT_KEYS)) return;
     debounceController?.abort();
     debounceController = new AbortController();
     const { signal } = debounceController;

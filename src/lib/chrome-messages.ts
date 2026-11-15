@@ -5,10 +5,6 @@ export interface RuntimeMessages {
     payload: { names: (keyof Settings)[] };
     response: Pick<Settings, keyof Settings>;
   };
-  MatchBlacklist: {
-    payload: { url: string };
-    response: string[];
-  };
   MatchAdditionalSelectors: {
     payload: { url: string };
     response: string[];

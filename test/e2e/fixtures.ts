@@ -37,6 +37,21 @@ export const test = base.extend<Fixtures>({
     if (ctx.serviceWorkers().length === 0) {
       await ctx.waitForEvent("serviceworker", { timeout: 10_000 });
     }
+    await ctx.serviceWorkers()[0].evaluate(async () => {
+      interface SW {
+        chrome: {
+          storage: { sync: { get(k: string): Promise<{ css?: string }> } };
+        };
+      }
+      const { chrome } = globalThis as unknown as SW;
+      const deadline = Date.now() + 10_000;
+      while (!(await chrome.storage.sync.get("css")).css) {
+        if (Date.now() > deadline) {
+          throw new Error("onInstalled back-fill did not write css in 10 s");
+        }
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    });
     await use(ctx);
     await ctx.close();
     rmSync(userDataDir, { recursive: true, force: true });
@@ -54,25 +69,49 @@ export { expect };
 /**
  * Set extension settings via the background service worker.
  * Only pass the keys you want to change; others remain untouched.
+ * `area` defaults to sync, the area a fresh profile reads from.
  */
 export async function setSettings(
   context: BrowserContext,
   settings: Record<string, string>,
+  area: "sync" | "local" = "sync",
 ): Promise<void> {
   const sw = context.serviceWorkers()[0];
   // WHY: chrome is available at runtime in the service worker; not known to TS here.
   await sw.evaluate(
-    (s) =>
+    ([a, s]) =>
       new Promise<void>((resolve) => {
         interface SW {
           chrome: {
-            storage: { sync: { set(i: typeof s, cb: () => void): void } };
+            storage: Record<
+              string,
+              { set(i: Record<string, string>, cb: () => void): void }
+            >;
           };
         }
-        (globalThis as unknown as SW).chrome.storage.sync.set(s, resolve);
+        (globalThis as unknown as SW).chrome.storage[a].set(s, resolve);
       }),
-    settings,
+    [area, settings] as const,
   );
+}
+
+/** Read every extension setting stored in the given area. */
+export async function getSettings(
+  context: BrowserContext,
+  area: "sync" | "local" = "sync",
+): Promise<Record<string, string>> {
+  const sw = context.serviceWorkers()[0];
+  return sw.evaluate(async (a) => {
+    interface SW {
+      chrome: {
+        storage: Record<
+          string,
+          { get(k: null): Promise<Record<string, string>> }
+        >;
+      };
+    }
+    return (globalThis as unknown as SW).chrome.storage[a].get(null);
+  }, area);
 }
 
 /**
