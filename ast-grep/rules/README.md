@@ -1,4 +1,9 @@
-# ast-grep comment-rationale rules
+# ast-grep rules
+
+`no-fixed-wait-in-e2e` forbids `waitForTimeout` in `test/e2e/`; see
+[dev-docs/testing.md](../../dev-docs/testing.md).
+
+## Comment-rationale rules
 
 Enforces that every source-code comment either
 

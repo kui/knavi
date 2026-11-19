@@ -8,8 +8,9 @@ export default defineConfig({
   testDir: path.join(__dirname, "test/e2e"),
   fullyParallel: false,
   timeout: 30_000,
-  // WHY: retries absorb two known CI-only races (iframe-hint readiness fixed by gotoTest's wait; iframe-blur-cycle's async blur chain can still race input, see #95/#110) without weakening assertions.
+  // WHY: retries let the rest of a CI run finish, and failOnFlakyTests still fails the run when a test passed only on a retry, so a race is not hidden.
   retries: process.env.CI ? 2 : 0,
+  failOnFlakyTests: !!process.env.CI,
   use: {
     baseURL: "http://127.0.0.1:8787/tests/",
     // WHY: extension tests require a persistent context, set up per fixture.

@@ -35,6 +35,44 @@ async function expectHintLetters(page: Page, letters: string): Promise<void> {
   }).toPass({ timeout: 10_000 });
 }
 
+/**
+ * Press and release Space, and report whether the page's own keydown listener
+ * saw it. content-all swallows the magic key unless the page is blacklisted,
+ * so `true` proves content-all has applied a blacklist match.
+ */
+async function spaceReachesPage(page: Page): Promise<boolean> {
+  await page.evaluate(() => {
+    const g = globalThis as unknown as { __spaceSeen?: boolean };
+    if (g.__spaceSeen === undefined) {
+      document.addEventListener("keydown", (e) => {
+        if (e.code === "Space") g.__spaceSeen = true;
+      });
+    }
+    g.__spaceSeen = false;
+  });
+  await page.keyboard.down("Space");
+  await page.keyboard.up("Space");
+  return page.evaluate(
+    () => (globalThis as unknown as { __spaceSeen?: boolean }).__spaceSeen,
+  ) as Promise<boolean>;
+}
+
+/**
+ * Run `change`, then wait until content-all has reloaded its settings. The
+ * reload sets `knaviReady` again, so clear it first and wait for it to return.
+ */
+async function waitForSettingsReload(
+  page: Page,
+  change: () => Promise<void>,
+): Promise<void> {
+  await page.evaluate(() => delete document.documentElement.dataset.knaviReady);
+  await change();
+  await page.waitForFunction(
+    () => document.documentElement.dataset.knaviReady === "1",
+    { timeout: 10_000 },
+  );
+}
+
 test.describe("settings read directly from storage", () => {
   test("a page load sends only frame messages, and hinting sends no settings message", async ({
     context,
@@ -103,11 +141,8 @@ test.describe("settings read directly from storage", () => {
       blackList: new URL("input.html", baseURL).href,
     });
     await gotoTest(page, "input.html");
-    await page.keyboard.down("Space");
-    // WHY: absence cannot be awaited; hints render well within this time when not blacklisted.
-    await page.waitForTimeout(1_000);
+    expect(await spaceReachesPage(page)).toBe(true);
     await expect(page.locator(".hint")).toHaveCount(0);
-    await page.keyboard.up("Space");
 
     await setSettings(context, { blackList: "" });
     await expect(async () => {
@@ -129,18 +164,15 @@ test.describe("settings read directly from storage", () => {
   }) => {
     const pushed = new URL("input.html?pushed", baseURL).href;
     await gotoTest(page, "input.html");
-    await setSettings(context, { blackList: pushed });
     // WHY: let content-all's debounced reload run at the original URL, so only the navigation can make the blacklist match.
-    await page.waitForTimeout(600);
+    await waitForSettingsReload(page, () =>
+      setSettings(context, { blackList: pushed }),
+    );
+    expect(await spaceReachesPage(page)).toBe(false);
     await page.evaluate(() => history.pushState(null, "", "?pushed"));
-    // WHY: the blacklist is re-read asynchronously after `navigatesuccess`; a Space pressed before that finishes would still start hinting.
-    await page.waitForTimeout(500);
-
-    await page.keyboard.down("Space");
-    // WHY: absence cannot be awaited; hints render well within this time when not blacklisted.
-    await page.waitForTimeout(1_000);
+    // WHY: the blacklist is re-read asynchronously after `navigatesuccess`.
+    await expect.poll(() => spaceReachesPage(page)).toBe(true);
     await expect(page.locator(".hint")).toHaveCount(0);
-    await page.keyboard.up("Space");
 
     await page.evaluate(() => history.pushState(null, "", "input.html"));
     await expect(async () => {

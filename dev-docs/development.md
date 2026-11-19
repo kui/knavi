@@ -26,6 +26,11 @@ Load `build/` with "Load unpacked" on `chrome://extensions` (Developer mode).
   `build/`, so run `npm run build` first. The first run needs
   `npx playwright install chromium`. The test pages are in `docs/tests/`,
   served at `http://127.0.0.1:8787/tests/` during the run.
+- `npm run test:coverage`: unit tests with a coverage report over all of
+  `src/`.
+
+Before writing or changing a test, read [testing.md](testing.md): which layer
+a test belongs in, what may be faked, and how to wait in E2E tests.
 
 ## Code conventions
 
