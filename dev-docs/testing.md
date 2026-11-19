@@ -41,6 +41,10 @@ A fix comes with a test that fails without the fix. Before opening the pull
 request, revert the fix locally, run the test, and confirm it fails for the
 reason the fix addresses. Say in the pull request that you did.
 
+If no test can reproduce the bug (for example, it needs a real site or user
+action that a fixture page cannot set up), say why in the pull request
+instead.
+
 ## Waiting in E2E tests
 
 Never sleep for a fixed time; the `no-fixed-wait-in-e2e` ast-grep rule
