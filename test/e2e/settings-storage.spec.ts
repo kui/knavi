@@ -37,8 +37,10 @@ async function expectHintLetters(page: Page, letters: string): Promise<void> {
 
 /**
  * Press and release Space, and report whether the page's own keydown listener
- * saw it. content-all swallows the magic key unless the page is blacklisted,
- * so `true` proves content-all has applied a blacklist match.
+ * saw it. Once settings are loaded, content-all swallows the magic key
+ * unless the page is blacklisted or an editable element has focus, so after
+ * `gotoTest` (which focuses the body) `true` proves content-all has applied a
+ * blacklist match.
  */
 async function spaceReachesPage(page: Page): Promise<boolean> {
   await page.evaluate(() => {

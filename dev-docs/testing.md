@@ -56,6 +56,7 @@ on a loaded CI runner (flaky). Wait for something the extension does:
   `evaluate`;
 - a DOM signal from the content scripts, such as `knaviReady` on the root
   `<html>`, which content-all sets each time it finishes loading settings.
+  It is not set again when an in-page navigation re-matches the blacklist.
 
 To check that something does not happen, first wait for a positive signal
 that the extension has finished deciding, then assert the absence once. For
