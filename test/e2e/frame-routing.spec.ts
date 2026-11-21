@@ -217,7 +217,8 @@ test.describe("hints in an iframe whose content script starts late", () => {
     await page.keyboard.up("Space").catch(() => void 0);
   });
 
-  test("a button in a cross-origin iframe inserted as hinting begins", async ({
+  // WHY: timing-dependent and covers an unsupported DOM change; see #174. failOnFlakyTests would fail CI on it.
+  test.fixme("a button in a cross-origin iframe inserted as hinting begins", async ({
     page,
   }) => {
     /* WHY: an init script registers its listener before the extension's

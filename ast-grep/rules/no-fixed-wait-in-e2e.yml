@@ -1,0 +1,11 @@
+id: no-fixed-wait-in-e2e
+language: TypeScript
+severity: error
+message: |
+  Do not sleep for a fixed time in E2E tests. Wait for something the extension
+  does instead: a locator assertion, `expect.poll`, `page.waitForFunction`, or
+  a DOM signal such as `knaviReady`. See dev-docs/testing.md.
+files:
+  - test/e2e/**
+rule:
+  pattern: $PAGE.waitForTimeout($$$)
