@@ -148,6 +148,26 @@ void describe("KeyboardHandlerContentAll", () => {
     assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
   });
 
+  void test("a blacklist match does not end a session started by another frame", () => {
+    hinter.isHinting = true;
+    handler.updateBlacklist(["example.com"]);
+
+    assert.deepEqual(hinter.calls, []);
+  });
+
+  void test("only the transition to matching ends the session", () => {
+    startHinting();
+    handler.updateBlacklist([]);
+    assert.deepEqual(hinter.calls, ["attachHints"]);
+
+    handler.updateBlacklist(["example.com"]);
+    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
+
+    hinter.isHinting = true;
+    handler.updateBlacklist(["example.com"]);
+    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
+  });
+
   void test("a blacklist match while not hinting does nothing", () => {
     handler.updateBlacklist(["example.com"]);
     assert.deepEqual(hinter.calls, []);

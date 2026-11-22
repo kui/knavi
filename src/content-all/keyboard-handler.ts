@@ -29,6 +29,8 @@ export class KeyboardHandlerContentAll {
    * false when attached by sticky key (fires only via actionKey/cancelKey).
    */
   private holdHinting = false;
+  /** True when this frame started the current session (not synced from another frame). */
+  private ownsSession = false;
 
   constructor(
     private readonly blurer: Blurer,
@@ -57,12 +59,22 @@ export class KeyboardHandlerContentAll {
   }
 
   updateBlacklist(matchedBlacklist: string[]) {
+    const wasBlacklisted = this.isBlacklisted();
     this.matchedBlacklist = matchedBlacklist;
     /* WHY: a blacklisted page means knavi does nothing there, so a session
        that starts matching midway (in-page navigation) ends without running
-       the action. Key handlers return early while blacklisted and could not
-       end it. */
-    if (this.isBlacklisted() && this.hinter.isHinting) {
+       the action. Only the frame that started the session ends it:
+       isHinting is synced to every frame, and another frame removing the
+       hints would bypass the initiator's barrier ordering. Only a
+       not-matching to matching transition counts, so an already blacklisted
+       frame does not end sessions on every navigation. */
+    if (!this.hinter.isHinting) this.ownsSession = false;
+    if (
+      !wasBlacklisted &&
+      this.isBlacklisted() &&
+      this.hinter.isHinting &&
+      this.ownsSession
+    ) {
       this.hinter
         .removeHints(
           { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false },
@@ -127,11 +139,13 @@ export class KeyboardHandlerContentAll {
       if (!isEditing() && hitMatcher?.match()) {
         this.hinter.attachHints().catch(printError);
         this.holdHinting = true;
+        this.ownsSession = true;
         return true;
       }
       if (!isEditing() && stickyMatcher?.match()) {
         this.hinter.attachHints().catch(printError);
         this.holdHinting = false;
+        this.ownsSession = true;
         return true;
       }
       if (blurMatcher?.match()) {
@@ -174,6 +188,7 @@ export class KeyboardHandlerContentAll {
    */
   private endSession() {
     this.holdHinting = false;
+    this.ownsSession = false;
     this.resetMatchers();
   }
 
