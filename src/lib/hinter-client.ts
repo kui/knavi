@@ -5,6 +5,15 @@ function noop() {
   /* WHY: intentionally empty — settled callback for the removeBarrier promise. */
 }
 
+/* WHY: crypto.randomUUID is undefined on non-secure pages (plain http other
+   than localhost) and content scripts follow the page's secure context, so
+   it would break knavi there. getRandomValues is available everywhere. */
+function newSessionId() {
+  return Array.from(crypto.getRandomValues(new Uint32Array(2)), (n) =>
+    n.toString(16),
+  ).join("-");
+}
+
 export default class HinterClient {
   private hinting: boolean;
   /**
@@ -67,7 +76,7 @@ export default class HinterClient {
        which keeps them in typing order and after AttachHintsInTab, instead of
        leaking to the page or being dropped. */
     this.hinting = true;
-    const sessionId = crypto.randomUUID();
+    const sessionId = newSessionId();
     this.ownSessionId = sessionId;
     this.currentSessionId = sessionId;
     const barrier = this.removeBarrier;

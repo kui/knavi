@@ -225,6 +225,24 @@ void describe("HinterClient", () => {
     await attaching;
   });
 
+  void test("attachHints works where crypto.randomUUID is undefined", async () => {
+    Object.defineProperty(crypto, "randomUUID", {
+      value: undefined,
+      configurable: true,
+    });
+    try {
+      const client = new HinterClient();
+      const attaching = client.attachHints();
+      await flush();
+      assert.notEqual(attachSessionId, "");
+      assert.equal(client.ownsSession, true);
+      releaseAttach();
+      await attaching;
+    } finally {
+      Reflect.deleteProperty(crypto, "randomUUID");
+    }
+  });
+
   void test("a session announced by another frame is not owned", async () => {
     const client = new HinterClient();
     const attaching = client.attachHints();

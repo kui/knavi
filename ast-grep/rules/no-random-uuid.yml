@@ -1,0 +1,11 @@
+id: no-random-uuid
+language: TypeScript
+severity: error
+message: |
+  Do not use `crypto.randomUUID()` in src/. It is only defined in secure
+  contexts, and content scripts follow the page's context, so it is undefined
+  on plain http pages. Build the id from `crypto.getRandomValues` instead.
+files:
+  - src/**
+rule:
+  pattern: crypto.randomUUID($$$)
