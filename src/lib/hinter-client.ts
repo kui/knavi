@@ -17,6 +17,8 @@ export default class HinterClient {
   private removeBarrier: Promise<void> | null = null;
   /** Settles once AttachHints has been dispatched; hint input waits on it. */
   private ready: Promise<void> = Promise.resolve();
+  /** The `ready` of the latest attachHints while its dispatch is pending. */
+  private pendingDispatch: Promise<void> | null = null;
 
   constructor() {
     this.hinting = false;
@@ -32,6 +34,10 @@ export default class HinterClient {
    * broadcast (see TabMessages in chrome-messages.ts and #120).
    */
   syncHinting(active: boolean) {
+    /* WHY: the previous session's SyncHintingState(false) broadcast can arrive
+       while attachHints waits for the remove barrier. Applying it would undo
+       the synchronous flag and leak queued hint letters to the page (#169). */
+    if (!active && this.pendingDispatch) return;
     this.hinting = active;
   }
 
@@ -53,6 +59,11 @@ export default class HinterClient {
       attach = sendToRuntime("AttachHints", undefined);
     })();
     this.ready = dispatched;
+    this.pendingDispatch = dispatched;
+    const clear = () => {
+      if (this.pendingDispatch === dispatched) this.pendingDispatch = null;
+    };
+    dispatched.then(clear, clear);
     try {
       await dispatched;
       await attach;
