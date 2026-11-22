@@ -7,4 +7,6 @@ message: |
 rule:
   kind: comment
   not:
-    regex: '^/\*\s*(WHY|HACK|SAFETY|INVARIANT)\b'
+    any:
+      - regex: '^/\*\s*(WHY|HACK|SAFETY|INVARIANT)\b'
+      - regex: '^/\*\s*ast-grep-ignore:.*--\s*WHY:\s*[^\s*]'
