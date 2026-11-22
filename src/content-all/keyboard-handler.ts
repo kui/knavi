@@ -12,7 +12,15 @@ type MatcherKey =
   | "actionKey"
   | "cancelKey"
   | "cycleKey";
+type SessionMode = "hold" | "sticky";
 type KeySettings = Pick<Settings, MatcherKey | "hints">;
+
+const NO_MODIFIERS: ActionOptions = {
+  shiftKey: false,
+  altKey: false,
+  ctrlKey: false,
+  metaKey: false,
+};
 
 export class KeyboardHandlerContentAll {
   private settings: KeySettings | null = null;
@@ -25,12 +33,12 @@ export class KeyboardHandlerContentAll {
   private hintLetters = "";
   private matchedBlacklist: string[] = [];
   /**
-   * True when hints were attached by magic key hold (fires on keyup);
-   * false when attached by sticky key (fires only via actionKey/cancelKey).
+   * The mode of the session this frame started, or null when this frame did
+   * not start the current one. `hinter.isHinting` is tab-wide (synced to every
+   * frame); this is per frame. "hold" fires on keyup; "sticky" only via
+   * actionKey/cancelKey.
    */
-  private holdHinting = false;
-  /** True when this frame started the current session (not synced from another frame). */
-  private ownsSession = false;
+  private startedSession: SessionMode | null = null;
 
   constructor(
     private readonly blurer: Blurer,
@@ -59,44 +67,27 @@ export class KeyboardHandlerContentAll {
   }
 
   updateBlacklist(matchedBlacklist: string[]) {
-    const wasBlacklisted = this.isBlacklisted();
+    const startsMatching = !this.isBlacklisted() && matchedBlacklist.length > 0;
     this.matchedBlacklist = matchedBlacklist;
-    /* WHY: a blacklisted page means knavi does nothing there, so a session
-       that starts matching midway (in-page navigation) ends without running
-       the action. Only the frame that started the session ends it:
-       isHinting is synced to every frame, and another frame removing the
-       hints would bypass the initiator's barrier ordering. Only a
-       not-matching to matching transition counts, so an already blacklisted
-       frame does not end sessions on every navigation. */
-    if (!this.hinter.isHinting) this.ownsSession = false;
-    if (
-      !wasBlacklisted &&
-      this.isBlacklisted() &&
-      this.hinter.isHinting &&
-      this.ownsSession
-    ) {
-      this.hinter
-        .removeHints(
-          { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false },
-          false,
-        )
-        .catch(printError);
-      this.endSession();
+    /* WHY: knavi does nothing on a blacklisted page, so a session that starts
+       matching midway (in-page navigation) ends without running the action.
+       Only the frame that started it ends it: RemoveHints from another frame
+       would bypass that frame's barrier ordering. */
+    if (startsMatching && this.startedSession && this.hinter.isHinting) {
+      this.cancelSession();
     }
   }
 
   /**
    * Called right after a "session ended" broadcast was passed to the hinter.
-   * Ownership must not outlive the session: a later session started by
-   * another frame is synced here as hinting, and this frame must not end it.
-   * The hinter ignores the broadcast while this frame's own attach is pending
-   * (it is the previous session's late message), so only reset when
-   * `isHinting` shows the broadcast was applied.
+   * A later session started by another frame is synced here as hinting, and
+   * this frame must not end it. The hinter ignores the broadcast while this
+   * frame's own attach is pending (it is the previous session's late
+   * message), so only forget when `isHinting` shows it was applied.
    */
-  handleHintingEnded() {
+  handleSessionEnded() {
     if (this.hinter.isHinting) return;
-    this.ownsSession = false;
-    this.holdHinting = false;
+    this.startedSession = null;
   }
 
   private resetMatchers() {
@@ -127,7 +118,7 @@ export class KeyboardHandlerContentAll {
         this.hinter
           .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, false)
           .catch(printError);
-        this.endSession();
+        this.forgetSession();
         return true;
       }
       if (actionMatcher?.match()) {
@@ -135,7 +126,7 @@ export class KeyboardHandlerContentAll {
         this.hinter
           .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, true)
           .catch(printError);
-        this.endSession();
+        this.forgetSession();
         return true;
       }
       if (cycleMatcher?.match()) {
@@ -152,14 +143,12 @@ export class KeyboardHandlerContentAll {
     } else {
       if (!isEditing() && hitMatcher?.match()) {
         this.hinter.attachHints().catch(printError);
-        this.holdHinting = true;
-        this.ownsSession = true;
+        this.startedSession = "hold";
         return true;
       }
       if (!isEditing() && stickyMatcher?.match()) {
         this.hinter.attachHints().catch(printError);
-        this.holdHinting = false;
-        this.ownsSession = true;
+        this.startedSession = "sticky";
         return true;
       }
       if (blurMatcher?.match()) {
@@ -182,12 +171,16 @@ export class KeyboardHandlerContentAll {
       return false;
     }
 
-    if (this.hinter.isHinting && this.holdHinting && !hitMatcher?.match()) {
+    if (
+      this.hinter.isHinting &&
+      this.startedSession === "hold" &&
+      !hitMatcher?.match()
+    ) {
       const { shiftKey, altKey, ctrlKey, metaKey } = event;
       this.hinter
         .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, true)
         .catch(printError);
-      this.endSession();
+      this.forgetSession();
       return true;
     }
     return false;
@@ -200,10 +193,15 @@ export class KeyboardHandlerContentAll {
    * arrived. Without this, the stuck key would spuriously match on the next
    * session.
    */
-  private endSession() {
-    this.holdHinting = false;
-    this.ownsSession = false;
+  private forgetSession() {
+    this.startedSession = null;
     this.resetMatchers();
+  }
+
+  /** Removes the hints without running the action, then forgets the session. */
+  private cancelSession() {
+    this.hinter.removeHints(NO_MODIFIERS, false).catch(printError);
+    this.forgetSession();
   }
 
   /**

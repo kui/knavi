@@ -155,19 +155,19 @@ void describe("KeyboardHandlerContentAll", () => {
     assert.deepEqual(hinter.calls, []);
   });
 
-  void test("ownership is cleared when another frame ends the session", () => {
+  void test("the started session is forgotten when another frame ends it", () => {
     startHinting();
     hinter.isHinting = false;
-    handler.handleHintingEnded();
+    handler.handleSessionEnded();
     hinter.isHinting = true;
     handler.updateBlacklist(["example.com"]);
 
     assert.deepEqual(hinter.calls, ["attachHints"]);
   });
 
-  void test("ownership is kept when the hinter ignores a stale end broadcast", () => {
+  void test("the started session is kept when the hinter ignores a stale end broadcast", () => {
     startHinting();
-    handler.handleHintingEnded();
+    handler.handleSessionEnded();
     handler.updateBlacklist(["example.com"]);
 
     assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
