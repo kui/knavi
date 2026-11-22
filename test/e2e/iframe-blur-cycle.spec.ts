@@ -3,7 +3,8 @@ import {
   expect,
   gotoTest,
   attachHintsSticky,
-  findHintFor,
+  findHintNear,
+  boxOf,
   setSettings,
 } from "./fixtures";
 
@@ -35,24 +36,32 @@ test.describe("iframe blur cycle (sticky mode)", () => {
     page,
   }) => {
     await gotoTest(page, "iframe.html");
+    /* WHY: the blur key is handled by the frame that holds focus, so the child
+       frame's keyboard handler must be set up; gotoTest only waits for the
+       root. */
+    await expect(page.frameLocator("iframe").locator("html")).toHaveAttribute(
+      "data-knavi-ready",
+      "1",
+    );
 
     await attachHintsSticky(page, STICKY_KEY);
-    const hintText = await findHintFor(page, "iframe");
+    const hintText = await findHintNear(page, await boxOf(page, "iframe"));
     for (const ch of hintText) {
       await page.keyboard.press(ch);
     }
     await page.keyboard.press(ACTION_KEY);
-    /* WHY: RemoveHints reaches content-root asynchronously. Without this wait,
-       attachHintsSticky below can return on a leftover hint of the first
-       session, and the snapshot taken by findHintFor then sees no hints at
-       all (#180). */
+    /* WHY: RemoveHints reaches content-root asynchronously; wait for the
+       previous session's hints to go so attachHintsSticky below does not
+       return on a leftover hint. */
     await expect(page.locator(".hint")).toHaveCount(0);
+    await expect(page.locator("iframe")).toBeFocused();
 
     await page.keyboard.press(BLUR_KEY);
+    await expect(page.locator("iframe")).not.toBeFocused();
 
     // WHY: re-focus via sticky hint; the hint key must fire the action, not RemoveHints.
     await attachHintsSticky(page, STICKY_KEY);
-    const hintText2 = await findHintFor(page, "iframe");
+    const hintText2 = await findHintNear(page, await boxOf(page, "iframe"));
     expect(hintText2).toBeTruthy();
 
     for (const ch of hintText2) {
