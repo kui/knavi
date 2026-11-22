@@ -58,6 +58,19 @@ export class KeyboardHandlerContentAll {
 
   updateBlacklist(matchedBlacklist: string[]) {
     this.matchedBlacklist = matchedBlacklist;
+    /* WHY: a blacklisted page means knavi does nothing there, so a session
+       that starts matching midway (in-page navigation) ends without running
+       the action. Key handlers return early while blacklisted and could not
+       end it. */
+    if (this.isBlacklisted() && this.hinter.isHinting) {
+      this.hinter
+        .removeHints(
+          { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false },
+          false,
+        )
+        .catch(printError);
+      this.endSession();
+    }
   }
 
   private resetMatchers() {
@@ -78,11 +91,7 @@ export class KeyboardHandlerContentAll {
     const cancelMatcher = this.cancelMatcher?.keydown(event);
     const cycleMatcher = this.cycleMatcher?.keydown(event);
 
-    const blacklisted = this.isBlacklisted();
-    /* WHY: the blacklist only prevents starting a session. It can start
-       matching mid-session (in-page navigation), and the keys that end the
-       session must still work or the hints stay forever. */
-    if (blacklisted && !this.hinter.isHinting) {
+    if (this.isBlacklisted()) {
       return false;
     }
 
@@ -102,9 +111,6 @@ export class KeyboardHandlerContentAll {
           .catch(printError);
         this.endSession();
         return true;
-      }
-      if (blacklisted) {
-        return false;
       }
       if (cycleMatcher?.match()) {
         this.hinter.cycleHint().catch(printError);
@@ -143,6 +149,10 @@ export class KeyboardHandlerContentAll {
     this.actionMatcher?.keyup(event);
     this.cancelMatcher?.keyup(event);
     this.cycleMatcher?.keyup(event);
+
+    if (this.isBlacklisted()) {
+      return false;
+    }
 
     if (this.hinter.isHinting && this.holdHinting && !hitMatcher?.match()) {
       const { shiftKey, altKey, ctrlKey, metaKey } = event;

@@ -25,6 +25,7 @@ function makeFakeHinter() {
   return {
     isHinting: false,
     calls: [] as string[],
+    executes: [] as boolean[],
     attachHints() {
       this.isHinting = true;
       this.calls.push("attachHints");
@@ -38,7 +39,8 @@ function makeFakeHinter() {
       this.calls.push("cycleHint");
       return Promise.resolve();
     },
-    removeHints() {
+    removeHints(_modifiers: unknown, execute: boolean) {
+      this.executes.push(execute);
       this.isHinting = false;
       this.calls.push("removeHints");
       return Promise.resolve();
@@ -125,51 +127,30 @@ void describe("KeyboardHandlerContentAll", () => {
     assert.deepEqual(hinter.calls, []);
   });
 
-  void test("releasing the magic key ends the session after the page becomes blacklisted", () => {
+  void test("a blacklist match during a hold session removes hints without executing", () => {
     startHinting();
     handler.updateBlacklist(["example.com"]);
 
-    assert.equal(handler.handleKeyup(keyEvent("keyup", " ", "Space")), true);
+    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
+    assert.deepEqual(hinter.executes, [false]);
+    assert.equal(handler.handleKeyup(keyEvent("keyup", " ", "Space")), false);
     assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
   });
 
-  void test("the cancel key ends the session after the page becomes blacklisted", () => {
-    handler.setup({ ...SETTINGS, cancelKey: "Escape" }, []);
+  void test("a blacklist match during a sticky session removes hints without executing", () => {
+    handler.setup({ ...SETTINGS, magicKey: "", stickyKey: "Space" }, []);
     startHinting();
     handler.updateBlacklist(["example.com"]);
 
-    assert.equal(
-      handler.handleKeydown(keyEvent("keydown", "Escape", "Escape")),
-      true,
-    );
+    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
+    assert.deepEqual(hinter.executes, [false]);
+    assert.equal(handler.handleKeyup(keyEvent("keyup", " ", "Space")), false);
     assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
   });
 
-  void test("the action key ends the session after the page becomes blacklisted", () => {
-    handler.setup({ ...SETTINGS, actionKey: "Enter" }, []);
-    startHinting();
+  void test("a blacklist match while not hinting does nothing", () => {
     handler.updateBlacklist(["example.com"]);
-
-    assert.equal(
-      handler.handleKeydown(keyEvent("keydown", "Enter", "Enter")),
-      true,
-    );
-    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
-  });
-
-  void test("hint letters and the cycle key are ignored after the page becomes blacklisted", () => {
-    startHinting();
-    handler.updateBlacklist(["example.com"]);
-
-    assert.equal(
-      handler.handleKeydown(keyEvent("keydown", "a", "KeyA")),
-      false,
-    );
-    assert.equal(
-      handler.handleKeydown(keyEvent("keydown", "Tab", "Tab")),
-      false,
-    );
-    assert.deepEqual(hinter.calls, ["attachHints"]);
+    assert.deepEqual(hinter.calls, []);
   });
 
   void test("the blacklist still prevents starting a session", () => {
