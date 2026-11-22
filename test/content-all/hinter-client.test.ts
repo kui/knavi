@@ -178,4 +178,29 @@ void describe("HinterClient", () => {
     await attaching;
     assert.equal(client.isHinting, false);
   });
+
+  void test("a late syncHinting(false) while attach waits for the barrier keeps hinting and queues keys", async () => {
+    const client = new HinterClient();
+    client.syncHinting(true);
+    const removing = client.removeHints(options, true);
+    await flush();
+    const attaching = client.attachHints();
+
+    // WHY: the previous session's SyncHintingState(false) broadcast.
+    client.syncHinting(false);
+    assert.equal(client.isHinting, true);
+    const hit = client.hitHint("a" as SingleLetter);
+    await flush();
+    assert.deepEqual(sent, ["RemoveHints"]);
+
+    releaseRemove();
+    await removing;
+    await hit;
+    releaseAttach();
+    await attaching;
+    assert.deepEqual(sent, ["RemoveHints", "AttachHints", "HitHint:a"]);
+
+    client.syncHinting(false);
+    assert.equal(client.isHinting, false);
+  });
 });
