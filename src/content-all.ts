@@ -103,6 +103,7 @@ chrome.runtime.onMessage.addListener(
     })
     .add("SyncHintingState", ({ active }) => {
       hinterClient.syncHinting(active);
+      if (!active) keyboardHandler.handleHintingEnded();
       framePath.handleHintingState(active);
     })
     .buildListener(),

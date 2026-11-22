@@ -85,6 +85,16 @@ export class KeyboardHandlerContentAll {
     }
   }
 
+  /**
+   * Called when another frame broadcasts that the session ended. Ownership
+   * must not outlive the session: a later session started by another frame
+   * is synced here as hinting, and this frame must not end it.
+   */
+  handleHintingEnded() {
+    this.ownsSession = false;
+    this.holdHinting = false;
+  }
+
   private resetMatchers() {
     this.hitMatcher?.reset();
     this.blurMatcher?.reset();

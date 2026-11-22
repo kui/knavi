@@ -155,6 +155,15 @@ void describe("KeyboardHandlerContentAll", () => {
     assert.deepEqual(hinter.calls, []);
   });
 
+  void test("ownership is cleared when another frame ends the session", () => {
+    startHinting();
+    handler.handleHintingEnded();
+    hinter.isHinting = true;
+    handler.updateBlacklist(["example.com"]);
+
+    assert.deepEqual(hinter.calls, ["attachHints"]);
+  });
+
   void test("only the transition to matching ends the session", () => {
     startHinting();
     handler.updateBlacklist([]);
