@@ -80,8 +80,8 @@ export class KeyboardHandlerContentAll {
 
     const blacklisted = this.isBlacklisted();
     /* WHY: the blacklist only prevents starting a session. It can start
-       matching mid-session (in-page navigation, settings change), and the
-       keys that end the session must still work or the hints stay forever. */
+       matching mid-session (in-page navigation), and the keys that end the
+       session must still work or the hints stay forever. */
     if (blacklisted && !this.hinter.isHinting) {
       return false;
     }

@@ -145,6 +145,33 @@ void describe("KeyboardHandlerContentAll", () => {
     assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
   });
 
+  void test("the action key ends the session after the page becomes blacklisted", () => {
+    handler.setup({ ...SETTINGS, actionKey: "Enter" }, []);
+    startHinting();
+    handler.updateBlacklist(["example.com"]);
+
+    assert.equal(
+      handler.handleKeydown(keyEvent("keydown", "Enter", "Enter")),
+      true,
+    );
+    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
+  });
+
+  void test("hint letters and the cycle key are ignored after the page becomes blacklisted", () => {
+    startHinting();
+    handler.updateBlacklist(["example.com"]);
+
+    assert.equal(
+      handler.handleKeydown(keyEvent("keydown", "a", "KeyA")),
+      false,
+    );
+    assert.equal(
+      handler.handleKeydown(keyEvent("keydown", "Tab", "Tab")),
+      false,
+    );
+    assert.deepEqual(hinter.calls, ["attachHints"]);
+  });
+
   void test("the blacklist still prevents starting a session", () => {
     handler.updateBlacklist(["example.com"]);
 
