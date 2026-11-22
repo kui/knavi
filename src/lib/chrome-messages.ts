@@ -103,7 +103,7 @@ export interface TabMessages {
    * can already be in flight and a late sync would clobber the newer flag.
    */
   SyncHintingState: {
-    payload: { active: boolean; sessionId?: string };
+    payload: { active: true; sessionId: string } | { active: false };
     response: void;
   };
 

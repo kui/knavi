@@ -8,4 +8,8 @@ message: |
 files:
   - src/**
 rule:
-  pattern: crypto.randomUUID($$$)
+  any:
+    - pattern: crypto.randomUUID($$$)
+    - pattern: crypto?.randomUUID($$$)
+    - pattern: $X.crypto.randomUUID($$$)
+    - pattern: $X.crypto?.randomUUID($$$)

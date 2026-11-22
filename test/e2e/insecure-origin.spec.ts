@@ -20,6 +20,9 @@ test.describe("non-secure origin", () => {
     page,
   }, testInfo) => {
     const address = nonLoopbackAddress();
+    if (!address && process.env.CI) {
+      throw new Error("CI needs a non-loopback IPv4 address for this test");
+    }
     testInfo.skip(!address, "no non-loopback IPv4 address on this machine");
 
     await gotoTest(page, `http://${address}:8787/tests/input.html`);

@@ -52,7 +52,7 @@ void describe("HinterClient", () => {
 
   void test("keys typed while the remove barrier is pending are replayed in order after attach", async () => {
     const client = new HinterClient();
-    client.syncHinting(true);
+    client.syncHinting(true, "other-1");
     const removing = client.removeHints(options, true);
     await flush();
 
@@ -108,7 +108,7 @@ void describe("HinterClient", () => {
 
   void test("cycleHint typed while the remove barrier is pending is sent after attach", async () => {
     const client = new HinterClient();
-    client.syncHinting(true);
+    client.syncHinting(true, "other-1");
     const removing = client.removeHints(options, true);
     await flush();
 
@@ -165,7 +165,7 @@ void describe("HinterClient", () => {
 
   void test("a removeHints typed while attach waits for the barrier is sent after AttachHints", async () => {
     const client = new HinterClient();
-    client.syncHinting(true);
+    client.syncHinting(true, "other-1");
     const first = client.removeHints(options, true);
     await flush();
     const attaching = client.attachHints();
@@ -187,7 +187,7 @@ void describe("HinterClient", () => {
 
   void test("a late syncHinting(false) while attach waits for the barrier keeps hinting and queues keys", async () => {
     const client = new HinterClient();
-    client.syncHinting(true);
+    client.syncHinting(true, "other-1");
     const removing = client.removeHints(options, true);
     await flush();
     const attaching = client.attachHints();
@@ -210,7 +210,7 @@ void describe("HinterClient", () => {
     assert.equal(client.isHinting, false);
   });
 
-  void test("a stale end broadcast after the own dispatch does not lose ownership", async () => {
+  void test("a late false after the own dispatch, then the own id, still owns the session", async () => {
     const client = new HinterClient();
     const attaching = client.attachHints();
     await flush();
@@ -241,6 +241,28 @@ void describe("HinterClient", () => {
     } finally {
       Reflect.deleteProperty(crypto, "randomUUID");
     }
+  });
+
+  void test("a late true of this frame's previous session does not take ownership from the new one", async () => {
+    const client = new HinterClient();
+    void client.attachHints();
+    await flush();
+    const first = attachSessionId;
+    const removing = client.removeHints(options, true);
+    await flush();
+    releaseRemove();
+    await removing;
+
+    const attaching = client.attachHints();
+    await flush();
+    assert.notEqual(attachSessionId, first);
+
+    client.syncHinting(true, first);
+    assert.equal(client.isHinting, true);
+    assert.equal(client.ownsSession, true);
+
+    releaseAttach();
+    await attaching;
   });
 
   void test("a session announced by another frame is not owned", async () => {

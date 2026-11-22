@@ -75,7 +75,7 @@ void describe("hint session and the frame path table", () => {
   void test("a second AttachHints drops what the first session reported", async () => {
     await call("AttachHints", { sessionId: "s1" });
     framePaths.report(TAB, ["0"], 9);
-    await call("AttachHints", { sessionId: "s1" });
+    await call("AttachHints", { sessionId: "s2" });
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
   });
 
