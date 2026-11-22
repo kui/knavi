@@ -26,6 +26,7 @@ const rectAggregator = new RectAggregator(framePath);
 const blurer = new Blurer(framePath);
 
 async function setupKeyboardHandler() {
+  const ticket = keyboardHandler.newBlacklistTicket();
   const [setting, matchedBlacklist] =
     await settingsClient.getWithBlacklistMatch(
       [
@@ -39,7 +40,7 @@ async function setupKeyboardHandler() {
       ],
       location.href,
     );
-  keyboardHandler.setup(setting, matchedBlacklist);
+  keyboardHandler.setup(setting, matchedBlacklist, ticket);
   console.debug("settings loaded");
   document.documentElement.dataset.knaviReady = "1";
 }
@@ -57,16 +58,32 @@ const RELEVANT_KEYS: (keyof Settings)[] = [
 ];
 
 let debounceController: AbortController | null = null;
+let blacklistChanged = false;
+
+async function refreshBlacklist() {
+  const ticket = keyboardHandler.newBlacklistTicket();
+  const matched = await settingsClient.matchBlacklist(location.href);
+  keyboardHandler.updateBlacklist(matched, ticket);
+}
 
 chrome.storage.onChanged.addListener((changes) => {
   (async () => {
     if (!isRelevantChange(changes, RELEVANT_KEYS)) return;
+    if ("blackList" in changes) blacklistChanged = true;
     debounceController?.abort();
     debounceController = new AbortController();
     const { signal } = debounceController;
-    do {
+    await wait(200, signal);
+    /* WHY: blacklisting the site must end a running (sticky) session now,
+       while the other key settings wait for it so they do not change
+       mid-session. */
+    if (blacklistChanged) {
+      blacklistChanged = false;
+      await refreshBlacklist();
+    }
+    while (hinterClient.isHinting) {
       await wait(200, signal);
-    } while (hinterClient.isHinting);
+    }
     await setupKeyboardHandler();
   })().catch((e) => {
     if (e instanceof DOMException && e.name === "AbortError") return;
@@ -75,10 +92,7 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 window.navigation?.addEventListener("navigatesuccess", () => {
-  settingsClient
-    .matchBlacklist(location.href)
-    .then((matched) => keyboardHandler.updateBlacklist(matched))
-    .catch(printError);
+  refreshBlacklist().catch(printError);
 });
 
 chrome.runtime.onMessage.addListener(

@@ -32,6 +32,7 @@ export class KeyboardHandlerContentAll {
   private cycleMatcher: KeyHoldMatcher | null = null;
   private hintLetters = "";
   private matchedBlacklist: string[] = [];
+  private latestBlacklistTicket = 0;
   /**
    * How the session this frame last started was begun: "hold" ends on magic
    * key release, "sticky" only via actionKey/cancelKey. Meaningful only while
@@ -44,7 +45,20 @@ export class KeyboardHandlerContentAll {
     private readonly hinter: Hinter,
   ) {}
 
-  setup(settings: KeySettings, matchedBlacklist: string[]) {
+  /**
+   * Blacklist results come from async matches. A caller takes a ticket before
+   * it starts matching and passes it back with the result, so a result that
+   * resolves after a newer match began is discarded.
+   */
+  newBlacklistTicket(): number {
+    return ++this.latestBlacklistTicket;
+  }
+
+  setup(
+    settings: KeySettings,
+    matchedBlacklist: string[],
+    ticket = this.newBlacklistTicket(),
+  ) {
     const prev = this.settings;
     this.settings = settings;
     /* WHY: a matcher holds the keys currently pressed. Rebuilding it while the
@@ -62,15 +76,21 @@ export class KeyboardHandlerContentAll {
     this.actionMatcher = matcher("actionKey", this.actionMatcher);
     this.cancelMatcher = matcher("cancelKey", this.cancelMatcher);
     this.cycleMatcher = matcher("cycleKey", this.cycleMatcher);
-    this.matchedBlacklist = matchedBlacklist;
+    this.updateBlacklist(matchedBlacklist, ticket);
   }
 
-  updateBlacklist(matchedBlacklist: string[]) {
+  updateBlacklist(
+    matchedBlacklist: string[],
+    ticket = this.newBlacklistTicket(),
+  ) {
+    if (ticket !== this.latestBlacklistTicket) return;
     this.matchedBlacklist = matchedBlacklist;
     /* WHY: knavi does nothing on a blacklisted page, so a session that this
        frame started ends without running the action once the page starts
        matching (in-page navigation). Blacklist matching is per frame, and the
-       frame that started the session is the page the user is acting on. */
+       frame that started the session is the page the user is acting on.
+       setup() runs this too: a magic key pressed while settings were loading
+       starts a session on the previous blacklist state. */
     if (matchedBlacklist.length > 0 && this.hinter.ownsSession) {
       this.endSession(NO_MODIFIERS, false);
     }

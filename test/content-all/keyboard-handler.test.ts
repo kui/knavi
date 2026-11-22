@@ -171,6 +171,50 @@ void describe("KeyboardHandlerContentAll", () => {
     assert.deepEqual(hinter.calls, []);
   });
 
+  void test("setup with a matching blacklist ends a session started while settings were loading", () => {
+    // WHY: the magic key was pressed after the old state was read and before setup() ran.
+    handler.setup({ ...SETTINGS, magicKey: "", stickyKey: "Space" }, []);
+    startHinting();
+    handler.setup({ ...SETTINGS, magicKey: "", stickyKey: "Space" }, [
+      "example.com",
+    ]);
+
+    assert.deepEqual(hinter.calls, ["attachHints", "removeHints(cancel)"]);
+  });
+
+  void test("a blacklist result that resolves after a newer one is discarded", () => {
+    const first = handler.newBlacklistTicket();
+    const second = handler.newBlacklistTicket();
+    handler.updateBlacklist([], second);
+    handler.updateBlacklist(["example.com"], first);
+
+    assert.equal(
+      handler.handleKeydown(keyEvent("keydown", " ", "Space")),
+      true,
+    );
+  });
+
+  void test("a stale blacklist result does not end a session", () => {
+    const first = handler.newBlacklistTicket();
+    handler.updateBlacklist([]);
+    startHinting();
+    handler.updateBlacklist(["example.com"], first);
+
+    assert.deepEqual(hinter.calls, ["attachHints"]);
+  });
+
+  void test("setup applies its settings even when its blacklist result is stale", () => {
+    const stale = handler.newBlacklistTicket();
+    handler.updateBlacklist(["example.com"]);
+    handler.setup({ ...SETTINGS, hints: "xyz" }, [], stale);
+
+    // WHY: the newer blacklist result still wins.
+    assert.equal(
+      handler.handleKeydown(keyEvent("keydown", " ", "Space")),
+      false,
+    );
+  });
+
   void test("the blacklist still prevents starting a session", () => {
     handler.updateBlacklist(["example.com"]);
 

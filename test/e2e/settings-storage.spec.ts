@@ -6,6 +6,7 @@ import {
   setSettings,
   getSettings,
   attachHints,
+  attachHintsSticky,
 } from "./fixtures";
 
 const CANCEL_KEY = "Escape";
@@ -188,6 +189,28 @@ test.describe("settings read directly from storage", () => {
         await page.keyboard.up("Space");
       }
     }).toPass({ timeout: 10_000 });
+  });
+
+  test("blacklisting the page during a sticky session ends it without running the action", async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    await setSettings(context, { stickyKey: "KeyQ", cancelKey: CANCEL_KEY });
+    try {
+      await gotoTest(page, "input.html");
+      await attachHintsSticky(page, "KeyQ");
+      await setSettings(context, {
+        blackList: new URL("input.html", baseURL).href,
+      });
+      await expect(page.locator(".hint")).toHaveCount(0);
+    } finally {
+      await setSettings(context, {
+        stickyKey: "",
+        cancelKey: "",
+        blackList: "",
+      });
+    }
   });
 
   test("switching the storage area updates hint letters in both content scripts", async ({
