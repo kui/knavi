@@ -23,12 +23,7 @@ interface HintContext {
 export class HinterContentRoot {
   private context: HintContext | null = null;
   private hintLetters = "";
-  /* WHY: ids must keep growing across top-frame documents of a tab,
-     including one restored from the back/forward cache, because a broadcast
-     of another document can reach this one's frames and frames drop ids
-     below the latest they have seen. Taken from the clock, assuming it does
-     not step backwards. */
-  private lastSessionId: SessionId = Date.now();
+  private lastSessionId: SessionId = 0;
   private isSetUp = false;
   /* WHY: the root frame loads its settings apart from the frame that catches
      the magic key, and right after install that load waits on the slow
@@ -56,6 +51,11 @@ export class HinterContentRoot {
     if (this.isSetUp && this.hintLetters.length === 0)
       throw Error("Ilegal state invocation: hintLetters is empty");
 
+    /* WHY: ids must keep growing across top-frame documents of a tab,
+       including one restored from the back/forward cache, because a
+       broadcast of another document can reach this one's frames and frames
+       drop ids below the latest they have seen. Taken from the clock,
+       assuming it does not step backwards. */
     this.lastSessionId = Math.max(this.lastSessionId + 1, Date.now());
     const context: HintContext = {
       id: this.lastSessionId,
