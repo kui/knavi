@@ -34,11 +34,17 @@ export class TabSession {
 
 /** An AttachHints this frame sent. */
 interface OwnAttach {
-  /** undefined until content-root replies, null if the attach failed. */
-  id: SessionId | null | undefined;
-  /** removeHints was called before the reply. */
-  removed: boolean;
+  state:
+    | { kind: "pending"; removed: boolean }
+    | { kind: "started"; id: SessionId }
+    | { kind: "failed" };
 }
+
+/**
+ * The session that this frame's input goes to: its own attach while the reply
+ * is pending, or else the tab's live session (null when none is live).
+ */
+type InputTarget = { own: OwnAttach } | { id: SessionId | null };
 
 export default class HinterClient {
   private readonly tab = new TabSession();
@@ -57,19 +63,16 @@ export default class HinterClient {
    * session (#120). Flips synchronously on attachHints and removeHints.
    */
   get isHinting() {
-    /* WHY: until the reply, the frame's own attach decides; sync broadcasts
-       of earlier sessions must not undo it and leak letters to the page (#169). */
-    const pending = this.pendingOwn();
-    if (pending) return !pending.removed;
-    return this.tab.id !== null;
+    const t = this.inputTarget();
+    return "own" in t || t.id !== null;
   }
 
   /** True when the live session was started by this frame. */
   get ownsSession() {
-    const own = this.own;
-    if (!own) return false;
-    if (own.id === undefined) return !own.removed;
-    return own.id !== null && this.tab.id === own.id;
+    const t = this.inputTarget();
+    if ("own" in t) return true;
+    const own = this.own?.state;
+    return own?.kind === "started" && t.id === own.id;
   }
 
   /** Returns false when the message was stale and ignored. */
@@ -77,26 +80,29 @@ export default class HinterClient {
     return this.tab.apply(active, sessionId);
   }
 
-  /** Resolves once the session has started. */
+  /** Resolves once content-root has accepted the session. */
   async attachHints(): Promise<void> {
     if (this.isHinting) throw Error("Illegal state");
-    const own: OwnAttach = { id: undefined, removed: false };
+    const own: OwnAttach = { state: { kind: "pending", removed: false } };
     this.own = own;
     await this.enqueue(async () => {
+      let id: SessionId;
       try {
-        own.id = (await sendToRuntime("AttachHints", undefined)).sessionId;
+        id = (await sendToRuntime("AttachHints", undefined)).sessionId;
       } catch (e) {
-        own.id = null;
+        own.state = { kind: "failed" };
         throw e;
       }
+      const removed = own.state.kind === "pending" && own.state.removed;
+      own.state = { kind: "started", id };
       /* WHY: the reply can arrive before the true broadcast of the session. */
-      this.tab.apply(!own.removed, own.id);
+      this.tab.apply(!removed, id);
     });
   }
 
   async hitHint(key: SingleLetter): Promise<void> {
     if (!this.isHinting) throw Error("Illegal state");
-    const target = this.target();
+    const target = this.resolver(this.inputTarget());
     await this.enqueue(async () => {
       const sessionId = target();
       if (sessionId === null) return;
@@ -106,7 +112,7 @@ export default class HinterClient {
 
   async cycleHint(): Promise<void> {
     if (!this.isHinting) throw Error("Illegal state");
-    const target = this.target();
+    const target = this.resolver(this.inputTarget());
     await this.enqueue(async () => {
       const sessionId = target();
       if (sessionId === null) return;
@@ -116,13 +122,12 @@ export default class HinterClient {
 
   async removeHints(options: ActionOptions, execute: boolean): Promise<void> {
     if (!this.isHinting) throw Error("Illegal state");
-    const target = this.target();
-    const pending = this.pendingOwn();
-    if (pending) {
-      pending.removed = true;
-    } else {
-      const id = this.tab.id;
-      if (id !== null) this.tab.apply(false, id);
+    const t = this.inputTarget();
+    const target = this.resolver(t);
+    if ("own" in t) {
+      t.own.state = { kind: "pending", removed: true };
+    } else if (t.id !== null) {
+      this.tab.apply(false, t.id);
     }
     await this.enqueue(async () => {
       const sessionId = target();
@@ -131,21 +136,24 @@ export default class HinterClient {
     });
   }
 
-  /**
-   * The session that input made now is meant for. Read when the queued
-   * message is sent, because the id of an attach still in flight is known
-   * only then.
-   */
-  private target(): () => SessionId | null {
-    const pending = this.pendingOwn();
-    if (pending) return () => pending.id ?? null;
-    const id = this.tab.id;
-    return () => id;
+  private inputTarget(): InputTarget {
+    const own = this.own;
+    /* WHY: until the reply, the frame's own attach decides; sync broadcasts
+       of earlier sessions must not undo it and leak letters to the page
+       (#169). Once it is removed, a session another frame started meanwhile
+       takes the input. */
+    if (own?.state.kind === "pending" && !own.state.removed) return { own };
+    return { id: this.tab.id };
   }
 
-  /** This frame's latest attach while its reply is pending. */
-  private pendingOwn(): OwnAttach | null {
-    return this.own?.id === undefined ? this.own : null;
+  /**
+   * Reads the target's id when the queued message is sent, because the id of
+   * an attach still in flight is known only then.
+   */
+  private resolver(t: InputTarget): () => SessionId | null {
+    if ("own" in t)
+      return () => (t.own.state.kind === "started" ? t.own.state.id : null);
+    return () => t.id;
   }
 
   private enqueue(op: () => Promise<void>): Promise<void> {

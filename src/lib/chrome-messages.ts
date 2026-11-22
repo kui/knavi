@@ -1,8 +1,8 @@
 import type { SingleLetter } from "./strings";
 
 /**
- * Assigned by content-root when it accepts a hint session; increases within
- * one top-frame document.
+ * Assigned by content-root when it accepts a hint session. Seeded from the
+ * clock, so it also increases across top-frame documents of a tab.
  */
 export type SessionId = number;
 
@@ -22,7 +22,7 @@ export interface RuntimeMessages {
 
   AttachHints: {
     payload: void;
-    /** Answered once the session has started, not when it ends. */
+    /** Answered as soon as content-root accepts the session, not when it ends. */
     response: { sessionId: SessionId };
   };
   HitHint: {

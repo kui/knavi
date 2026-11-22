@@ -23,7 +23,10 @@ interface HintContext {
 export class HinterContentRoot {
   private context: HintContext | null = null;
   private hintLetters = "";
-  private lastSessionId: SessionId = 0;
+  /* WHY: ids must keep growing across top-frame documents of a tab, because
+     a broadcast of the previous document can reach the new one after a
+     navigation and frames drop ids below the latest they have seen. */
+  private lastSessionId: SessionId = Date.now();
   /* WHY: the root frame loads its settings apart from the frame that catches
      the magic key, and right after install that load waits on the slow
      default CSS fetch, so AttachHintsInTab can arrive before setup(). */
@@ -40,10 +43,10 @@ export class HinterContentRoot {
   }
 
   /**
-   * Resolves with the new session's id once the session has started; the
-   * hints are rendered after that, without being awaited.
+   * Starts a session and returns its id at once; the hints are rendered after
+   * that, without being awaited.
    */
-  async attachHints(): Promise<SessionId> {
+  attachHints(): SessionId {
     if (this.context)
       throw Error("Ilegal state invocation: already started hinting");
 
@@ -53,25 +56,25 @@ export class HinterContentRoot {
       targets: [],
     };
     this.context = context;
-
-    await this.setupDone.promise;
-    await waitUntil(() => Boolean(document.body));
-    if (this.hintLetters.length === 0) {
-      if (this.context === context) this.context = null;
-      throw Error("Ilegal state invocation: hintLetters is empty");
-    }
-    /* WHY: the session is ended only by RemoveHints, so a rendering failure
-       leaves it live for the user to end, instead of failing the attach of
-       a session that frames already route keys to. */
+    /* WHY: the session is ended only by RemoveHints, so a failure while
+       rendering leaves it live for the user to end. Replying before the
+       setup wait lets RemoveHints through even if setup never finishes. */
     this.render(context).catch(printError);
     return context.id;
   }
 
   private async render(context: HintContext) {
+    /* WHY: the session may end at any await; rendering after that would
+       leave hints no session can remove. */
+    await this.setupDone.promise;
+    if (this.context !== context) return;
+    await waitUntil(() => Boolean(document.body));
+    if (this.context !== context) return;
+    if (this.hintLetters.length === 0)
+      throw Error("Ilegal state invocation: hintLetters is empty");
+
     const hintTextGenerator = this.generateHintTexts();
     for await (const elementRects of this.rectAggregator.aggregate()) {
-      /* WHY: the session may end at any await; rendering after that would
-         leave hints no session can remove. */
       if (this.context !== context) break;
       if (!this.view.isStarted()) this.view.start();
       if (elementRects.length === 0) continue;
@@ -227,9 +230,7 @@ export class HinterContentRoot {
 
 export function buildHinterRouter(hinter: HinterContentRoot) {
   return Router.newTabInstance()
-    .add("AttachHintsInTab", async () => ({
-      sessionId: await hinter.attachHints(),
-    }))
+    .add("AttachHintsInTab", () => ({ sessionId: hinter.attachHints() }))
     .add("HitHintInTab", ({ sessionId, key }) => hinter.hitHint(sessionId, key))
     .add("CycleHintInTab", ({ sessionId }) => hinter.cycleHint(sessionId))
     .add("RemoveHintsInTab", ({ sessionId, options, execute }) =>

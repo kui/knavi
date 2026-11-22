@@ -253,6 +253,27 @@ void describe("HinterClient", () => {
     assert.equal(client.ownsSession, true);
   });
 
+  void test("after removing a pending attach, another frame's live session takes the input", async () => {
+    nextSessionId = 1;
+    const client = new HinterClient();
+    const attaching = client.attachHints();
+    await flush();
+    const removing = client.removeHints(options, false);
+    assert.equal(client.isHinting, false);
+
+    client.syncHinting(true, 5);
+    assert.equal(client.isHinting, true);
+    assert.equal(client.ownsSession, false);
+    const hit = client.hitHint("a" as SingleLetter);
+
+    releaseAttach();
+    await attaching;
+    await flush();
+    releaseRemove();
+    await Promise.all([removing, hit]);
+    assert.deepEqual(sent, ["AttachHints", "RemoveHints", "HitHint:a@5"]);
+  });
+
   void test("a session announced by another frame is not owned", async () => {
     const client = new HinterClient();
     const attaching = client.attachHints();

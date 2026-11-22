@@ -24,6 +24,8 @@ const frames: Frame[] = [];
 /** Messages to content-root of these types wait until the test releases them. */
 const held = new Map<string, (() => void)[]>();
 let actions = 0;
+/** Messages that reached content-root, in order. */
+let rootReceived: Msg[] = [];
 
 function call(listener: Listener, msg: Msg, frameId: number) {
   return new Promise<unknown>((resolve) => {
@@ -53,6 +55,7 @@ console.debug = () => undefined;
       if (options.frameId === 0) {
         const gate = held.get(msg["@type"]);
         if (gate) await new Promise<void>((resolve) => gate.push(resolve));
+        rootReceived.push(msg);
         return call(rootListener, msg, 0);
       }
       for (const f of frames) f.inbox.push(msg);
@@ -119,31 +122,39 @@ const OPTIONS = {
 
 void describe("hint session ordering across frames", () => {
   let A: Frame, B: Frame;
+  let root: InstanceType<typeof HinterContentRoot>;
+
+  /** Replaces content-root with one whose settings have not loaded yet. */
+  function rootBeforeSetup() {
+    root = new HinterContentRoot(aggregator as never, view as never);
+    rootListener = buildHinterRouter(root).buildListener() as Listener;
+  }
+
+  const view = {
+    isStarted: () => false,
+    start: () => undefined,
+    render: () => undefined,
+    remove: () => undefined,
+    hit: () => undefined,
+  };
+  const aggregator = {
+    // eslint-disable-next-line @typescript-eslint/require-await, require-yield
+    async *aggregate() {
+      return;
+    },
+    action: () => {
+      actions++;
+      return Promise.resolve();
+    },
+  };
 
   beforeEach(() => {
     frames.length = 0;
     held.clear();
     actions = 0;
-    const view = {
-      isStarted: () => false,
-      start: () => undefined,
-      render: () => undefined,
-      remove: () => undefined,
-      hit: () => undefined,
-    };
-    const aggregator = {
-      // eslint-disable-next-line @typescript-eslint/require-await, require-yield
-      async *aggregate() {
-        return;
-      },
-      action: () => {
-        actions++;
-        return Promise.resolve();
-      },
-    };
-    const root = new HinterContentRoot(aggregator as never, view as never);
+    rootReceived = [];
+    rootBeforeSetup();
     root.setup("asdf");
-    rootListener = buildHinterRouter(root).buildListener() as Listener;
     backgroundListener = backgroundRouter.buildListener() as Listener;
     A = new Frame();
     B = new Frame();
@@ -257,8 +268,74 @@ void describe("hint session ordering across frames", () => {
     release();
     await hit;
     await settle();
+    const started = A.inbox.find((m) => m.active);
+    const hits = rootReceived.filter((m) => m["@type"] === "HitHintInTab");
+    assert.equal(hits.length, 1);
+    assert.equal(hits[0]?.sessionId, started?.sessionId);
+  });
+
+  void test("releasing the magic key before content-root accepts ends the session once in every frame", async () => {
+    const release = hold("AttachHintsInTab");
+    A.client.attachHints().catch(() => undefined);
+    await settle();
+    assert.equal(A.client.isHinting, true);
+    const removed = A.client.removeHints(OPTIONS, true);
+    assert.equal(A.client.isHinting, false);
+    release();
+    await removed;
+    await settle();
     A.deliver();
+    B.deliver();
+    assert.equal(actions, 1);
+    assert.equal(A.client.isHinting, false);
+    assert.equal(B.client.isHinting, false);
+
+    await A.client.attachHints();
+    await settle();
+    A.deliver();
+    B.deliver();
+    assert.equal(A.client.ownsSession, true);
+    assert.equal(B.client.isHinting, true);
+  });
+
+  void test("a frame whose attach was rejected can still end the live session", async () => {
+    await A.client.attachHints();
+    await settle();
+    await assert.rejects(B.client.attachHints());
+    B.deliver();
+    assert.equal(B.client.isHinting, true);
+    assert.equal(B.client.ownsSession, false);
+
+    await B.client.removeHints(OPTIONS, false);
+    await settle();
+    A.deliver();
+    assert.equal(A.client.isHinting, false);
+    assert.equal(actions, 1);
+  });
+
+  void test("removeHints while content-root's settings are loading ends the session without waiting for them", async () => {
+    rootBeforeSetup();
+    A.client.attachHints().catch(() => undefined);
+    await settle();
     await A.client.removeHints(OPTIONS, false);
-    assert.equal(actions, 2);
+    await settle();
+    assert.equal(actions, 1);
+    A.deliver();
+    assert.equal(A.client.isHinting, false);
+
+    await A.client.attachHints();
+    assert.equal(A.client.ownsSession, true);
+  });
+
+  void test("the true broadcast is sent before content-root's settings have loaded", async () => {
+    rootBeforeSetup();
+    A.client.attachHints().catch(() => undefined);
+    await settle();
+    assert.deepEqual(
+      B.inbox.map((m) => m.active),
+      [true],
+    );
+    B.deliver();
+    assert.equal(B.client.isHinting, true);
   });
 });
