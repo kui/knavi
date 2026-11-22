@@ -1,6 +1,8 @@
 # ast-grep rules
 
-`no-fixed-wait-in-e2e` forbids `waitForTimeout` in `test/e2e/`; see
+`no-fixed-wait-in-e2e` forbids fixed-time sleeps in `test/e2e/`
+(`waitForTimeout`, `setTimeout`, `await sleep(N)`-style helpers) outside a
+`while` loop; see
 [dev-docs/testing.md](../../dev-docs/testing.md).
 
 ## Comment-rationale rules

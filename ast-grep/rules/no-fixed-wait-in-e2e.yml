@@ -8,4 +8,19 @@ message: |
 files:
   - test/e2e/**
 rule:
-  pattern: $PAGE.waitForTimeout($$$)
+  any:
+    - pattern: $PAGE.waitForTimeout($$$)
+    - all:
+        - any:
+            - pattern: setTimeout($$$)
+            - pattern: await $W($N)
+        - not:
+            inside:
+              # WHY: a bounded polling loop that re-checks its condition on each iteration is a legitimate wait (test/e2e/fixtures.ts).
+              kind: while_statement
+              stopBy: end
+constraints:
+  W:
+    regex: ^(sleep|delay|wait|pause|timeout)$
+  N:
+    kind: number
