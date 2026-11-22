@@ -6,9 +6,14 @@ let sent: string[] = [];
 let releaseRemove: () => void = () => undefined;
 let releaseAttach: () => void = () => undefined;
 let failAttach = false;
+let attachSessionId = "";
 (globalThis as Record<string, unknown>).chrome = {
   runtime: {
-    sendMessage: async (msg: { "@type": string; key?: string }) => {
+    sendMessage: async (msg: {
+      "@type": string;
+      key?: string;
+      sessionId?: string;
+    }) => {
       const fail = failAttach;
       // WHY: record at send time so the order reflects when each message was sent.
       sent.push(msg.key ? `${msg["@type"]}:${msg.key}` : msg["@type"]);
@@ -16,6 +21,7 @@ let failAttach = false;
         await new Promise<void>((resolve) => (releaseRemove = resolve));
       }
       if (msg["@type"] === "AttachHints") {
+        attachSessionId = msg.sessionId ?? "";
         // WHY: the real AttachHints is answered only when the session ends.
         await new Promise<void>((resolve) => (releaseAttach = resolve));
         if (fail) return { error: new Error("attach failed") };
@@ -202,5 +208,45 @@ void describe("HinterClient", () => {
 
     client.syncHinting(false);
     assert.equal(client.isHinting, false);
+  });
+
+  void test("a stale end broadcast after the own dispatch does not lose ownership", async () => {
+    const client = new HinterClient();
+    const attaching = client.attachHints();
+    await flush();
+    assert.equal(client.ownsSession, true);
+
+    client.syncHinting(false);
+    assert.equal(client.isHinting, false);
+    client.syncHinting(true, attachSessionId);
+    assert.equal(client.ownsSession, true);
+
+    releaseAttach();
+    await attaching;
+  });
+
+  void test("a session announced by another frame is not owned", async () => {
+    const client = new HinterClient();
+    const attaching = client.attachHints();
+    await flush();
+    client.syncHinting(false);
+    client.syncHinting(true, "another-frame");
+    assert.equal(client.isHinting, true);
+    assert.equal(client.ownsSession, false);
+
+    releaseAttach();
+    await attaching;
+  });
+
+  void test("a failed AttachHints does not make a later session from another frame owned", async () => {
+    failAttach = true;
+    const client = new HinterClient();
+    const attaching = client.attachHints();
+    await flush();
+    releaseAttach();
+    await assert.rejects(attaching, /attach failed/);
+
+    client.syncHinting(true, "another-frame");
+    assert.equal(client.ownsSession, false);
   });
 });

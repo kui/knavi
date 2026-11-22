@@ -33,12 +33,11 @@ export class KeyboardHandlerContentAll {
   private hintLetters = "";
   private matchedBlacklist: string[] = [];
   /**
-   * The mode of the session this frame started, or null when this frame did
-   * not start the current one. `hinter.isHinting` is tab-wide (synced to every
-   * frame); this is per frame. "hold" fires on keyup; "sticky" only via
-   * actionKey/cancelKey.
+   * How the session this frame last started was begun: "hold" ends on magic
+   * key release, "sticky" only via actionKey/cancelKey. Meaningful only while
+   * `hinter.ownsSession`.
    */
-  private startedSession: SessionMode | null = null;
+  private mode: SessionMode = "hold";
 
   constructor(
     private readonly blurer: Blurer,
@@ -67,27 +66,14 @@ export class KeyboardHandlerContentAll {
   }
 
   updateBlacklist(matchedBlacklist: string[]) {
-    const startsMatching = !this.isBlacklisted() && matchedBlacklist.length > 0;
     this.matchedBlacklist = matchedBlacklist;
-    /* WHY: knavi does nothing on a blacklisted page, so a session that starts
-       matching midway (in-page navigation) ends without running the action.
-       Only the frame that started it ends it: RemoveHints from another frame
-       would bypass that frame's barrier ordering. */
-    if (startsMatching && this.startedSession && this.hinter.isHinting) {
-      this.cancelSession();
+    /* WHY: knavi does nothing on a blacklisted page, so a session that this
+       frame started ends without running the action once the page starts
+       matching (in-page navigation). Blacklist matching is per frame, and the
+       frame that started the session is the page the user is acting on. */
+    if (matchedBlacklist.length > 0 && this.hinter.ownsSession) {
+      this.endSession(NO_MODIFIERS, false);
     }
-  }
-
-  /**
-   * Called right after a "session ended" broadcast was passed to the hinter.
-   * A later session started by another frame is synced here as hinting, and
-   * this frame must not end it. The hinter ignores the broadcast while this
-   * frame's own attach is pending (it is the previous session's late
-   * message), so only forget when `isHinting` shows it was applied.
-   */
-  handleSessionEnded() {
-    if (this.hinter.isHinting) return;
-    this.startedSession = null;
   }
 
   private resetMatchers() {
@@ -114,19 +100,11 @@ export class KeyboardHandlerContentAll {
 
     if (this.hinter.isHinting) {
       if (cancelMatcher?.match()) {
-        const { shiftKey, altKey, ctrlKey, metaKey } = event;
-        this.hinter
-          .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, false)
-          .catch(printError);
-        this.forgetSession();
+        this.endSession(modifiers(event), false);
         return true;
       }
       if (actionMatcher?.match()) {
-        const { shiftKey, altKey, ctrlKey, metaKey } = event;
-        this.hinter
-          .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, true)
-          .catch(printError);
-        this.forgetSession();
+        this.endSession(modifiers(event), true);
         return true;
       }
       if (cycleMatcher?.match()) {
@@ -143,12 +121,12 @@ export class KeyboardHandlerContentAll {
     } else {
       if (!isEditing() && hitMatcher?.match()) {
         this.hinter.attachHints().catch(printError);
-        this.startedSession = "hold";
+        this.mode = "hold";
         return true;
       }
       if (!isEditing() && stickyMatcher?.match()) {
         this.hinter.attachHints().catch(printError);
-        this.startedSession = "sticky";
+        this.mode = "sticky";
         return true;
       }
       if (blurMatcher?.match()) {
@@ -172,15 +150,11 @@ export class KeyboardHandlerContentAll {
     }
 
     if (
-      this.hinter.isHinting &&
-      this.startedSession === "hold" &&
+      this.hinter.ownsSession &&
+      this.mode === "hold" &&
       !hitMatcher?.match()
     ) {
-      const { shiftKey, altKey, ctrlKey, metaKey } = event;
-      this.hinter
-        .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, true)
-        .catch(printError);
-      this.forgetSession();
+      this.endSession(modifiers(event), true);
       return true;
     }
     return false;
@@ -193,15 +167,9 @@ export class KeyboardHandlerContentAll {
    * arrived. Without this, the stuck key would spuriously match on the next
    * session.
    */
-  private forgetSession() {
-    this.startedSession = null;
+  private endSession(options: ActionOptions, execute: boolean) {
+    this.hinter.removeHints(options, execute).catch(printError);
     this.resetMatchers();
-  }
-
-  /** Removes the hints without running the action, then forgets the session. */
-  private cancelSession() {
-    this.hinter.removeHints(NO_MODIFIERS, false).catch(printError);
-    this.forgetSession();
   }
 
   /**
@@ -224,6 +192,15 @@ export class KeyboardHandlerContentAll {
   private isBlacklisted() {
     return this.matchedBlacklist.length > 0;
   }
+}
+
+function modifiers({
+  shiftKey,
+  altKey,
+  ctrlKey,
+  metaKey,
+}: KeyboardEvent): ActionOptions {
+  return { shiftKey, altKey, ctrlKey, metaKey };
 }
 
 function isEditing() {

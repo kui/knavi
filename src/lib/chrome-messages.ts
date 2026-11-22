@@ -15,7 +15,8 @@ export interface RuntimeMessages {
   };
 
   AttachHints: {
-    payload: void;
+    /** Echoed in SyncHintingState(true) so frames can tell who started the session. */
+    payload: { sessionId: string };
     response: void;
   };
   HitHint: {
@@ -102,7 +103,7 @@ export interface TabMessages {
    * can already be in flight and a late sync would clobber the newer flag.
    */
   SyncHintingState: {
-    payload: { active: boolean };
+    payload: { active: boolean; sessionId?: string };
     response: void;
   };
 

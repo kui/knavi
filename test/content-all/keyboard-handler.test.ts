@@ -25,9 +25,10 @@ function makeFakeHinter() {
   return {
     isHinting: false,
     calls: [] as string[],
-    executes: [] as boolean[],
+    ownsSession: false,
     attachHints() {
       this.isHinting = true;
+      this.ownsSession = true;
       this.calls.push("attachHints");
       return Promise.resolve();
     },
@@ -40,9 +41,9 @@ function makeFakeHinter() {
       return Promise.resolve();
     },
     removeHints(_modifiers: unknown, execute: boolean) {
-      this.executes.push(execute);
       this.isHinting = false;
-      this.calls.push("removeHints");
+      this.ownsSession = false;
+      this.calls.push(execute ? "removeHints(execute)" : "removeHints(cancel)");
       return Promise.resolve();
     },
   };
@@ -131,10 +132,9 @@ void describe("KeyboardHandlerContentAll", () => {
     startHinting();
     handler.updateBlacklist(["example.com"]);
 
-    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
-    assert.deepEqual(hinter.executes, [false]);
+    assert.deepEqual(hinter.calls, ["attachHints", "removeHints(cancel)"]);
     assert.equal(handler.handleKeyup(keyEvent("keyup", " ", "Space")), false);
-    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
+    assert.deepEqual(hinter.calls, ["attachHints", "removeHints(cancel)"]);
   });
 
   void test("a blacklist match during a sticky session removes hints without executing", () => {
@@ -142,10 +142,9 @@ void describe("KeyboardHandlerContentAll", () => {
     startHinting();
     handler.updateBlacklist(["example.com"]);
 
-    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
-    assert.deepEqual(hinter.executes, [false]);
+    assert.deepEqual(hinter.calls, ["attachHints", "removeHints(cancel)"]);
     assert.equal(handler.handleKeyup(keyEvent("keyup", " ", "Space")), false);
-    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
+    assert.deepEqual(hinter.calls, ["attachHints", "removeHints(cancel)"]);
   });
 
   void test("a blacklist match does not end a session started by another frame", () => {
@@ -153,38 +152,6 @@ void describe("KeyboardHandlerContentAll", () => {
     handler.updateBlacklist(["example.com"]);
 
     assert.deepEqual(hinter.calls, []);
-  });
-
-  void test("the started session is forgotten when another frame ends it", () => {
-    startHinting();
-    hinter.isHinting = false;
-    handler.handleSessionEnded();
-    hinter.isHinting = true;
-    handler.updateBlacklist(["example.com"]);
-
-    assert.deepEqual(hinter.calls, ["attachHints"]);
-  });
-
-  void test("the started session is kept when the hinter ignores a stale end broadcast", () => {
-    startHinting();
-    handler.handleSessionEnded();
-    handler.updateBlacklist(["example.com"]);
-
-    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
-    assert.deepEqual(hinter.executes, [false]);
-  });
-
-  void test("only the transition to matching ends the session", () => {
-    startHinting();
-    handler.updateBlacklist([]);
-    assert.deepEqual(hinter.calls, ["attachHints"]);
-
-    handler.updateBlacklist(["example.com"]);
-    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
-
-    hinter.isHinting = true;
-    handler.updateBlacklist(["example.com"]);
-    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
   });
 
   void test("a blacklist match while not hinting does nothing", () => {

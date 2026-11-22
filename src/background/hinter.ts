@@ -5,16 +5,16 @@ import { requireTabId } from "./sender-guards";
 
 /* WHY: fire-and-forget; a sync failure must not fail the RPC the initiating
    frame awaits. */
-function syncHintingState(tabId: number, active: boolean) {
-  sendToTab(tabId, "SyncHintingState", { active }).catch(printError);
+function syncHintingState(tabId: number, active: boolean, sessionId?: string) {
+  sendToTab(tabId, "SyncHintingState", { active, sessionId }).catch(printError);
 }
 
 export const router = Router.newRuntimeInstance()
-  .add("AttachHints", async (_msg, sender) => {
+  .add("AttachHints", async ({ sessionId }, sender) => {
     const tabId = requireTabId(sender);
     framePaths.reset(tabId);
     /* WHY: dispatch before awaiting; see SyncHintingState in chrome-messages.ts. */
-    syncHintingState(tabId, true);
+    syncHintingState(tabId, true, sessionId);
     try {
       return await sendToTab(tabId, "AttachHintsInTab", undefined, {
         frameId: 0,

@@ -101,9 +101,8 @@ chrome.runtime.onMessage.addListener(
     .add("BlurRelay", ({ targetPath, childSegment, rect }) => {
       blurer.handleBlurRelay(targetPath, childSegment, rect);
     })
-    .add("SyncHintingState", ({ active }) => {
-      hinterClient.syncHinting(active);
-      if (!active) keyboardHandler.handleSessionEnded();
+    .add("SyncHintingState", ({ active, sessionId }) => {
+      hinterClient.syncHinting(active, sessionId);
       framePath.handleHintingState(active);
     })
     .buildListener(),
