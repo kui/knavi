@@ -13,4 +13,4 @@ rule:
       - regex: '^(//|/\*)\s*(WHY|HACK|SAFETY|INVARIANT)\b'
       - regex: '^(//|/\*)\s*(eslint-|ts-|@ts-|biome-|prettier-|deno-|c8|istanbul|v8)'
       - regex: '^(//|/\*)\s*#?(region|endregion)\b'
-      - regex: '^//\s*ast-grep-ignore:.*--\s*WHY:'
+      - regex: '^(//|/\*)\s*ast-grep-ignore:.*--\s*WHY:\s*[^\s*]'

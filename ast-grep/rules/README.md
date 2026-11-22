@@ -1,15 +1,19 @@
 # ast-grep rules
 
 `no-fixed-wait-in-e2e` forbids fixed-time sleeps in `test/e2e/`:
-`waitForTimeout`, a `setTimeout` inside `new Promise(...)`, and `await sleep(N)`-style
-helper calls (`sleep`, `delay`, `wait`, `pause`, `timeout`, also as a member
-call). See [dev-docs/testing.md](../../dev-docs/testing.md).
+`waitForTimeout`, any `setTimeout` inside `new Promise(...)` (including a
+deadline timer for `Promise.race`; suppress those with a reason), any call to
+`sleep` / `delay` / `wait` / `pause` / `timeout`, and `await obj.sleep(N)`-style
+member calls with a number literal. See
+[dev-docs/testing.md](../../dev-docs/testing.md).
 
 To allow a legitimate exception, put
-`// ast-grep-ignore: <rule-id> -- WHY: <reason>` on the line before it (or at
-the end of the line). The `-- WHY:` reason is required: a bare
-`// ast-grep-ignore` fails `require-comment-rationale`. A suppression that
-suppresses nothing fails lint (`--error=unused-suppression`).
+`// ast-grep-ignore: <rule-id> -- WHY: <reason>` on the line before the line
+the match is reported on (for a multi-line `new Promise((r) =>\n setTimeout(r, 5))`,
+the `setTimeout` line), or at the end of that line. Use the comment syntax of
+the language (`#`, `/* */`, `<!-- -->`). The reason after `-- WHY:` is required:
+a directive without one fails the comment-rationale rule of that language. A
+suppression that suppresses nothing fails lint (`--error=unused-suppression`).
 
 ## Comment-rationale rules
 

@@ -15,13 +15,15 @@ rule:
             - pattern: setTimeout($$$)
             - pattern: $G.setTimeout($$$)
         - inside:
-            pattern: new Promise($$$)
+            any:
+              - pattern: new Promise($$$)
+              - pattern: new Promise<$T>($$$)
             stopBy: end
-    - pattern: await sleep($N)
-    - pattern: await delay($N)
-    - pattern: await wait($N)
-    - pattern: await pause($N)
-    - pattern: await timeout($N)
+    - pattern: sleep($$$)
+    - pattern: delay($$$)
+    - pattern: wait($$$)
+    - pattern: pause($$$)
+    - pattern: timeout($$$)
     - pattern: await $O.sleep($N)
     - pattern: await $O.delay($N)
     - pattern: await $O.wait($N)
@@ -29,6 +31,4 @@ rule:
     - pattern: await $O.timeout($N)
 constraints:
   N:
-    any:
-      - kind: number
-      - kind: identifier
+    kind: number

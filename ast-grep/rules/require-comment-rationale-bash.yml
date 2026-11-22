@@ -11,3 +11,4 @@ rule:
       - regex: "^#!"
       - regex: '^#\s*(WHY|HACK|SAFETY|INVARIANT)\b'
       - regex: '^#\s*shellcheck\b'
+      - regex: '^#\s*ast-grep-ignore:.*--\s*WHY:\s*\S'
