@@ -14,11 +14,15 @@ rule:
         - any:
             - pattern: setTimeout($$$)
             - pattern: $G.setTimeout($$$)
+            - pattern: setInterval($$$)
+            - pattern: $G.setInterval($$$)
         - inside:
             any:
               - pattern: new Promise($$$)
               - pattern: new Promise<$T>($$$)
             stopBy: end
+    - pattern: await setTimeout($$$)
+    - pattern: await $G.setTimeout($$$)
     - pattern: sleep($$$)
     - pattern: delay($$$)
     - pattern: wait($$$)

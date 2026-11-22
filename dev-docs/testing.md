@@ -48,8 +48,14 @@ instead.
 ## Waiting in E2E tests
 
 Never sleep for a fixed time; the `no-fixed-wait-in-e2e` ast-grep rule
-rejects `waitForTimeout`, a `setTimeout` inside `new Promise(...)`, and `sleep(N)`-style helpers. A bounded polling loop that re-checks its condition, or a deadline timer, may opt out with `// ast-grep-ignore: no-fixed-wait-in-e2e -- WHY: <reason>` on the line before the reported line (see `test/e2e/fixtures.ts`); the reason is required. A fixed sleep is either too long (slow) or too short
-on a loaded CI runner (flaky). Wait for something the extension does:
+rejects `waitForTimeout`, a `setTimeout` or `setInterval` inside
+`new Promise(...)`, `await setTimeout(...)`, and `sleep(N)`-style helpers (see
+[ast-grep/rules/README.md](../ast-grep/rules/README.md) for the exact forms). A
+bounded polling loop that re-checks its condition, or a deadline timer, may opt
+out with `// ast-grep-ignore: no-fixed-wait-in-e2e -- WHY: <reason>` on the
+line before the reported line (see `test/e2e/fixtures.ts`); the reason is
+required. A fixed sleep is either too long (slow) or too short on a loaded CI
+runner (flaky). Wait for something the extension does:
 
 - a locator assertion (`toBeVisible`, `toHaveCount`), which retries;
 - `expect.poll` or `expect(...).toPass` for a value read through

@@ -1,11 +1,18 @@
 # ast-grep rules
 
 `no-fixed-wait-in-e2e` forbids fixed-time sleeps in `test/e2e/`:
-`waitForTimeout`, any `setTimeout` inside `new Promise(...)` (including a
-deadline timer for `Promise.race`; suppress those with a reason), any call to
-`sleep` / `delay` / `wait` / `pause` / `timeout`, and `await obj.sleep(N)`-style
-member calls with a number literal. See
-[dev-docs/testing.md](../../dev-docs/testing.md).
+
+- `waitForTimeout`;
+- any `setTimeout` or `setInterval` inside `new Promise(...)` (including a
+  deadline timer for `Promise.race`; suppress those with a reason);
+- `await setTimeout(...)` (the `node:timers/promises` form; an aliased import
+  is not detected);
+- any call to a bare `sleep` / `delay` / `wait` / `pause` / `timeout`, awaited
+  or not (suppress a non-sleep helper of that name with a reason);
+- member calls such as `obj.sleep(...)` only when awaited with a number
+  literal, so `await helper.wait(locator)` is not reported.
+
+See [dev-docs/testing.md](../../dev-docs/testing.md).
 
 To allow a legitimate exception, put
 `// ast-grep-ignore: <rule-id> -- WHY: <reason>` on the line before the line
