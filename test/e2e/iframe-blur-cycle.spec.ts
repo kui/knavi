@@ -31,8 +31,7 @@ test.describe("iframe blur cycle (sticky mode)", () => {
     });
   });
 
-  // WHY: fails about 1 in 10 runs (#180); failOnFlakyTests would fail CI on it.
-  test.fixme("hint action works after focus-blur-focus cycle on iframe element", async ({
+  test("hint action works after focus-blur-focus cycle on iframe element", async ({
     page,
   }) => {
     await gotoTest(page, "iframe.html");
@@ -43,6 +42,11 @@ test.describe("iframe blur cycle (sticky mode)", () => {
       await page.keyboard.press(ch);
     }
     await page.keyboard.press(ACTION_KEY);
+    /* WHY: RemoveHints reaches content-root asynchronously. Without this wait,
+       attachHintsSticky below can return on a leftover hint of the first
+       session, and the snapshot taken by findHintFor then sees no hints at
+       all (#180). */
+    await expect(page.locator(".hint")).toHaveCount(0);
 
     await page.keyboard.press(BLUR_KEY);
 
