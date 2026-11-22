@@ -10,3 +10,4 @@ rule:
     any:
       - regex: '^<!--\s*(WHY|HACK|SAFETY|INVARIANT)\b'
       - regex: '^<!--\s*\[if '
+      - regex: '^<!--\s*ast-grep-ignore:.*--\s*WHY:\s*[^\s-]'

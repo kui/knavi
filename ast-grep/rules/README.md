@@ -3,8 +3,27 @@
 `no-random-uuid` forbids `crypto.randomUUID` in `src/` (undefined on non-secure
 pages).
 
-`no-fixed-wait-in-e2e` forbids `waitForTimeout` in `test/e2e/`; see
-[dev-docs/testing.md](../../dev-docs/testing.md).
+`no-fixed-wait-in-e2e` forbids fixed-time sleeps in `test/e2e/`:
+
+- `waitForTimeout`;
+- any `setTimeout` or `setInterval` inside `new Promise(...)` (including a
+  deadline timer for `Promise.race`; suppress those with a reason);
+- `await setTimeout(...)` (the `node:timers/promises` form; an aliased import
+  is not detected);
+- any call to a bare `sleep` / `delay` / `wait` / `pause` / `timeout`, awaited
+  or not (suppress a non-sleep helper of that name with a reason);
+- member calls such as `obj.sleep(...)` only when awaited with a number
+  literal, so `await helper.wait(locator)` is not reported.
+
+See [dev-docs/testing.md](../../dev-docs/testing.md).
+
+To allow a legitimate exception, put
+`// ast-grep-ignore: <rule-id> -- WHY: <reason>` on the line before the line
+the match is reported on (for a multi-line `new Promise((r) =>\n setTimeout(r, 5))`,
+the `setTimeout` line), or at the end of that line. Use the comment syntax of
+the language (`#`, `/* */`, `<!-- -->`). The reason after `-- WHY:` is required:
+a directive without one fails the comment-rationale rule of that language. A
+suppression that suppresses nothing fails lint (`--error=unused-suppression`).
 
 ## Comment-rationale rules
 

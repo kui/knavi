@@ -8,4 +8,31 @@ message: |
 files:
   - test/e2e/**
 rule:
-  pattern: $PAGE.waitForTimeout($$$)
+  any:
+    - pattern: $PAGE.waitForTimeout($$$)
+    - all:
+        - any:
+            - pattern: setTimeout($$$)
+            - pattern: $G.setTimeout($$$)
+            - pattern: setInterval($$$)
+            - pattern: $G.setInterval($$$)
+        - inside:
+            any:
+              - pattern: new Promise($$$)
+              - pattern: new Promise<$T>($$$)
+            stopBy: end
+    - pattern: await setTimeout($$$)
+    - pattern: await $G.setTimeout($$$)
+    - pattern: sleep($$$)
+    - pattern: delay($$$)
+    - pattern: wait($$$)
+    - pattern: pause($$$)
+    - pattern: timeout($$$)
+    - pattern: await $O.sleep($N)
+    - pattern: await $O.delay($N)
+    - pattern: await $O.wait($N)
+    - pattern: await $O.pause($N)
+    - pattern: await $O.timeout($N)
+constraints:
+  N:
+    kind: number
