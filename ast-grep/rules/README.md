@@ -1,8 +1,9 @@
 # ast-grep rules
 
-`no-fixed-wait-in-e2e` forbids fixed-time sleeps in `test/e2e/`
-(`waitForTimeout`, `setTimeout`, `await sleep(N)`-style helpers) outside a
-`while` loop; see
+`no-fixed-wait-in-e2e` forbids fixed-time sleeps in `test/e2e/`:
+`waitForTimeout` is always rejected, and so are `setTimeout` calls and
+`await sleep(N)`-style helper calls (`sleep`, `delay`, `wait`, `pause`,
+`timeout`, also as a member call) unless they are inside a `while` loop. See
 [dev-docs/testing.md](../../dev-docs/testing.md).
 
 ## Comment-rationale rules

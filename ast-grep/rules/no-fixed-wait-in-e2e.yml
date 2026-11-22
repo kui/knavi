@@ -13,14 +13,24 @@ rule:
     - all:
         - any:
             - pattern: setTimeout($$$)
-            - pattern: await $W($N)
+            - pattern: $G.setTimeout($$$)
+            - pattern: await sleep($N)
+            - pattern: await delay($N)
+            - pattern: await wait($N)
+            - pattern: await pause($N)
+            - pattern: await timeout($N)
+            - pattern: await $O.sleep($N)
+            - pattern: await $O.delay($N)
+            - pattern: await $O.wait($N)
+            - pattern: await $O.pause($N)
+            - pattern: await $O.timeout($N)
         - not:
             inside:
               # WHY: a bounded polling loop that re-checks its condition on each iteration is a legitimate wait (test/e2e/fixtures.ts).
               kind: while_statement
               stopBy: end
 constraints:
-  W:
-    regex: ^(sleep|delay|wait|pause|timeout)$
   N:
-    kind: number
+    any:
+      - kind: number
+      - kind: identifier
