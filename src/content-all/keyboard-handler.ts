@@ -12,7 +12,15 @@ type MatcherKey =
   | "actionKey"
   | "cancelKey"
   | "cycleKey";
+type SessionMode = "hold" | "sticky";
 type KeySettings = Pick<Settings, MatcherKey | "hints">;
+
+const NO_MODIFIERS: ActionOptions = {
+  shiftKey: false,
+  altKey: false,
+  ctrlKey: false,
+  metaKey: false,
+};
 
 export class KeyboardHandlerContentAll {
   private settings: KeySettings | null = null;
@@ -25,10 +33,11 @@ export class KeyboardHandlerContentAll {
   private hintLetters = "";
   private matchedBlacklist: string[] = [];
   /**
-   * True when hints were attached by magic key hold (fires on keyup);
-   * false when attached by sticky key (fires only via actionKey/cancelKey).
+   * How the session this frame last started was begun: "hold" ends on magic
+   * key release, "sticky" only via actionKey/cancelKey. Meaningful only while
+   * `hinter.ownsSession`.
    */
-  private holdHinting = false;
+  private mode: SessionMode = "hold";
 
   constructor(
     private readonly blurer: Blurer,
@@ -58,6 +67,13 @@ export class KeyboardHandlerContentAll {
 
   updateBlacklist(matchedBlacklist: string[]) {
     this.matchedBlacklist = matchedBlacklist;
+    /* WHY: knavi does nothing on a blacklisted page, so a session that this
+       frame started ends without running the action once the page starts
+       matching (in-page navigation). Blacklist matching is per frame, and the
+       frame that started the session is the page the user is acting on. */
+    if (matchedBlacklist.length > 0 && this.hinter.ownsSession) {
+      this.endSession(NO_MODIFIERS, false);
+    }
   }
 
   private resetMatchers() {
@@ -84,19 +100,11 @@ export class KeyboardHandlerContentAll {
 
     if (this.hinter.isHinting) {
       if (cancelMatcher?.match()) {
-        const { shiftKey, altKey, ctrlKey, metaKey } = event;
-        this.hinter
-          .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, false)
-          .catch(printError);
-        this.endSession();
+        this.endSession(modifiers(event), false);
         return true;
       }
       if (actionMatcher?.match()) {
-        const { shiftKey, altKey, ctrlKey, metaKey } = event;
-        this.hinter
-          .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, true)
-          .catch(printError);
-        this.endSession();
+        this.endSession(modifiers(event), true);
         return true;
       }
       if (cycleMatcher?.match()) {
@@ -113,12 +121,12 @@ export class KeyboardHandlerContentAll {
     } else {
       if (!isEditing() && hitMatcher?.match()) {
         this.hinter.attachHints().catch(printError);
-        this.holdHinting = true;
+        this.mode = "hold";
         return true;
       }
       if (!isEditing() && stickyMatcher?.match()) {
         this.hinter.attachHints().catch(printError);
-        this.holdHinting = false;
+        this.mode = "sticky";
         return true;
       }
       if (blurMatcher?.match()) {
@@ -141,12 +149,12 @@ export class KeyboardHandlerContentAll {
       return false;
     }
 
-    if (this.hinter.isHinting && this.holdHinting && !hitMatcher?.match()) {
-      const { shiftKey, altKey, ctrlKey, metaKey } = event;
-      this.hinter
-        .removeHints({ shiftKey, altKey, ctrlKey, metaKey }, true)
-        .catch(printError);
-      this.endSession();
+    if (
+      this.hinter.ownsSession &&
+      this.mode === "hold" &&
+      !hitMatcher?.match()
+    ) {
+      this.endSession(modifiers(event), true);
       return true;
     }
     return false;
@@ -159,8 +167,8 @@ export class KeyboardHandlerContentAll {
    * arrived. Without this, the stuck key would spuriously match on the next
    * session.
    */
-  private endSession() {
-    this.holdHinting = false;
+  private endSession(options: ActionOptions, execute: boolean) {
+    this.hinter.removeHints(options, execute).catch(printError);
     this.resetMatchers();
   }
 
@@ -184,6 +192,15 @@ export class KeyboardHandlerContentAll {
   private isBlacklisted() {
     return this.matchedBlacklist.length > 0;
   }
+}
+
+function modifiers({
+  shiftKey,
+  altKey,
+  ctrlKey,
+  metaKey,
+}: KeyboardEvent): ActionOptions {
+  return { shiftKey, altKey, ctrlKey, metaKey };
 }
 
 function isEditing() {

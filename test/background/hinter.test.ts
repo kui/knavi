@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 interface Sent {
   type: string;
   active?: boolean;
+  sessionId?: string;
 }
 const sent: Sent[] = [];
 let attachFails = false;
@@ -12,9 +13,13 @@ let attachFails = false;
   tabs: {
     sendMessage: (
       _tabId: number,
-      message: { "@type": string; active?: boolean },
+      message: { "@type": string; active?: boolean; sessionId?: string },
     ) => {
-      sent.push({ type: message["@type"], active: message.active });
+      sent.push({
+        type: message["@type"],
+        active: message.active,
+        sessionId: message.sessionId,
+      });
       if (message["@type"] === "AttachHintsInTab" && attachFails)
         return Promise.reject(new Error("no receiver"));
       return Promise.resolve({ response: undefined });
@@ -55,21 +60,27 @@ void describe("hint session and the frame path table", () => {
   });
 
   void test("AttachHints starts a session and tells every frame", async () => {
-    await call("AttachHints");
+    await call("AttachHints", { sessionId: "s1" });
     assert.deepEqual(syncStates(), [true]);
     framePaths.report(TAB, ["0"], 9);
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
   });
 
+  void test("AttachHints echoes the session id in the SyncHintingState(true) broadcast", async () => {
+    await call("AttachHints", { sessionId: "s1" });
+    const sync = sent.find((m) => m.type === "SyncHintingState");
+    assert.equal(sync?.sessionId, "s1");
+  });
+
   void test("a second AttachHints drops what the first session reported", async () => {
-    await call("AttachHints");
+    await call("AttachHints", { sessionId: "s1" });
     framePaths.report(TAB, ["0"], 9);
-    await call("AttachHints");
+    await call("AttachHints", { sessionId: "s2" });
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
   });
 
   void test("RemoveHints ends the session and drops reports made after it", async () => {
-    await call("AttachHints");
+    await call("AttachHints", { sessionId: "s1" });
     framePaths.report(TAB, ["0"], 9);
     await call("RemoveHints", { options: {}, execute: false });
     assert.deepEqual(syncStates(), [true, false]);
@@ -79,7 +90,7 @@ void describe("hint session and the frame path table", () => {
 
   void test("a failed AttachHints ends the session", async () => {
     attachFails = true;
-    await assert.rejects(call("AttachHints"));
+    await assert.rejects(call("AttachHints", { sessionId: "s1" }));
     assert.deepEqual(syncStates(), [true, false]);
     framePaths.report(TAB, ["0"], 9);
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);

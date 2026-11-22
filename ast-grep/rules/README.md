@@ -1,5 +1,8 @@
 # ast-grep rules
 
+`no-random-uuid` forbids `crypto.randomUUID` in `src/` (undefined on non-secure
+pages).
+
 `no-fixed-wait-in-e2e` forbids fixed-time sleeps in `test/e2e/`:
 
 - `waitForTimeout`;

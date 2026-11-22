@@ -5,22 +5,25 @@ import { requireTabId } from "./sender-guards";
 
 /* WHY: fire-and-forget; a sync failure must not fail the RPC the initiating
    frame awaits. */
-function syncHintingState(tabId: number, active: boolean) {
-  sendToTab(tabId, "SyncHintingState", { active }).catch(printError);
+function syncHintingState(
+  tabId: number,
+  state: { active: true; sessionId: string } | { active: false },
+) {
+  sendToTab(tabId, "SyncHintingState", state).catch(printError);
 }
 
 export const router = Router.newRuntimeInstance()
-  .add("AttachHints", async (_msg, sender) => {
+  .add("AttachHints", async ({ sessionId }, sender) => {
     const tabId = requireTabId(sender);
     framePaths.reset(tabId);
     /* WHY: dispatch before awaiting; see SyncHintingState in chrome-messages.ts. */
-    syncHintingState(tabId, true);
+    syncHintingState(tabId, { active: true, sessionId });
     try {
       return await sendToTab(tabId, "AttachHintsInTab", undefined, {
         frameId: 0,
       });
     } catch (e) {
-      syncHintingState(tabId, false);
+      syncHintingState(tabId, { active: false });
       framePaths.end(tabId);
       throw e;
     }
@@ -42,7 +45,7 @@ export const router = Router.newRuntimeInstance()
   })
   .add("RemoveHints", async ({ options, execute }, sender) => {
     const tabId = requireTabId(sender);
-    syncHintingState(tabId, false);
+    syncHintingState(tabId, { active: false });
     framePaths.end(tabId);
     return await sendToTab(
       tabId,
