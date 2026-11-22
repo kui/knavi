@@ -135,3 +135,29 @@ test.describe("slotted content in a shadow control", () => {
         .toBe(true);
     });
 });
+
+test.describe("slotted label with its own pointer cursor", () => {
+  test.afterEach(async ({ page }) => {
+    await page.keyboard.up("Space").catch(() => void 0);
+  });
+
+  test("the label folds into the shadow button: one hint, which clicks the button (#164)", async ({
+    page,
+  }) => {
+    await gotoTest(page, "slotted-label-shadow-button.html");
+    await attachHints(page);
+    expect(await page.locator(".hint").count()).toBe(1);
+
+    const hintText = await findHintFor(page, "x-btn");
+    for (const ch of hintText) await page.keyboard.press(ch);
+    await page.keyboard.up("Space");
+
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (window as { clickedTarget?: string }).clickedTarget,
+        ),
+      )
+      .toBe("button");
+  });
+});

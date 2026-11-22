@@ -72,9 +72,10 @@ export function* traverseParent(
 }
 
 /**
- * Like `traverseParent()`, but steps from a shadow root to its host instead of
- * stopping at the shadow boundary. Unlike `containsComposed()`, it does not
- * follow slot assignment: a slotted node steps to its light-DOM parent.
+ * Like `traverseParent()`, but walks the flat tree, as `containsComposed()`
+ * does: a slotted node steps to the `<slot>` it is assigned to, and a shadow
+ * root steps to its host. `assignedSlot` is null for a node slotted into a
+ * closed shadow root, so the walk goes up the light DOM there instead.
  */
 export function* traverseComposedParent(
   element: Element,
@@ -88,6 +89,8 @@ export function* traverseComposedParent(
 }
 
 function composedParent(element: Element): Element | null {
+  const slot = (element as Partial<Slottable>).assignedSlot;
+  if (slot) return slot;
   if (element.parentElement) return element.parentElement;
   const parent = element.parentNode;
   return parent instanceof ShadowRoot ? parent.host : null;

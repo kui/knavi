@@ -304,3 +304,18 @@ void describe("traverseComposedParent", () => {
   void test("yields nothing for a root element", () =>
     assert.deepEqual(parents(wrapper), []));
 });
+
+void describe("traverseComposedParent with slots", () => {
+  const host = new FakeNode();
+  const shadow = new FakeShadowRoot(host);
+  const button = new FakeNode(shadow);
+  const slot = new FakeNode(button);
+  const label = new FakeNode(host);
+  label.assignedSlot = slot;
+  const parents = (e: FakeNode) => [
+    ...traverseComposedParent(e as unknown as Element),
+  ];
+
+  void test("steps from a slotted node to its slot before its light parent", () =>
+    assert.deepEqual(parents(label), [slot, button, host]));
+});
