@@ -135,18 +135,65 @@ void describe("HinterContentRoot", () => {
     await hinter.removeHints(next, OPTIONS, false);
   });
 
-  void test("a new content-root's ids exceed an older one's", async () => {
-    hinter.setup("asdf");
+  void test("a new content-root's ids exceed an older one's", async (t) => {
+    const now = t.mock.method(Date, "now", () => 1000);
+    const old = new HinterContentRoot(aggregator, view as never);
+    old.setup("asdf");
     let last = 0;
     for (let i = 0; i < 3; i++) {
-      last = hinter.attachHints();
-      await hinter.removeHints(last, OPTIONS, false);
+      last = old.attachHints();
+      await old.removeHints(last, OPTIONS, false);
     }
     // WHY: a new top document loads at least a moment after the old one's sessions.
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    now.mock.mockImplementation(() => 2000);
     const next = new HinterContentRoot(aggregator, view as never);
     next.setup("asdf");
     assert.ok(next.attachHints() > last);
+  });
+
+  void test("a content-root restored after another document's sessions issues larger ids", async (t) => {
+    const now = t.mock.method(Date, "now", () => 1000);
+    const restored = new HinterContentRoot(aggregator, view as never);
+    restored.setup("asdf");
+    now.mock.mockImplementation(() => 2000);
+    const other = new HinterContentRoot(aggregator, view as never);
+    other.setup("asdf");
+    const otherId = other.attachHints();
+    await other.removeHints(otherId, OPTIONS, false);
+
+    now.mock.mockImplementation(() => 3000);
+    assert.ok(restored.attachHints() > otherId);
+  });
+
+  void test("letters typed before setup() are applied once the hint letters are known", async () => {
+    const id = hinter.attachHints();
+    hinter.hitHint(id, "z" as SingleLetter);
+    hinter.hitHint(id, "a" as SingleLetter);
+    hinter.setup("asdf");
+    await tick();
+    aggregator.handleRects(++requestId, RECTS);
+    await tick();
+
+    assert.equal(view.batches[0][0].state, "hit");
+    await hinter.removeHints(id, OPTIONS, false);
+  });
+
+  void test("attachHints rejects an empty hint letter setting once it is loaded", () => {
+    hinter.setup("");
+    assert.throws(() => hinter.attachHints(), /hintLetters is empty/);
+    hinter.setup("asdf");
+    assert.doesNotThrow(() => hinter.attachHints());
+  });
+
+  void test("an empty hint letter setting loaded after attach leaves the session for RemoveHints", async () => {
+    const id = hinter.attachHints();
+    hinter.setup("");
+    await tick();
+    assert.equal(view.isStarted(), false);
+    assert.throws(() => hinter.attachHints(), /already started/);
+    await hinter.removeHints(id, OPTIONS, false);
+    hinter.setup("asdf");
+    assert.doesNotThrow(() => hinter.attachHints());
   });
 
   void test("a second attachHints while a session is live rejects", async () => {

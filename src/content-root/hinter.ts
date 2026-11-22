@@ -23,10 +23,13 @@ interface HintContext {
 export class HinterContentRoot {
   private context: HintContext | null = null;
   private hintLetters = "";
-  /* WHY: ids must keep growing across top-frame documents of a tab, because
-     a broadcast of the previous document can reach the new one after a
-     navigation and frames drop ids below the latest they have seen. */
+  /* WHY: ids must keep growing across top-frame documents of a tab,
+     including one restored from the back/forward cache, because a broadcast
+     of another document can reach this one's frames and frames drop ids
+     below the latest they have seen. Taken from the clock, assuming it does
+     not step backwards. */
   private lastSessionId: SessionId = Date.now();
+  private isSetUp = false;
   /* WHY: the root frame loads its settings apart from the frame that catches
      the magic key, and right after install that load waits on the slow
      default CSS fetch, so AttachHintsInTab can arrive before setup(). */
@@ -39,6 +42,7 @@ export class HinterContentRoot {
 
   setup(hintLetters: string) {
     this.hintLetters = hintLetters;
+    this.isSetUp = true;
     this.setupDone.resolve();
   }
 
@@ -49,9 +53,12 @@ export class HinterContentRoot {
   attachHints(): SessionId {
     if (this.context)
       throw Error("Ilegal state invocation: already started hinting");
+    if (this.isSetUp && this.hintLetters.length === 0)
+      throw Error("Ilegal state invocation: hintLetters is empty");
 
+    this.lastSessionId = Math.max(this.lastSessionId + 1, Date.now());
     const context: HintContext = {
-      id: ++this.lastSessionId,
+      id: this.lastSessionId,
       inputSequence: [],
       targets: [],
     };
@@ -72,6 +79,10 @@ export class HinterContentRoot {
     if (this.context !== context) return;
     if (this.hintLetters.length === 0)
       throw Error("Ilegal state invocation: hintLetters is empty");
+    /* WHY: letters typed before setup() were kept unchecked. */
+    context.inputSequence = context.inputSequence.filter((l) =>
+      this.hintLetters.includes(l),
+    );
 
     const hintTextGenerator = this.generateHintTexts();
     for await (const elementRects of this.rectAggregator.aggregate()) {
@@ -161,7 +172,9 @@ export class HinterContentRoot {
     const context = this.live(id);
     if (!context) return;
 
-    if (!this.hintLetters.includes(inputLetter)) return;
+    /* WHY: before setup() the hint letters are unknown, so keep the letter
+       for render() to check. */
+    if (this.isSetUp && !this.hintLetters.includes(inputLetter)) return;
 
     delete context.cycle;
 

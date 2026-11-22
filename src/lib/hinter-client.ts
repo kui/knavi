@@ -12,7 +12,7 @@ function noop() {
  * no fixed order, so anything older than the latest session id is dropped.
  */
 export class TabSession {
-  /* WHY: content-root numbers sessions from 1. */
+  /* WHY: below every id content-root issues. */
   private latest: SessionId = 0;
   private active = false;
 
@@ -147,8 +147,9 @@ export default class HinterClient {
   }
 
   /**
-   * Reads the target's id when the queued message is sent, because the id of
-   * an attach still in flight is known only then.
+   * For an own attach still in flight, reads its id when the queued message
+   * is sent, because it is known only then; otherwise the tab's live id taken
+   * at call time.
    */
   private resolver(t: InputTarget): () => SessionId | null {
     if ("own" in t)

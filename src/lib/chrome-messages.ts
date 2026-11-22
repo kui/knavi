@@ -1,8 +1,9 @@
 import type { SingleLetter } from "./strings";
 
 /**
- * Assigned by content-root when it accepts a hint session. Seeded from the
- * clock, so it also increases across top-frame documents of a tab.
+ * Assigned by content-root when it accepts a hint session. Taken from the
+ * clock, so it also increases across top-frame documents of a tab, as long
+ * as the wall clock does not step backwards.
  */
 export type SessionId = number;
 
