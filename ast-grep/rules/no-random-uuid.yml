@@ -2,14 +2,20 @@ id: no-random-uuid
 language: TypeScript
 severity: error
 message: |
-  Do not use `crypto.randomUUID()` in src/. It is only defined in secure
+  Do not use `crypto.randomUUID` in src/. It is only defined in secure
   contexts, and content scripts follow the page's context, so it is undefined
   on plain http pages. Build the id from `crypto.getRandomValues` instead.
 files:
   - src/**
 rule:
   any:
-    - pattern: crypto.randomUUID($$$)
-    - pattern: crypto?.randomUUID($$$)
-    - pattern: $X.crypto.randomUUID($$$)
-    - pattern: $X.crypto?.randomUUID($$$)
+    - kind: member_expression
+      has:
+        field: property
+        regex: ^randomUUID$
+    - kind: shorthand_property_identifier_pattern
+      regex: ^randomUUID$
+    - kind: pair_pattern
+      has:
+        field: key
+        regex: ^randomUUID$

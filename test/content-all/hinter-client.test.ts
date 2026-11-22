@@ -245,9 +245,10 @@ void describe("HinterClient", () => {
 
   void test("a late true of this frame's previous session does not take ownership from the new one", async () => {
     const client = new HinterClient();
-    void client.attachHints();
+    const attachingFirst = client.attachHints();
     await flush();
     const first = attachSessionId;
+    const releaseFirst = releaseAttach;
     const removing = client.removeHints(options, true);
     await flush();
     releaseRemove();
@@ -261,8 +262,9 @@ void describe("HinterClient", () => {
     assert.equal(client.isHinting, true);
     assert.equal(client.ownsSession, true);
 
+    releaseFirst();
     releaseAttach();
-    await attaching;
+    await Promise.all([attachingFirst, attaching]);
   });
 
   void test("a session announced by another frame is not owned", async () => {

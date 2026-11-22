@@ -10,7 +10,7 @@ function noop() {
    it would break knavi there. getRandomValues is available everywhere. */
 function randomHex() {
   return Array.from(crypto.getRandomValues(new Uint32Array(2)), (n) =>
-    n.toString(16),
+    n.toString(16).padStart(8, "0"),
   ).join("");
 }
 
@@ -64,12 +64,13 @@ export default class HinterClient {
    */
   syncHinting(active: false): void;
   syncHinting(active: true, sessionId: string): void;
-  syncHinting(active: boolean, sessionId?: string) {
+  syncHinting(...args: [active: false] | [active: true, sessionId: string]) {
+    const [active, sessionId] = args;
     /* WHY: the previous session's SyncHintingState(false) broadcast can arrive
        while attachHints waits for the remove barrier. Applying it would undo
        the synchronous flag and leak queued hint letters to the page (#169). */
     if (!active && this.pendingDispatch) return;
-    if (active && sessionId !== undefined) {
+    if (active) {
       /* WHY: SyncHintingState(true) is sent when the background receives
          AttachHints and is not ordered against this frame's later attaches, so
          it can arrive after this frame started its next session. Applying it
