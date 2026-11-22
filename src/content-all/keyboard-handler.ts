@@ -86,11 +86,15 @@ export class KeyboardHandlerContentAll {
   }
 
   /**
-   * Called when another frame broadcasts that the session ended. Ownership
-   * must not outlive the session: a later session started by another frame
-   * is synced here as hinting, and this frame must not end it.
+   * Called right after a "session ended" broadcast was passed to the hinter.
+   * Ownership must not outlive the session: a later session started by
+   * another frame is synced here as hinting, and this frame must not end it.
+   * The hinter ignores the broadcast while this frame's own attach is pending
+   * (it is the previous session's late message), so only reset when
+   * `isHinting` shows the broadcast was applied.
    */
   handleHintingEnded() {
+    if (this.hinter.isHinting) return;
     this.ownsSession = false;
     this.holdHinting = false;
   }
