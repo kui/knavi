@@ -78,7 +78,11 @@ export class KeyboardHandlerContentAll {
     const cancelMatcher = this.cancelMatcher?.keydown(event);
     const cycleMatcher = this.cycleMatcher?.keydown(event);
 
-    if (this.isBlacklisted()) {
+    const blacklisted = this.isBlacklisted();
+    /* WHY: the blacklist only prevents starting a session. It can start
+       matching mid-session (in-page navigation, settings change), and the
+       keys that end the session must still work or the hints stay forever. */
+    if (blacklisted && !this.hinter.isHinting) {
       return false;
     }
 
@@ -98,6 +102,9 @@ export class KeyboardHandlerContentAll {
           .catch(printError);
         this.endSession();
         return true;
+      }
+      if (blacklisted) {
+        return false;
       }
       if (cycleMatcher?.match()) {
         this.hinter.cycleHint().catch(printError);
@@ -136,10 +143,6 @@ export class KeyboardHandlerContentAll {
     this.actionMatcher?.keyup(event);
     this.cancelMatcher?.keyup(event);
     this.cycleMatcher?.keyup(event);
-
-    if (this.isBlacklisted()) {
-      return false;
-    }
 
     if (this.hinter.isHinting && this.holdHinting && !hitMatcher?.match()) {
       const { shiftKey, altKey, ctrlKey, metaKey } = event;

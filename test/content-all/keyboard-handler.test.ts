@@ -124,4 +124,34 @@ void describe("KeyboardHandlerContentAll", () => {
     handler.handleKeydown(keyEvent("keydown", " ", "Space"));
     assert.deepEqual(hinter.calls, []);
   });
+
+  void test("releasing the magic key ends the session after the page becomes blacklisted", () => {
+    startHinting();
+    handler.updateBlacklist(["example.com"]);
+
+    assert.equal(handler.handleKeyup(keyEvent("keyup", " ", "Space")), true);
+    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
+  });
+
+  void test("the cancel key ends the session after the page becomes blacklisted", () => {
+    handler.setup({ ...SETTINGS, cancelKey: "Escape" }, []);
+    startHinting();
+    handler.updateBlacklist(["example.com"]);
+
+    assert.equal(
+      handler.handleKeydown(keyEvent("keydown", "Escape", "Escape")),
+      true,
+    );
+    assert.deepEqual(hinter.calls, ["attachHints", "removeHints"]);
+  });
+
+  void test("the blacklist still prevents starting a session", () => {
+    handler.updateBlacklist(["example.com"]);
+
+    assert.equal(
+      handler.handleKeydown(keyEvent("keydown", " ", "Space")),
+      false,
+    );
+    assert.deepEqual(hinter.calls, []);
+  });
 });
