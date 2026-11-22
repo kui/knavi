@@ -1,4 +1,5 @@
 import { Router, sendToTab } from "../lib/chrome-messages";
+import type { SessionId } from "../lib/chrome-messages";
 import { printError } from "../lib/errors";
 import * as framePaths from "./frame-paths";
 import { requireTabId } from "./sender-guards";
@@ -7,50 +8,55 @@ import { requireTabId } from "./sender-guards";
    frame awaits. */
 function syncHintingState(
   tabId: number,
-  state: { active: true; sessionId: string } | { active: false },
+  active: boolean,
+  sessionId: SessionId,
 ) {
-  sendToTab(tabId, "SyncHintingState", state).catch(printError);
+  sendToTab(tabId, "SyncHintingState", { active, sessionId }).catch(printError);
 }
 
+/* WHY: the session state lives in content-root, not here, because this
+   service worker can be stopped in the middle of a session. Content-root
+   ignores a message whose sessionId is not the live session. */
 export const router = Router.newRuntimeInstance()
-  .add("AttachHints", async ({ sessionId }, sender) => {
+  .add("AttachHints", async (_msg, sender) => {
     const tabId = requireTabId(sender);
     framePaths.reset(tabId);
-    /* WHY: dispatch before awaiting; see SyncHintingState in chrome-messages.ts. */
-    syncHintingState(tabId, { active: true, sessionId });
-    try {
-      return await sendToTab(tabId, "AttachHintsInTab", undefined, {
-        frameId: 0,
-      });
-    } catch (e) {
-      syncHintingState(tabId, { active: false });
-      framePaths.end(tabId);
-      throw e;
-    }
+    /* WHY: a rejected attach (e.g. "already started hinting" while another
+       frame's session is live) announced nothing, so it broadcasts nothing;
+       a false here would end the live session in every frame. */
+    const { sessionId } = await sendToTab(
+      tabId,
+      "AttachHintsInTab",
+      undefined,
+      { frameId: 0 },
+    );
+    syncHintingState(tabId, true, sessionId);
+    return { sessionId };
   })
-  .add("HitHint", async ({ key }, sender) => {
+  .add("HitHint", async ({ sessionId, key }, sender) => {
     return await sendToTab(
       requireTabId(sender),
       "HitHintInTab",
-      { key },
-      {
-        frameId: 0,
-      },
+      { sessionId, key },
+      { frameId: 0 },
     );
   })
-  .add("CycleHint", async (_msg, sender) => {
-    return await sendToTab(requireTabId(sender), "CycleHintInTab", undefined, {
-      frameId: 0,
-    });
+  .add("CycleHint", async ({ sessionId }, sender) => {
+    return await sendToTab(
+      requireTabId(sender),
+      "CycleHintInTab",
+      { sessionId },
+      { frameId: 0 },
+    );
   })
-  .add("RemoveHints", async ({ options, execute }, sender) => {
+  .add("RemoveHints", async ({ sessionId, options, execute }, sender) => {
     const tabId = requireTabId(sender);
-    syncHintingState(tabId, { active: false });
+    syncHintingState(tabId, false, sessionId);
     framePaths.end(tabId);
     return await sendToTab(
       tabId,
       "RemoveHintsInTab",
-      { options, execute },
+      { sessionId, options, execute },
       { frameId: 0 },
     );
   });

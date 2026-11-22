@@ -6,5 +6,8 @@
     "types": ["node", "chrome"]
   },
   "include": ["./*.ts", "../../src/types", "../../types"],
-  "references": [{ "path": "../../src/tsconfig.content-root.json" }]
+  "references": [
+    { "path": "../../src/tsconfig.content-root.json" },
+    { "path": "../../src/tsconfig.background.json" }
+  ]
 }

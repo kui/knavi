@@ -6,32 +6,33 @@ let sent: string[] = [];
 let releaseRemove: () => void = () => undefined;
 let releaseAttach: () => void = () => undefined;
 let failAttach = false;
-let attachSessionId = "";
+let nextSessionId = 1;
 (globalThis as Record<string, unknown>).chrome = {
   runtime: {
     sendMessage: async (msg: {
       "@type": string;
       key?: string;
-      sessionId?: string;
+      sessionId?: number;
     }) => {
       const fail = failAttach;
       // WHY: record at send time so the order reflects when each message was sent.
-      sent.push(msg.key ? `${msg["@type"]}:${msg.key}` : msg["@type"]);
+      const id = msg.sessionId === undefined ? "" : `@${msg.sessionId}`;
+      sent.push(msg.key ? `${msg["@type"]}:${msg.key}${id}` : msg["@type"]);
       if (msg["@type"] === "RemoveHints") {
         await new Promise<void>((resolve) => (releaseRemove = resolve));
       }
       if (msg["@type"] === "AttachHints") {
-        attachSessionId = msg.sessionId ?? "";
-        // WHY: the real AttachHints is answered only when the session ends.
+        // WHY: the real AttachHints is answered once content-root starts the session.
         await new Promise<void>((resolve) => (releaseAttach = resolve));
         if (fail) return { error: new Error("attach failed") };
+        return { response: { sessionId: nextSessionId++ } };
       }
       return { response: undefined };
     },
   },
 };
 
-const { default: HinterClient } =
+const { default: HinterClient, TabSession } =
   await import("../../src/lib/hinter-client.js");
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -42,17 +43,43 @@ const options = {
   metaKey: false,
 };
 
+void describe("TabSession", () => {
+  void test("drops updates older than the latest id", () => {
+    const s = new TabSession();
+    assert.equal(s.apply(true, 2), true);
+    assert.equal(s.apply(false, 1), false);
+    assert.equal(s.apply(true, 1), false);
+    assert.equal(s.id, 2);
+  });
+
+  void test("a true after the false of the same id does not revive it", () => {
+    const s = new TabSession();
+    assert.equal(s.apply(false, 3), true);
+    assert.equal(s.apply(true, 3), false);
+    assert.equal(s.id, null);
+  });
+
+  void test("a duplicate true is applied as a no-op", () => {
+    const s = new TabSession();
+    s.apply(true, 1);
+    assert.equal(s.apply(true, 1), true);
+    assert.equal(s.id, 1);
+  });
+});
+
 void describe("HinterClient", () => {
   beforeEach(() => {
     sent = [];
     releaseRemove = () => undefined;
     releaseAttach = () => undefined;
     failAttach = false;
+    nextSessionId = 1;
   });
 
-  void test("keys typed while the remove barrier is pending are replayed in order after attach", async () => {
+  void test("keys typed while the previous RemoveHints is pending are sent in order after attach", async () => {
+    nextSessionId = 2;
     const client = new HinterClient();
-    client.syncHinting(true, "other-1");
+    client.syncHinting(true, 1);
     const removing = client.removeHints(options, true);
     await flush();
 
@@ -68,14 +95,16 @@ void describe("HinterClient", () => {
 
     releaseRemove();
     await removing;
-    await Promise.all(hits);
+    await flush();
+    assert.deepEqual(sent, ["RemoveHints", "AttachHints"]);
     releaseAttach();
     await attaching;
+    await Promise.all(hits);
     assert.deepEqual(sent, [
       "RemoveHints",
       "AttachHints",
-      "HitHint:a",
-      "HitHint:s",
+      "HitHint:a@2",
+      "HitHint:s@2",
     ]);
   });
 
@@ -91,24 +120,23 @@ void describe("HinterClient", () => {
     assert.equal(client.isHinting, false);
   });
 
-  void test("removeHints still sends RemoveHints when the AttachHints response fails", async () => {
+  void test("removeHints of a failed attach sends nothing", async () => {
     failAttach = true;
     const client = new HinterClient();
     const attaching = client.attachHints().catch(() => undefined);
     await flush();
 
     const removing = client.removeHints(options, false);
-    await flush();
     releaseAttach();
     await attaching;
-    releaseRemove();
     await removing;
-    assert.deepEqual(sent, ["AttachHints", "RemoveHints"]);
+    assert.deepEqual(sent, ["AttachHints"]);
   });
 
-  void test("cycleHint typed while the remove barrier is pending is sent after attach", async () => {
+  void test("cycleHint typed while the previous RemoveHints is pending is sent after attach", async () => {
+    nextSessionId = 2;
     const client = new HinterClient();
-    client.syncHinting(true, "other-1");
+    client.syncHinting(true, 1);
     const removing = client.removeHints(options, true);
     await flush();
 
@@ -119,9 +147,10 @@ void describe("HinterClient", () => {
 
     releaseRemove();
     await removing;
-    await cycling;
+    await flush();
     releaseAttach();
     await attaching;
+    await cycling;
     assert.deepEqual(sent, ["RemoveHints", "AttachHints", "CycleHint"]);
   });
 
@@ -130,12 +159,14 @@ void describe("HinterClient", () => {
     const attaching = client.attachHints();
     const hit = client.hitHint("a" as SingleLetter);
     const removing = client.removeHints(options, false);
+    assert.equal(client.isHinting, false);
+    await flush();
+    releaseAttach();
+    await attaching;
     await flush();
     releaseRemove();
     await Promise.all([hit, removing]);
-    releaseAttach();
-    await attaching;
-    assert.deepEqual(sent, ["AttachHints", "HitHint:a", "RemoveHints"]);
+    assert.deepEqual(sent, ["AttachHints", "HitHint:a@1", "RemoveHints"]);
   });
 
   void test("a late failure of an older attach does not reset a newer session", async () => {
@@ -147,25 +178,25 @@ void describe("HinterClient", () => {
     failAttach = false;
 
     const removing = client.removeHints(options, false);
-    await flush();
     const second = client.attachHints();
     assert.equal(client.isHinting, true);
 
     releaseFirst();
     await first;
+    await removing;
     assert.equal(client.isHinting, true);
 
-    releaseRemove();
-    await removing;
     await flush();
     releaseAttach();
     await second;
     assert.equal(client.isHinting, true);
+    assert.equal(client.ownsSession, true);
+    assert.deepEqual(sent, ["AttachHints", "AttachHints"]);
   });
 
-  void test("a removeHints typed while attach waits for the barrier is sent after AttachHints", async () => {
+  void test("a removeHints typed while attach waits for the previous RemoveHints is sent after AttachHints", async () => {
     const client = new HinterClient();
-    client.syncHinting(true, "other-1");
+    client.syncHinting(true, 1);
     const first = client.removeHints(options, true);
     await flush();
     const attaching = client.attachHints();
@@ -176,108 +207,62 @@ void describe("HinterClient", () => {
     releaseRemove();
     await first;
     await flush();
+    releaseAttach();
+    await attaching;
+    await flush();
     assert.deepEqual(sent, ["RemoveHints", "AttachHints", "RemoveHints"]);
 
     releaseRemove();
     await second;
-    releaseAttach();
-    await attaching;
     assert.equal(client.isHinting, false);
   });
 
-  void test("a late syncHinting(false) while attach waits for the barrier keeps hinting and queues keys", async () => {
+  void test("a late false of the previous session while attach is pending keeps hinting", async () => {
+    nextSessionId = 2;
     const client = new HinterClient();
-    client.syncHinting(true, "other-1");
+    client.syncHinting(true, 1);
     const removing = client.removeHints(options, true);
-    await flush();
     const attaching = client.attachHints();
 
-    // WHY: the previous session's SyncHintingState(false) broadcast.
-    client.syncHinting(false);
+    client.syncHinting(false, 1);
     assert.equal(client.isHinting, true);
-    const hit = client.hitHint("a" as SingleLetter);
-    await flush();
-    assert.deepEqual(sent, ["RemoveHints"]);
-
-    releaseRemove();
-    await removing;
-    await hit;
-    releaseAttach();
-    await attaching;
-    assert.deepEqual(sent, ["RemoveHints", "AttachHints", "HitHint:a"]);
-
-    client.syncHinting(false);
-    assert.equal(client.isHinting, false);
-  });
-
-  void test("a late false after the own dispatch, then the own id, still owns the session", async () => {
-    const client = new HinterClient();
-    const attaching = client.attachHints();
-    await flush();
-    assert.equal(client.ownsSession, true);
-
-    client.syncHinting(false);
-    assert.equal(client.isHinting, false);
-    client.syncHinting(true, attachSessionId);
-    assert.equal(client.ownsSession, true);
-
-    releaseAttach();
-    await attaching;
-  });
-
-  void test("attachHints works where crypto.randomUUID is undefined", async () => {
-    Object.defineProperty(crypto, "randomUUID", {
-      value: undefined,
-      configurable: true,
-    });
-    try {
-      const client = new HinterClient();
-      const attaching = client.attachHints();
-      await flush();
-      assert.notEqual(attachSessionId, "");
-      assert.equal(client.ownsSession, true);
-      releaseAttach();
-      await attaching;
-    } finally {
-      Reflect.deleteProperty(crypto, "randomUUID");
-    }
-  });
-
-  void test("a late true of this frame's previous session does not take ownership from the new one", async () => {
-    const client = new HinterClient();
-    const attachingFirst = client.attachHints();
-    await flush();
-    const first = attachSessionId;
-    const releaseFirst = releaseAttach;
-    const removing = client.removeHints(options, true);
     await flush();
     releaseRemove();
     await removing;
-
-    const attaching = client.attachHints();
     await flush();
-    assert.notEqual(attachSessionId, first);
-
-    client.syncHinting(true, first);
+    client.syncHinting(false, 1);
+    assert.equal(client.isHinting, true);
+    releaseAttach();
+    await attaching;
+    client.syncHinting(false, 1);
     assert.equal(client.isHinting, true);
     assert.equal(client.ownsSession, true);
 
-    releaseFirst();
+    client.syncHinting(false, 2);
+    assert.equal(client.isHinting, false);
+  });
+
+  void test("the own reply counts as the start even before the true broadcast", async () => {
+    const client = new HinterClient();
+    const attaching = client.attachHints();
+    await flush();
     releaseAttach();
-    await Promise.all([attachingFirst, attaching]);
+    await attaching;
+    assert.equal(client.ownsSession, true);
+    client.syncHinting(true, 1);
+    assert.equal(client.ownsSession, true);
   });
 
   void test("a session announced by another frame is not owned", async () => {
     const client = new HinterClient();
     const attaching = client.attachHints();
     await flush();
-    client.syncHinting(false);
-    client.syncHinting(true, "another-frame");
-    assert.equal(client.isHinting, true);
-    assert.equal(client.ownsSession, false);
-
     releaseAttach();
     await attaching;
+    client.syncHinting(false, 1);
+    client.syncHinting(true, 2);
+    assert.equal(client.isHinting, true);
+    assert.equal(client.ownsSession, false);
   });
 
   void test("a failed AttachHints does not make a later session from another frame owned", async () => {
@@ -288,7 +273,7 @@ void describe("HinterClient", () => {
     releaseAttach();
     await assert.rejects(attaching, /attach failed/);
 
-    client.syncHinting(true, "another-frame");
+    client.syncHinting(true, 1);
     assert.equal(client.ownsSession, false);
   });
 });

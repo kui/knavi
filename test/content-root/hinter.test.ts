@@ -93,47 +93,88 @@ void describe("HinterContentRoot", () => {
   });
 
   async function attachAndRender() {
-    const attached = hinter.attachHints();
+    const id = await hinter.attachHints();
     await tick();
     aggregator.handleRects(++requestId, RECTS);
     await tick();
-    await hinter.removeHints(OPTIONS, false);
-    await attached;
+    await hinter.removeHints(id, OPTIONS, false);
   }
 
   void test("attachHints waits for setup() instead of failing when settings load late", async () => {
     const attached = hinter.attachHints();
     await tick();
     hinter.setup("asdf");
+    const id = await attached;
     await tick();
     aggregator.handleRects(++requestId, RECTS);
     await tick();
 
     assert.equal(view.rendered, 1);
-    await hinter.removeHints(OPTIONS, false);
-    await attached;
+    await hinter.removeHints(id, OPTIONS, false);
   });
 
-  void test("releasing before setup() renders nothing and keeps hinting usable", async () => {
-    const attached = hinter.attachHints();
-    await tick();
-    await hinter.removeHints(OPTIONS, true);
+  void test("attachHints resolves with the session id before any rects arrive", async () => {
     hinter.setup("asdf");
-    await attached;
-
+    const first = await hinter.attachHints();
     assert.equal(view.rendered, 0);
+    await hinter.removeHints(first, OPTIONS, false);
+    const second = await hinter.attachHints();
+    assert.ok(second > first);
+    await hinter.removeHints(second, OPTIONS, false);
+  });
+
+  void test("a second attachHints while a session is live rejects", async () => {
+    hinter.setup("asdf");
+    const id = await hinter.attachHints();
+    await assert.rejects(hinter.attachHints(), /already started/);
+    await hinter.removeHints(id, OPTIONS, false);
+  });
+
+  void test("messages with the id of an ended session are ignored", async () => {
+    hinter.setup("asdf");
+    const old = await hinter.attachHints();
+    await hinter.removeHints(old, OPTIONS, false);
+    const id = await hinter.attachHints();
+    await tick();
+    // WHY: each session's aggregate() takes the next request id.
+    requestId += 2;
+    aggregator.handleRects(requestId, RECTS);
+    await tick();
+
+    hinter.hitHint(old, "a" as SingleLetter);
+    hinter.cycleHint(old);
+    await hinter.removeHints(old, OPTIONS, true);
+    assert.equal(view.hits.length, 0);
+    assert.equal(view.isStarted(), true);
+
+    await hinter.removeHints(id, OPTIONS, false);
     assert.equal(view.isStarted(), false);
-    await attachAndRender();
-    assert.equal(view.rendered, 1);
+  });
+
+  void test("a rendering failure keeps the session live until RemoveHints", async () => {
+    hinter.setup("asdf");
+    const failing = {
+      // eslint-disable-next-line @typescript-eslint/require-await, require-yield
+      async *aggregate() {
+        throw Error("aggregation failed");
+      },
+      action: () => Promise.resolve(),
+    };
+    const root = new HinterContentRoot(failing as never, view as never);
+    root.setup("asdf");
+    const id = await root.attachHints();
+    await tick();
+    await assert.rejects(root.attachHints(), /already started/);
+    await root.removeHints(id, OPTIONS, false);
+    await root.removeHints(await root.attachHints(), OPTIONS, false);
   });
 
   void test("releasing before the first rects renders nothing and keeps hinting usable", async () => {
     hinter.setup("asdf");
-    const attached = hinter.attachHints();
-    await tick();
-    await hinter.removeHints(OPTIONS, true);
+    const id = await hinter.attachHints();
+    await hinter.removeHints(id, OPTIONS, true);
     aggregator.handleRects(++requestId, RECTS);
-    await attached;
+    await tick();
 
     assert.equal(view.rendered, 0);
     assert.equal(view.isStarted(), false);
@@ -143,10 +184,10 @@ void describe("HinterContentRoot", () => {
 
   void test("letters typed before the first rects are applied to the first batch", async () => {
     hinter.setup("asdf");
-    const attached = hinter.attachHints();
+    const id = await hinter.attachHints();
     await tick();
 
-    assert.doesNotThrow(() => hinter.hitHint("a" as SingleLetter));
+    assert.doesNotThrow(() => hinter.hitHint(id, "a" as SingleLetter));
     assert.equal(view.hits.length, 0);
 
     aggregator.handleRects(requestId + 1, RECTS);
@@ -154,15 +195,14 @@ void describe("HinterContentRoot", () => {
 
     assert.equal(view.batches[0][0].state, "hit");
     assert.equal(view.hits.length, 1);
-    await hinter.removeHints(OPTIONS, false);
-    await attached;
+    await hinter.removeHints(id, OPTIONS, false);
   });
 
   void test("letters typed before the first rects are applied to later batches too", async () => {
     hinter.setup("asdf");
-    const attached = hinter.attachHints();
+    const id = await hinter.attachHints();
     await tick();
-    hinter.hitHint("s" as SingleLetter);
+    hinter.hitHint(id, "s" as SingleLetter);
 
     // WHY: the first batch holds hint "a", the second hint "s".
     aggregator.handleRects(requestId + 1, RECTS);
@@ -174,15 +214,14 @@ void describe("HinterContentRoot", () => {
     assert.equal(view.batches[1][0].state, "hit");
     assert.equal(view.hits.length, 1);
     assert.ok(view.hits[0].includes(view.batches[1][0]));
-    await hinter.removeHints(OPTIONS, false);
-    await attached;
+    await hinter.removeHints(id, OPTIONS, false);
   });
 
   void test("later batches without a hit do not call view.hit again", async () => {
     hinter.setup("asdf");
-    const attached = hinter.attachHints();
+    const id = await hinter.attachHints();
     await tick();
-    hinter.hitHint("a" as SingleLetter);
+    hinter.hitHint(id, "a" as SingleLetter);
 
     aggregator.handleRects(requestId + 1, RECTS);
     await tick();
@@ -191,21 +230,20 @@ void describe("HinterContentRoot", () => {
     await tick();
 
     assert.equal(view.hits.length, 1);
-    await hinter.removeHints(OPTIONS, false);
-    await attached;
+    await hinter.removeHints(id, OPTIONS, false);
   });
 
   void test("a later batch does not call view.hit after the Cycle Key", async () => {
     hinter.setup("asdf");
-    const attached = hinter.attachHints();
+    const id = await hinter.attachHints();
     await tick();
-    hinter.hitHint("a" as SingleLetter);
+    hinter.hitHint(id, "a" as SingleLetter);
     aggregator.handleRects(requestId + 1, RECTS);
     await tick();
     const a = view.batches[0][0];
     const b = { ...a, hint: "zz", state: "candidate" } as HintedElement;
     view.setCycleSet([a, b]);
-    hinter.cycleHint();
+    hinter.cycleHint(id);
     const badge = view.badges.at(-1);
     assert.deepEqual(badge, { count: 1, index: 2, total: 2 });
     const calls = view.hits.length;
@@ -216,19 +254,18 @@ void describe("HinterContentRoot", () => {
 
     assert.equal(view.hits.length, calls);
     assert.deepEqual(view.badges.at(-1), badge);
-    await hinter.removeHints(OPTIONS, false);
-    await attached;
+    await hinter.removeHints(id, OPTIONS, false);
   });
 
   void test("letters typed after an empty first batch are applied to the next batch", async () => {
     hinter.setup("asdf");
-    const attached = hinter.attachHints();
+    const id = await hinter.attachHints();
     await tick();
     aggregator.handleRects(requestId + 1, []);
     await tick();
     assert.equal(view.isStarted(), true);
 
-    hinter.hitHint("a" as SingleLetter);
+    hinter.hitHint(id, "a" as SingleLetter);
     assert.equal(view.hits.length, 1);
     aggregator.handleRects(requestId + 1, RECTS);
     await tick();
@@ -236,19 +273,17 @@ void describe("HinterContentRoot", () => {
     assert.equal(view.batches[0][0].state, "hit");
     assert.equal(view.hits.length, 2);
     assert.ok(view.hits[1].includes(view.batches[0][0]));
-    await hinter.removeHints(OPTIONS, false);
-    await attached;
+    await hinter.removeHints(id, OPTIONS, false);
   });
 
   void test("a Cycle Key and an Action Key before the first rects call neither view.hit nor an action", async () => {
     hinter.setup("asdf");
-    const attached = hinter.attachHints();
+    const id = await hinter.attachHints();
     await tick();
     sentTypes.length = 0;
 
-    hinter.cycleHint();
-    await hinter.removeHints(OPTIONS, true);
-    await attached;
+    hinter.cycleHint(id);
+    await hinter.removeHints(id, OPTIONS, true);
 
     assert.equal(view.hits.length, 0);
     assert.ok(!sentTypes.includes("ExecuteAction"));

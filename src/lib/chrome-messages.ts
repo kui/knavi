@@ -1,5 +1,11 @@
 import type { SingleLetter } from "./strings";
 
+/**
+ * Assigned by content-root when it accepts a hint session; increases within
+ * one top-frame document.
+ */
+export type SessionId = number;
+
 export interface RuntimeMessages {
   GetSettings: {
     payload: { names: (keyof Settings)[] };
@@ -15,20 +21,20 @@ export interface RuntimeMessages {
   };
 
   AttachHints: {
-    /** Echoed in SyncHintingState(true) so frames can tell who started the session. */
-    payload: { sessionId: string };
-    response: void;
+    payload: void;
+    /** Answered once the session has started, not when it ends. */
+    response: { sessionId: SessionId };
   };
   HitHint: {
-    payload: { key: SingleLetter };
+    payload: { sessionId: SessionId; key: SingleLetter };
     response: void;
   };
   CycleHint: {
-    payload: void;
+    payload: { sessionId: SessionId };
     response: void;
   };
   RemoveHints: {
-    payload: { options: ActionOptions; execute: boolean };
+    payload: { sessionId: SessionId; options: ActionOptions; execute: boolean };
     response: void;
   };
 
@@ -72,38 +78,36 @@ export interface RuntimeMessages {
 export interface TabMessages {
   AttachHintsInTab: {
     payload: void;
-    response: void;
+    response: { sessionId: SessionId };
   };
   HitHintInTab: {
-    payload: { key: SingleLetter };
+    payload: { sessionId: SessionId; key: SingleLetter };
     response: void;
   };
   CycleHintInTab: {
-    payload: void;
+    payload: { sessionId: SessionId };
     response: void;
   };
   RemoveHintsInTab: {
-    payload: { options: ActionOptions; execute: boolean };
+    payload: { sessionId: SessionId; options: ActionOptions; execute: boolean };
     response: void;
   };
   /**
-   * Broadcast to every frame (no frameId filter) when the background
-   * forwards AttachHints/RemoveHints, so each frame's KeyboardHandler routes
-   * keystrokes correctly even when focus sits in a frame that did not
-   * initiate the session (#120).
+   * Broadcast to every frame (no frameId filter) when a session starts or is
+   * asked to end, so each frame's KeyboardHandler routes keystrokes correctly
+   * even when focus sits in a frame that did not initiate the session (#120).
    * Kept separate from AttachHintsInTab/RemoveHintsInTab on purpose: those
    * are 1:1 RPCs to the session-owning root frame, and frames eavesdropping
-   * on them cannot observe the response, so a failed attach would strand
-   * them at hinting=true and handleKeypress would swallow every keystroke.
-   * A dedicated message lets the background compensate with {active:false}
-   * when the attach fails.
-   * INVARIANT: dispatch at request time, not after the RPC settles.
-   * AttachHintsInTab resolves only after rect streaming and RemoveHintsInTab
-   * only after the action executes; by then the next session's keystrokes
-   * can already be in flight and a late sync would clobber the newer flag.
+   * on them cannot observe the response.
+   * Broadcasts are not ordered against each other or against the replies to
+   * AttachHints, so frames drop one whose sessionId is older than the latest
+   * they have seen.
+   * INVARIANT: dispatch true as soon as content-root accepts the session and
+   * false when RemoveHints is received, not after the RPC settles: by then
+   * the next session's keystrokes can already be in flight.
    */
   SyncHintingState: {
-    payload: { active: true; sessionId: string } | { active: false };
+    payload: { active: boolean; sessionId: SessionId };
     response: void;
   };
 
