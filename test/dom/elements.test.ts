@@ -318,4 +318,23 @@ void describe("traverseComposedParent with slots", () => {
 
   void test("steps from a slotted node to its slot before its light parent", () =>
     assert.deepEqual(parents(label), [slot, button, host]));
+
+  void test("follows a slot that is itself assigned to an outer slot", () => {
+    const outerHost = new FakeNode();
+    const outerShadow = new FakeShadowRoot(outerHost);
+    const outerButton = new FakeNode(outerShadow);
+    const outerSlot = new FakeNode(outerButton);
+    const innerHost = new FakeNode(outerHost);
+    const innerShadow = new FakeShadowRoot(innerHost);
+    const innerSlot = new FakeNode(innerShadow);
+    innerSlot.assignedSlot = outerSlot;
+    assert.deepEqual(parents(innerSlot), [outerSlot, outerButton, outerHost]);
+  });
+
+  void test("falls back to the light parent when assignedSlot is null", () => {
+    const closedHost = new FakeNode();
+    const unassigned = new FakeNode(closedHost);
+    unassigned.assignedSlot = null;
+    assert.deepEqual(parents(unassigned), [closedHost]);
+  });
 });
