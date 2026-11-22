@@ -1,10 +1,15 @@
 # ast-grep rules
 
 `no-fixed-wait-in-e2e` forbids fixed-time sleeps in `test/e2e/`:
-`waitForTimeout` is always rejected, and so are `setTimeout` calls and
-`await sleep(N)`-style helper calls (`sleep`, `delay`, `wait`, `pause`,
-`timeout`, also as a member call) unless they are inside a `while` loop. See
-[dev-docs/testing.md](../../dev-docs/testing.md).
+`waitForTimeout`, a `setTimeout` inside `new Promise(...)`, and `await sleep(N)`-style
+helper calls (`sleep`, `delay`, `wait`, `pause`, `timeout`, also as a member
+call). See [dev-docs/testing.md](../../dev-docs/testing.md).
+
+To allow a legitimate exception, put
+`// ast-grep-ignore: <rule-id> -- WHY: <reason>` on the line before it (or at
+the end of the line). The `-- WHY:` reason is required: a bare
+`// ast-grep-ignore` fails `require-comment-rationale`. A suppression that
+suppresses nothing fails lint (`--error=unused-suppression`).
 
 ## Comment-rationale rules
 

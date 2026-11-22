@@ -49,6 +49,7 @@ export const test = base.extend<Fixtures>({
         if (Date.now() > deadline) {
           throw new Error("onInstalled back-fill did not write css in 10 s");
         }
+        // ast-grep-ignore: no-fixed-wait-in-e2e -- WHY: bounded polling loop that re-checks its condition on each iteration.
         await new Promise((r) => setTimeout(r, 50));
       }
     });
