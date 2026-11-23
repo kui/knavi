@@ -4,6 +4,7 @@ import settings from "./lib/settings";
 import { keyCodeToChars } from "./lib/key-chars";
 import { waitUntil } from "./dom/animations";
 import { printError } from "./lib/errors";
+import { validateHintLetters } from "./lib/hint-letters";
 
 async function init() {
   await waitUntil(() => Boolean(document.body));
@@ -93,6 +94,12 @@ function computeKeyConflicts(values: Record<string, string>): {
       invalid.add(a);
       invalid.add(b);
     }
+  }
+
+  const hintsError = validateHintLetters(values.hints ?? "");
+  if (hintsError) {
+    messages.push(hintsError);
+    invalid.add("hints");
   }
 
   const hints = (values.hints ?? "").toLowerCase();
