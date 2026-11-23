@@ -78,7 +78,7 @@ async function updateActiveTabs() {
   );
 }
 
-export function onActivated({ tabId }: { tabId: number }) {
+export function onActivated({ tabId }: chrome.tabs.OnActivatedInfo) {
   Promise.all([chrome.tabs.get(tabId), loadBlackList()])
     .then(([t, list]) => updateTab(tabId, t.url, list))
     .catch(printErrorUnlessTargetGone);
@@ -86,8 +86,8 @@ export function onActivated({ tabId }: { tabId: number }) {
 
 export function onUpdated(
   tabId: number,
-  changeInfo: { url?: string; status?: string },
-  tab: { url?: string },
+  changeInfo: chrome.tabs.OnUpdatedInfo,
+  tab: chrome.tabs.Tab,
 ) {
   /* WHY: The exact onUpdated firing behavior (e.g. for history.pushState/
      replaceState navigations) is not documented, so we react broadly to any
@@ -99,8 +99,8 @@ export function onUpdated(
 }
 
 export function onStorageChanged(
-  changes: Record<string, unknown>,
-  area: string,
+  changes: Record<string, chrome.storage.StorageChange>,
+  area: chrome.storage.AreaName,
 ) {
   if (area !== "sync" && area !== "local") return;
   if (!("blackList" in changes)) return;

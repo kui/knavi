@@ -7,8 +7,11 @@ pages).
 files (`src/background.ts`, `src/content-all.ts`, `src/content-root.ts`,
 `src/options.ts`, `src/popup.ts`):
 
-- `chrome.*.*.addListener`;
-- `addEventListener` on `window`, `document` and `window.navigation`.
+- `addListener` on any `chrome.*` event, at any depth (e.g.
+  `chrome.storage.local.onChanged.addListener`);
+- `addEventListener` on `window`, `document`, `self`, `globalThis` and
+  `navigation` / `window.navigation` (with or without `?.`), and a bare
+  `addEventListener(...)`.
 
 Listeners on elements or `AbortSignal`s that a module creates itself stay
 allowed. Export a handler from the module and wire it in the entry point.

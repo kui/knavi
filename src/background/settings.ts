@@ -15,8 +15,8 @@ let toggleQueue: Promise<unknown> = Promise.resolve();
    and back-fill defaults into the newly active area: onInstalled only ran on
    install/update, so a later switch would otherwise leave that area empty. */
 export function onStorageChanged(
-  changes: Record<string, unknown>,
-  area: string,
+  changes: Record<string, chrome.storage.StorageChange>,
+  area: chrome.storage.AreaName,
 ) {
   if (area !== "local" || !("_area" in changes)) return;
   settings

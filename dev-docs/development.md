@@ -34,9 +34,10 @@ a test belongs in, what may be faked, and how to wait in E2E tests.
 
 ## Code conventions
 
-- Event-hook wiring belongs in the entry-point files; the ast-grep rule
-  `entry-point-event-wiring` enforces it (see
-  [ast-grep/rules/README.md](../ast-grep/rules/README.md)). Modules under
+- Event-hook wiring belongs in the entry-point files (`src/background.ts`,
+  `src/content-all.ts`, `src/content-root.ts`, `src/options.ts`,
+  `src/popup.ts`); the ast-grep rule `entry-point-event-wiring` enforces it
+  (see [ast-grep/rules/README.md](../ast-grep/rules/README.md)). Modules under
   `src/{name}/` export handler functions or objects, and the entry point wires
   them up.
 - An ast-grep rule (`require-comment-rationale`) requires every source comment
