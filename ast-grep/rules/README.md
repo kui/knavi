@@ -3,6 +3,16 @@
 `no-random-uuid` forbids `crypto.randomUUID` in `src/` (undefined on non-secure
 pages).
 
+`entry-point-event-wiring` forbids registering listeners outside the entry-point
+files (`src/background.ts`, `src/content-all.ts`, `src/content-root.ts`,
+`src/options.ts`, `src/popup.ts`):
+
+- `chrome.*.*.addListener`;
+- `addEventListener` on `window`, `document` and `window.navigation`.
+
+Listeners on elements or `AbortSignal`s that a module creates itself stay
+allowed. Export a handler from the module and wire it in the entry point.
+
 `no-fixed-wait-in-e2e` forbids fixed-time sleeps in `test/e2e/`:
 
 - `waitForTimeout`;

@@ -78,26 +78,36 @@ async function updateActiveTabs() {
   );
 }
 
+export function onActivated({ tabId }: { tabId: number }) {
+  Promise.all([chrome.tabs.get(tabId), loadBlackList()])
+    .then(([t, list]) => updateTab(tabId, t.url, list))
+    .catch(printErrorUnlessTargetGone);
+}
+
+export function onUpdated(
+  tabId: number,
+  changeInfo: { url?: string; status?: string },
+  tab: { url?: string },
+) {
+  /* WHY: The exact onUpdated firing behavior (e.g. for history.pushState/
+     replaceState navigations) is not documented, so we react broadly to any
+     URL/status change and re-evaluate from the tab's current URL. */
+  if (changeInfo.url == null && changeInfo.status == null) return;
+  loadBlackList()
+    .then((list) => updateTab(tabId, tab.url, list))
+    .catch(printErrorUnlessTargetGone);
+}
+
+export function onStorageChanged(
+  changes: Record<string, unknown>,
+  area: string,
+) {
+  if (area !== "sync" && area !== "local") return;
+  if (!("blackList" in changes)) return;
+  cachedList = undefined;
+  updateActiveTabs().catch(printError);
+}
+
 export function init() {
-  chrome.tabs.onActivated.addListener(({ tabId }) => {
-    Promise.all([chrome.tabs.get(tabId), loadBlackList()])
-      .then(([t, list]) => updateTab(tabId, t.url, list))
-      .catch(printErrorUnlessTargetGone);
-  });
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    /* WHY: The exact onUpdated firing behavior (e.g. for history.pushState/
-       replaceState navigations) is not documented, so we react broadly to any
-       URL/status change and re-evaluate from the tab's current URL. */
-    if (changeInfo.url == null && changeInfo.status == null) return;
-    loadBlackList()
-      .then((list) => updateTab(tabId, tab.url, list))
-      .catch(printErrorUnlessTargetGone);
-  });
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area !== "sync" && area !== "local") return;
-    if (!("blackList" in changes)) return;
-    cachedList = undefined;
-    updateActiveTabs().catch(printError);
-  });
   updateActiveTabs().catch(printError);
 }

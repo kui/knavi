@@ -34,12 +34,11 @@ a test belongs in, what may be faked, and how to wait in E2E tests.
 
 ## Code conventions
 
-- Event-hook wiring (`window.addEventListener`,
-  `chrome.runtime.onMessage.addListener`,
-  `chrome.storage.onChanged.addListener`, etc.) belongs in the entry-point
-  files (`src/background.ts`, `src/content-all.ts`, `src/content-root.ts`).
-  Logic implementation belongs in the corresponding `src/{name}/*.ts` modules,
-  which export handler functions or objects to be wired up by the entry point.
+- Event-hook wiring belongs in the entry-point files; the ast-grep rule
+  `entry-point-event-wiring` enforces it (see
+  [ast-grep/rules/README.md](../ast-grep/rules/README.md)). Modules under
+  `src/{name}/` export handler functions or objects, and the entry point wires
+  them up.
 - An ast-grep rule (`require-comment-rationale`) requires every source comment
   to either start with `WHY:` / `HACK:` / `SAFETY:` / `INVARIANT:`, or qualify
   for one of the built-in exemptions (JSDoc blocks, tooling directives, etc.;

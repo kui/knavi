@@ -1,0 +1,23 @@
+id: entry-point-event-wiring
+language: TypeScript
+severity: error
+message: |
+  Register event listeners on `chrome.*` events, `window`, `document` and
+  `window.navigation` only in the entry-point files. Export a handler from
+  this module and wire it up in the entry point (src/background.ts,
+  src/content-all.ts, src/content-root.ts).
+files:
+  - src/**
+ignores:
+  - src/background.ts
+  - src/content-all.ts
+  - src/content-root.ts
+  - src/options.ts
+  - src/popup.ts
+rule:
+  any:
+    - pattern: chrome.$NS.$EVENT.addListener($$$)
+    - pattern: window.addEventListener($$$)
+    - pattern: document.addEventListener($$$)
+    - pattern: window.navigation?.addEventListener($$$)
+    - pattern: window.navigation.addEventListener($$$)

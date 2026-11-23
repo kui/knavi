@@ -14,13 +14,16 @@ let toggleQueue: Promise<unknown> = Promise.resolve();
    in local storage. When the user switches it, invalidate the memoized area
    and back-fill defaults into the newly active area: onInstalled only ran on
    install/update, so a later switch would otherwise leave that area empty. */
-chrome.storage.onChanged.addListener((changes, area) => {
+export function onStorageChanged(
+  changes: Record<string, unknown>,
+  area: string,
+) {
   if (area !== "local" || !("_area" in changes)) return;
   settings
     .getStorage(true)
     .then(() => settings.backfillDefaults())
     .catch(printError);
-});
+}
 
 export const router = Router.newRuntimeInstance()
   .add("GetSettings", async (message) => {
