@@ -108,6 +108,14 @@ export class KeyboardHandlerContentAll {
     const cycleMatcher = this.cycleMatcher?.keydown(event);
 
     if (this.isBlacklisted()) {
+      /* WHY: a session another frame owns stays visible while this frame
+         matches the blacklist, so the Cancel Key must still end it from
+         here. The Action Key stays blocked: the hit target may be on this
+         blacklisted page. */
+      if (this.hinter.isHinting && cancelMatcher?.match()) {
+        this.endSession(modifiers(event), false);
+        return true;
+      }
       return false;
     }
 
