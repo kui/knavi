@@ -85,7 +85,7 @@ function report(path: string[], frameId: number) {
 void describe("background AllRectsRequest routing", () => {
   beforeEach(() => {
     sent.length = 0;
-    framePaths.reset(TAB);
+    framePaths.reset(TAB, 1);
   });
 
   void test("routes the empty path to the top frame without a report", async () => {
@@ -161,7 +161,7 @@ void describe("background AllRectsRequest routing", () => {
   void test("ignores a report made outside a session", async () => {
     framePaths.end(TAB);
     await report(["0"], 9);
-    framePaths.reset(TAB);
+    framePaths.reset(TAB, 1);
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
   });
 
@@ -169,13 +169,13 @@ void describe("background AllRectsRequest routing", () => {
     framePaths.end(TAB);
     assert.equal(await framePaths.lookup(TAB, [], 10), undefined);
     await report(["0"], 9);
-    framePaths.reset(TAB);
+    framePaths.reset(TAB, 1);
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
   });
 
   void test("forgets reports of the previous hint session", async () => {
     await report(["0"], 9);
-    framePaths.reset(TAB);
+    framePaths.reset(TAB, 1);
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
   });
 });

@@ -102,4 +102,22 @@ void describe("hint session and the frame path table", () => {
     await assert.rejects(call("AttachHints"));
     assert.deepEqual(syncStates(), []);
   });
+
+  void test("a rejected AttachHints keeps the live session's frame paths", async () => {
+    await call("AttachHints");
+    framePaths.report(TAB, ["0"], 9);
+    attachFails = true;
+    await assert.rejects(call("AttachHints"));
+    assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
+  });
+
+  void test("RemoveHints of an older session keeps the live session's frame paths", async () => {
+    const { sessionId: old } = (await call("AttachHints")) as {
+      sessionId: number;
+    };
+    await call("AttachHints");
+    framePaths.report(TAB, ["0"], 9);
+    await call("RemoveHints", { sessionId: old, options: {}, execute: false });
+    assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
+  });
 });

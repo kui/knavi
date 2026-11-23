@@ -1,3 +1,5 @@
+import type { SessionId } from "../lib/chrome-messages";
+
 /**
  * The path → frameId table of the hint session running in each tab. Frames
  * report their path when a session starts (see FramePath in
@@ -11,6 +13,7 @@
 const LOOKUP_TIMEOUT_MS = 300;
 
 interface Session {
+  id: SessionId;
   frames: Map<string, number>;
   waiters: Map<string, ((frameId: number | undefined) => void)[]>;
 }
@@ -21,9 +24,9 @@ function key(path: readonly string[]): string {
   return JSON.stringify(path);
 }
 
-function newSession(): Session {
+function newSession(id: SessionId): Session {
   // INVARIANT: the top frame is always frame 0.
-  return { frames: new Map([[key([]), 0]]), waiters: new Map() };
+  return { id, frames: new Map([[key([]), 0]]), waiters: new Map() };
 }
 
 function settleWaiters(session: Session) {
@@ -32,16 +35,33 @@ function settleWaiters(session: Session) {
   }
 }
 
-/** Starts a new hint session in the tab, dropping the previous table. */
-export function reset(tabId: number): void {
+/**
+ * Starts the table of session `sessionId`, which content-root has accepted,
+ * dropping the previous one.
+ */
+export function reset(tabId: number, sessionId: SessionId): void {
   const old = sessions.get(tabId);
   if (old) settleWaiters(old);
-  sessions.set(tabId, newSession());
+  sessions.set(tabId, newSession(sessionId));
 }
 
-export function end(tabId: number): void {
+/**
+ * Drops the table if it belongs to session `sessionId`, or whatever table the
+ * tab has when the id is omitted.
+ */
+export function end(tabId: number, sessionId?: SessionId): void {
   const old = sessions.get(tabId);
-  if (old) settleWaiters(old);
+  if (!old) return;
+  if (sessionId != null && old.id !== sessionId) {
+    console.debug(
+      "Keep the frame paths of",
+      old.id,
+      "on the end of",
+      sessionId,
+    );
+    return;
+  }
+  settleWaiters(old);
   sessions.delete(tabId);
 }
 

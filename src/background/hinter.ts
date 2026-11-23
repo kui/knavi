@@ -20,7 +20,6 @@ function syncHintingState(
 export const router = Router.newRuntimeInstance()
   .add("AttachHints", async (_msg, sender) => {
     const tabId = requireTabId(sender);
-    framePaths.reset(tabId);
     /* WHY: a rejected attach (e.g. "already started hinting" while another
        frame's session is live) announced nothing, so it broadcasts nothing;
        a false here would end the live session in every frame. */
@@ -30,6 +29,10 @@ export const router = Router.newRuntimeInstance()
       undefined,
       { frameId: 0 },
     );
+    /* WHY: reset only once content-root has accepted, so a rejected attach
+       keeps the live session's table. Frames report their paths on the true
+       broadcast, which follows. */
+    framePaths.reset(tabId, sessionId);
     syncHintingState(tabId, true, sessionId);
     return { sessionId };
   })
@@ -52,7 +55,7 @@ export const router = Router.newRuntimeInstance()
   .add("RemoveHints", async ({ sessionId, options, execute }, sender) => {
     const tabId = requireTabId(sender);
     syncHintingState(tabId, false, sessionId);
-    framePaths.end(tabId);
+    framePaths.end(tabId, sessionId);
     return await sendToTab(
       tabId,
       "RemoveHintsInTab",
