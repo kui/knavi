@@ -2,14 +2,13 @@ import { RectAggregatorContentAll as RectAggregator } from "./content-all/rect-a
 import { KeyboardHandlerContentAll as KeyboardHandler } from "./content-all/keyboard-handler";
 import { BlurerContentAll as Blurer } from "./content-all/blurer";
 import settingsClient from "./lib/settings-client";
-import { isRelevantChange } from "./lib/settings-change";
 import { printError } from "./lib/errors";
-import { wait } from "./lib/promises";
 import BlurerClient from "./content-all/blurer-client";
 import HinterClient from "./lib/hinter-client";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
 import { Coordinates, Rect } from "./dom/rects";
 import { FramePath } from "./content-all/frame-path";
+import { SettingsWatcher } from "./content-all/settings-watcher";
 
 globalThis.KNAVI_FILE = "content-all";
 
@@ -25,79 +24,23 @@ const keyboardHandler = new KeyboardHandler(blurerClient, hinterClient);
 const rectAggregator = new RectAggregator(framePath);
 const blurer = new Blurer(framePath);
 
-async function setupKeyboardHandler() {
-  const ticket = keyboardHandler.newBlacklistTicket();
-  const [setting, matchedBlacklist] =
-    await settingsClient.getWithBlacklistMatch(
-      [
-        "magicKey",
-        "blurKey",
-        "hints",
-        "stickyKey",
-        "actionKey",
-        "cancelKey",
-        "cycleKey",
-      ],
-      location.href,
-    );
-  keyboardHandler.setup(setting, matchedBlacklist, ticket);
-  console.debug("settings loaded");
-  document.documentElement.dataset.knaviReady = "1";
-}
-setupKeyboardHandler().catch(printError);
-
-const RELEVANT_KEYS: (keyof Settings)[] = [
-  "magicKey",
-  "blurKey",
-  "hints",
-  "stickyKey",
-  "actionKey",
-  "cancelKey",
-  "cycleKey",
-  "blackList",
-];
-
-let debounceController: AbortController | null = null;
-
-async function refreshBlacklist() {
-  const ticket = keyboardHandler.newBlacklistTicket();
-  const matched = await settingsClient.matchBlacklist(location.href);
-  keyboardHandler.updateBlacklist(matched, ticket);
-}
+const settingsWatcher = new SettingsWatcher({
+  hinterClient,
+  keyboardHandler,
+  settingsClient,
+  url: () => location.href,
+  onLoaded: () => {
+    document.documentElement.dataset.knaviReady = "1";
+  },
+});
+settingsWatcher.load().catch(printError);
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  (async () => {
-    if (!(await isRelevantChange(changes, areaName, RELEVANT_KEYS))) return;
-    debounceController?.abort();
-    debounceController = new AbortController();
-    const { signal } = debounceController;
-    await wait(200, signal);
-    /* WHY: blacklisting the site, or switching to a storage area whose
-       blacklist matches (no `blackList` key changes then), must end a running
-       (sticky) session now, while the other key settings wait for it so they
-       do not change mid-session. Without a session, setupKeyboardHandler()
-       below matches the blacklist itself. */
-    if (hinterClient.isHinting) {
-      try {
-        await refreshBlacklist();
-      } catch (e) {
-        // WHY: a failed refresh must not stop the handler from reaching the settings reload.
-        printError(e);
-      }
-      signal.throwIfAborted();
-    }
-    while (hinterClient.isHinting) {
-      await wait(200, signal);
-    }
-    await setupKeyboardHandler();
-  })().catch((e) => {
-    if (e instanceof DOMException && e.name === "AbortError") return;
-    printError(e);
-  });
+  void settingsWatcher.handleStorageChange(changes, areaName);
 });
 
 window.navigation?.addEventListener("navigatesuccess", () => {
-  refreshBlacklist().catch(printError);
+  void settingsWatcher.handleNavigateSuccess();
 });
 
 chrome.runtime.onMessage.addListener(
