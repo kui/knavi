@@ -1,148 +1,165 @@
 import { sendToRuntime } from "./chrome-messages";
+import type { SessionId } from "./chrome-messages";
 import type { SingleLetter } from "./strings";
 
 function noop() {
-  /* WHY: intentionally empty — settled callback for the removeBarrier promise. */
+  /* WHY: intentionally empty — settled callback that keeps the queue from rejecting. */
 }
 
-/* WHY: crypto.randomUUID is undefined on non-secure pages (plain http other
-   than localhost) and content scripts follow the page's secure context, so
-   it would break knavi there. getRandomValues is available everywhere. */
-function randomHex() {
-  return Array.from(crypto.getRandomValues(new Uint32Array(2)), (n) =>
-    n.toString(16).padStart(8, "0"),
-  ).join("");
+/**
+ * This frame's view of the tab's live session, built from SyncHintingState
+ * broadcasts and the replies to this frame's own AttachHints. Those arrive in
+ * no fixed order, so anything older than the latest session id is dropped.
+ */
+export class TabSession {
+  /* WHY: below every id content-root issues. */
+  private latest: SessionId = 0;
+  private active = false;
+
+  /** The live session's id, or null. */
+  get id(): SessionId | null {
+    return this.active ? this.latest : null;
+  }
+
+  /** Returns false when the update is stale and ignored. */
+  apply(active: boolean, id: SessionId): boolean {
+    if (id < this.latest) return false;
+    /* WHY: the true broadcast of a session can arrive after its false. */
+    if (id === this.latest && active && !this.active) return false;
+    this.latest = id;
+    this.active = active;
+    return true;
+  }
 }
+
+/** An AttachHints this frame sent. */
+interface OwnAttach {
+  state:
+    | { kind: "pending"; removed: boolean }
+    | { kind: "started"; id: SessionId }
+    | { kind: "failed" };
+}
+
+/**
+ * The session that this frame's input goes to: its own attach while the reply
+ * is pending, or else the tab's live session (null when none is live).
+ */
+type InputTarget = { own: OwnAttach } | { id: SessionId | null };
 
 export default class HinterClient {
-  private hinting: boolean;
+  private readonly tab = new TabSession();
+  /** The latest attach this frame made. */
+  private own: OwnAttach | null = null;
   /**
-   * WHY: the AttachHints dispatch waits for this barrier (and hint input waits
-   * for that dispatch via `ready`), so RemoveHintsInTab always reaches
-   * content-root before AttachHintsInTab. Without it, rapid action→sticky
-   * sequences interleave sessions and silently drop hitHint calls.
-   * Always resolves, never rejects.
+   * WHY: every hint message goes through this queue, so content-root receives
+   * them in the order they were typed: a RemoveHints before the next
+   * AttachHints, letters after the AttachHints they belong to. Never rejects.
    */
-  private removeBarrier: Promise<void> | null = null;
-  /** Settles once AttachHints has been dispatched; hint input waits on it. */
-  private ready: Promise<void> = Promise.resolve();
-  /** The `ready` of the latest attachHints while its dispatch is pending. */
-  private pendingDispatch: Promise<void> | null = null;
-  /** Makes this frame's session ids recognizable: `${idPrefix}-${ownSeq}`. */
-  private readonly idPrefix = randomHex();
-  private ownSeq = 0;
-  private ownSessionId: string | null = null;
-  /** Id of the latest session announced by SyncHintingState(true) or started here. */
-  private currentSessionId: string | null = null;
+  private queue: Promise<void> = Promise.resolve();
 
-  constructor() {
-    this.hinting = false;
-  }
-
+  /**
+   * Tab-wide: true while any frame's session is live, synced to every frame
+   * because keyboard focus can move to a frame that did not initiate the
+   * session (#120). Flips synchronously on attachHints and removeHints.
+   */
   get isHinting() {
-    return this.hinting;
+    const t = this.inputTarget();
+    return "own" in t || t.id !== null;
   }
 
-  /**
-   * True when the current session was started by this frame. `isHinting` is
-   * tab-wide (synced to every frame); this is per frame. Decided by session id
-   * because the end broadcast of an earlier session can arrive after this
-   * frame started the next one.
-   */
+  /** True when the live session was started by this frame. */
   get ownsSession() {
-    return (
-      this.hinting &&
-      this.ownSessionId !== null &&
-      this.currentSessionId === this.ownSessionId
-    );
+    const t = this.inputTarget();
+    if ("own" in t) return true;
+    const own = this.own?.state;
+    return own?.kind === "started" && t.id === own.id;
+  }
+
+  /** Returns false when the message was stale and ignored. */
+  syncHinting(active: boolean, sessionId: SessionId): boolean {
+    return this.tab.apply(active, sessionId);
+  }
+
+  /** Resolves once content-root has accepted the session. */
+  async attachHints(): Promise<void> {
+    if (this.isHinting) throw Error("Illegal state");
+    const own: OwnAttach = { state: { kind: "pending", removed: false } };
+    this.own = own;
+    await this.enqueue(async () => {
+      let id: SessionId;
+      try {
+        id = (await sendToRuntime("AttachHints", undefined)).sessionId;
+      } catch (e) {
+        own.state = { kind: "failed" };
+        throw e;
+      }
+      const removed = own.state.kind === "pending" && own.state.removed;
+      own.state = { kind: "started", id };
+      /* WHY: the reply can arrive before the true broadcast of the session. */
+      this.tab.apply(!removed, id);
+    });
+  }
+
+  async hitHint(key: SingleLetter): Promise<void> {
+    if (!this.isHinting) throw Error("Illegal state");
+    const target = this.resolver(this.inputTarget());
+    await this.enqueue(async () => {
+      const sessionId = target();
+      if (sessionId === null) return;
+      await sendToRuntime("HitHint", { sessionId, key });
+    });
+  }
+
+  async cycleHint(): Promise<void> {
+    if (!this.isHinting) throw Error("Illegal state");
+    const target = this.resolver(this.inputTarget());
+    await this.enqueue(async () => {
+      const sessionId = target();
+      if (sessionId === null) return;
+      await sendToRuntime("CycleHint", { sessionId });
+    });
+  }
+
+  async removeHints(options: ActionOptions, execute: boolean): Promise<void> {
+    if (!this.isHinting) throw Error("Illegal state");
+    const t = this.inputTarget();
+    const target = this.resolver(t);
+    if ("own" in t) {
+      t.own.state = { kind: "pending", removed: true };
+    } else if (t.id !== null) {
+      this.tab.apply(false, t.id);
+    }
+    await this.enqueue(async () => {
+      const sessionId = target();
+      if (sessionId === null) return;
+      await sendToRuntime("RemoveHints", { sessionId, options, execute });
+    });
+  }
+
+  private inputTarget(): InputTarget {
+    const own = this.own;
+    /* WHY: until the reply, the frame's own attach decides; sync broadcasts
+       of earlier sessions must not undo it and leak letters to the page
+       (#169). Once it is removed, a session another frame started meanwhile
+       takes the input. */
+    if (own?.state.kind === "pending" && !own.state.removed) return { own };
+    return { id: this.tab.id };
   }
 
   /**
-   * WHY: keyboard focus can move to a frame that did not initiate the hint
-   * session, so every frame's flag is synced via the SyncHintingState
-   * broadcast (see TabMessages in chrome-messages.ts and #120).
+   * For an own attach still in flight, reads its id when the queued message
+   * is sent, because it is known only then; otherwise the tab's live id taken
+   * at call time.
    */
-  syncHinting(active: false): void;
-  syncHinting(active: true, sessionId: string): void;
-  syncHinting(...args: [active: false] | [active: true, sessionId: string]) {
-    const [active, sessionId] = args;
-    /* WHY: the previous session's SyncHintingState(false) broadcast can arrive
-       while attachHints waits for the remove barrier. Applying it would undo
-       the synchronous flag and leak queued hint letters to the page (#169). */
-    if (!active && this.pendingDispatch) return;
-    if (active) {
-      /* WHY: SyncHintingState(true) is sent when the background receives
-         AttachHints and is not ordered against this frame's later attaches, so
-         it can arrive after this frame started its next session. Applying it
-         would hand that session's ownership to the older id. */
-      if (this.isOlderOwnId(sessionId)) return;
-      this.currentSessionId = sessionId;
-    }
-    this.hinting = active;
+  private resolver(t: InputTarget): () => SessionId | null {
+    if ("own" in t)
+      return () => (t.own.state.kind === "started" ? t.own.state.id : null);
+    return () => t.id;
   }
 
-  private isOlderOwnId(sessionId: string) {
-    const prefix = `${this.idPrefix}-`;
-    return (
-      sessionId.startsWith(prefix) &&
-      Number(sessionId.slice(prefix.length)) < this.ownSeq
-    );
-  }
-
-  async attachHints() {
-    if (this.hinting) throw Error("Illegal state");
-    /* WHY: hinting flips synchronously so hint letters typed while the barrier
-       is pending are already routed here. Every later call waits on `ready`,
-       which keeps them in typing order and after AttachHintsInTab, instead of
-       leaking to the page or being dropped. */
-    this.hinting = true;
-    const sessionId = `${this.idPrefix}-${++this.ownSeq}`;
-    this.ownSessionId = sessionId;
-    this.currentSessionId = sessionId;
-    const barrier = this.removeBarrier;
-    /* WHY: AttachHints is answered only when the session ends, and ending it
-       needs RemoveHints. If `ready` waited for the answer, removeHints would
-       wait for the end of the session it is trying to end, so `ready` settles
-       when the message is dispatched. */
-    let attach: Promise<void> | undefined;
-    const dispatched = (async () => {
-      if (barrier) await barrier;
-      attach = sendToRuntime("AttachHints", { sessionId });
-    })();
-    this.ready = dispatched;
-    this.pendingDispatch = dispatched;
-    const clear = () => {
-      if (this.pendingDispatch === dispatched) this.pendingDispatch = null;
-    };
-    dispatched.then(clear, clear);
-    try {
-      await dispatched;
-      await attach;
-    } catch (e) {
-      if (this.ready === dispatched) this.hinting = false;
-      throw e;
-    }
-  }
-
-  async hitHint(key: SingleLetter) {
-    if (!this.hinting) throw Error("Illegal state");
-    await this.ready;
-    await sendToRuntime("HitHint", { key });
-  }
-
-  async cycleHint() {
-    if (!this.hinting) throw Error("Illegal state");
-    await this.ready;
-    await sendToRuntime("CycleHint", undefined);
-  }
-
-  async removeHints(options: ActionOptions, execute: boolean) {
-    if (!this.hinting) throw Error("Illegal state");
-    this.hinting = false;
-    const p = this.ready.then(() =>
-      sendToRuntime("RemoveHints", { options, execute }),
-    );
-    this.removeBarrier = p.then(noop, noop);
-    await p;
+  private enqueue(op: () => Promise<void>): Promise<void> {
+    const p = this.queue.then(op);
+    this.queue = p.then(noop, noop);
+    return p;
   }
 }

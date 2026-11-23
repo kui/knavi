@@ -3,15 +3,18 @@ import assert from "node:assert/strict";
 
 interface Sent {
   "@type": string;
-  sessionId?: string;
+  sessionId?: number;
   execute?: boolean;
 }
 const sent: Sent[] = [];
+let lastSessionId = 0;
 
 (globalThis as Record<string, unknown>).chrome = {
   runtime: {
     sendMessage: (msg: Sent) => {
       sent.push(msg);
+      if (msg["@type"] === "AttachHints")
+        return Promise.resolve({ response: { sessionId: ++lastSessionId } });
       return Promise.resolve({ response: undefined });
     },
   },
@@ -237,7 +240,7 @@ void describe("KeyboardHandlerContentAll with the real HinterClient", () => {
 
     handler.handleKeydown(keyEvent("keydown", " ", "Space"));
     await flush();
-    const first = sent.find((m) => m["@type"] === "AttachHints")?.sessionId;
+    const first = lastSessionId;
     assert.ok(first);
     handler.handleKeyup(keyEvent("keyup", " ", "Space"));
     await flush();

@@ -1,5 +1,5 @@
 import settingsClient from "./lib/settings-client";
-import { HinterContentRoot } from "./content-root/hinter";
+import { HinterContentRoot, buildHinterRouter } from "./content-root/hinter";
 import { BlurerContentRoot } from "./content-root/blurer";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
 import { RectAggregatorClient } from "./content-root/rect-aggregator-client";
@@ -38,12 +38,7 @@ chrome.runtime.onMessage.addListener(
     .add("ResponseRectsFragment", (m) =>
       rectAggregator.handleRects(m.requestId, m.rects),
     )
-    .add("AttachHintsInTab", () => hinter.attachHints())
-    .add("HitHintInTab", ({ key }) => hinter.hitHint(key))
-    .add("CycleHintInTab", () => hinter.cycleHint())
-    .add("RemoveHintsInTab", ({ options, execute }) =>
-      hinter.removeHints(options, execute),
-    )
+    .merge(buildHinterRouter(hinter))
     .add("BlurRoot", ({ rect }) => blurer.handleBlurRoot(rect))
     .buildListener(),
 );

@@ -1,0 +1,23 @@
+<!-- WHY: the label has its own cursor: pointer and a rect different from the shadow button. It resolves to the button it is slotted into and shares its hint instead of getting a second one (#164). -->
+<!-- WHY: gotoTest() clicks the body corner; the padding keeps that click off the button. -->
+<body style="margin: 0; padding: 40px">
+  <x-btn style="display: block; width: 240px">
+    <span
+      id="label"
+      style="display: block; width: 100px; height: 40px; cursor: pointer"
+      >slotted label</span
+    >
+  </x-btn>
+  <script>
+    customElements.define(
+      "x-btn",
+      class extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: "open" }).innerHTML =
+            '<button style="display: block; width: 100%; padding: 20px; border: 0" onclick="window.clickedTarget = event.target.localName"><slot></slot></button>';
+        }
+      },
+    );
+  </script>
+</body>

@@ -3,8 +3,12 @@ import { HintView } from "./hinter-view";
 import { map, zip } from "../lib/iters";
 import type { RectAggregatorClient } from "./rect-aggregator-client";
 import type { SingleLetter } from "../lib/strings";
+import { Router } from "../lib/chrome-messages";
+import type { SessionId } from "../lib/chrome-messages";
+import { printError } from "../lib/errors";
 
 interface HintContext {
+  id: SessionId;
   targets: HintedElement[];
   inputSequence: string[];
   hitTarget?: HintedElement | undefined;
@@ -19,6 +23,8 @@ interface HintContext {
 export class HinterContentRoot {
   private context: HintContext | null = null;
   private hintLetters = "";
+  private lastSessionId: SessionId = 0;
+  private isSetUp = false;
   /* WHY: the root frame loads its settings apart from the frame that catches
      the magic key, and right after install that load waits on the slow
      default CSS fetch, so AttachHintsInTab can arrive before setup(). */
@@ -31,28 +37,52 @@ export class HinterContentRoot {
 
   setup(hintLetters: string) {
     this.hintLetters = hintLetters;
+    this.isSetUp = true;
     this.setupDone.resolve();
   }
 
-  async attachHints() {
+  /**
+   * Starts a session and returns its id at once; the hints are rendered after
+   * that, without being awaited.
+   */
+  attachHints(): SessionId {
     if (this.context)
       throw Error("Ilegal state invocation: already started hinting");
+    if (this.isSetUp && this.hintLetters.length === 0)
+      throw Error("Ilegal state invocation: hintLetters is empty");
 
+    /* WHY: ids must keep growing across top-frame documents of a tab,
+       including one restored from the back/forward cache, because a
+       broadcast of another document can reach this one's frames and frames
+       drop ids below the latest they have seen. Taken from the clock,
+       assuming it does not step backwards. */
+    this.lastSessionId = Math.max(this.lastSessionId + 1, Date.now());
     const context: HintContext = {
+      id: this.lastSessionId,
       inputSequence: [],
       targets: [],
     };
     this.context = context;
+    /* WHY: the session is ended only by RemoveHints, so a failure while
+       rendering leaves it live for the user to end. Replying before the
+       setup wait lets RemoveHints through even if setup never finishes. */
+    this.render(context).catch(printError);
+    return context.id;
+  }
 
+  private async render(context: HintContext) {
+    /* WHY: the session may end at any await; rendering after that would
+       leave hints no session can remove. */
     await this.setupDone.promise;
-    await waitUntil(() => Boolean(document.body));
-    /* WHY: the magic key may be released at any await below; rendering after
-       that would leave hints no session can remove. */
     if (this.context !== context) return;
-    if (this.hintLetters.length === 0) {
-      this.context = null;
+    await waitUntil(() => Boolean(document.body));
+    if (this.context !== context) return;
+    if (this.hintLetters.length === 0)
       throw Error("Ilegal state invocation: hintLetters is empty");
-    }
+    /* WHY: letters typed before setup() were kept unchecked. */
+    context.inputSequence = context.inputSequence.filter((l) =>
+      this.hintLetters.includes(l),
+    );
 
     const hintTextGenerator = this.generateHintTexts();
     for await (const elementRects of this.rectAggregator.aggregate()) {
@@ -82,6 +112,18 @@ export class HinterContentRoot {
       if (changes.some((t) => t.state === "hit"))
         this.showHit(context, changes);
     }
+  }
+
+  /**
+   * The context of session `id` if it is the live one. Messages of an ended
+   * session can arrive after the next one started, so a mismatch is not an
+   * error.
+   */
+  private live(id: SessionId): HintContext | null {
+    const context = this.context;
+    if (context?.id === id) return context;
+    console.debug("Ignore a message of session", id, "live:", context?.id);
+    return null;
   }
 
   *generateHintTexts(): Generator<string> {
@@ -126,11 +168,13 @@ export class HinterContentRoot {
     };
   }
 
-  hitHint(inputLetter: SingleLetter) {
-    const context = this.context;
-    if (!context) throw Error("Ilegal state invocation: hinting not started");
+  hitHint(id: SessionId, inputLetter: SingleLetter) {
+    const context = this.live(id);
+    if (!context) return;
 
-    if (!this.hintLetters.includes(inputLetter)) return;
+    /* WHY: before setup() the hint letters are unknown, so keep the letter
+       for render() to check. */
+    if (this.isSetUp && !this.hintLetters.includes(inputLetter)) return;
 
     delete context.cycle;
 
@@ -150,9 +194,9 @@ export class HinterContentRoot {
     this.view.hit(changes, hit?.descriptions ?? null, cycleBadge);
   }
 
-  cycleHint() {
-    const context = this.context;
-    if (!context) throw Error("Ilegal state invocation: hinting not started");
+  cycleHint(id: SessionId) {
+    const context = this.live(id);
+    if (!context) return;
     if (!context.hitTarget) return;
 
     if (!context.cycle) {
@@ -180,11 +224,9 @@ export class HinterContentRoot {
     );
   }
 
-  async removeHints(options: ActionOptions, execute: boolean) {
-    const context = this.context;
-    if (!context) {
-      throw Error("Ilegal state invocation: hinting not started");
-    }
+  async removeHints(id: SessionId, options: ActionOptions, execute: boolean) {
+    const context = this.live(id);
+    if (!context) return;
     /* WHY: Clear the context synchronously, before any await. Executing the
      * action round-trips a message (e.g. a target=_blank action opening a new
      * tab); a second AttachHints arriving meanwhile must not see a stale
@@ -197,6 +239,16 @@ export class HinterContentRoot {
       options,
     );
   }
+}
+
+export function buildHinterRouter(hinter: HinterContentRoot) {
+  return Router.newTabInstance()
+    .add("AttachHintsInTab", () => ({ sessionId: hinter.attachHints() }))
+    .add("HitHintInTab", ({ sessionId, key }) => hinter.hitHint(sessionId, key))
+    .add("CycleHintInTab", ({ sessionId }) => hinter.cycleHint(sessionId))
+    .add("RemoveHintsInTab", ({ sessionId, options, execute }) =>
+      hinter.removeHints(sessionId, options, execute),
+    );
 }
 
 /** Return true if the state is changed. */

@@ -4,24 +4,27 @@ import assert from "node:assert/strict";
 interface Sent {
   type: string;
   active?: boolean;
-  sessionId?: string;
+  sessionId?: number;
 }
 const sent: Sent[] = [];
 let attachFails = false;
+let nextSessionId = 1;
 
 (globalThis as Record<string, unknown>).chrome = {
   tabs: {
     sendMessage: (
       _tabId: number,
-      message: { "@type": string; active?: boolean; sessionId?: string },
+      message: { "@type": string; active?: boolean; sessionId?: number },
     ) => {
       sent.push({
         type: message["@type"],
         active: message.active,
         sessionId: message.sessionId,
       });
-      if (message["@type"] === "AttachHintsInTab" && attachFails)
-        return Promise.reject(new Error("no receiver"));
+      if (message["@type"] === "AttachHintsInTab") {
+        if (attachFails) return Promise.reject(new Error("no receiver"));
+        return Promise.resolve({ response: { sessionId: nextSessionId++ } });
+      }
       return Promise.resolve({ response: undefined });
     },
   },
@@ -34,17 +37,17 @@ const listener = router.buildListener();
 const TAB = 200;
 
 function call(type: string, payload: Record<string, unknown> = {}) {
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<unknown>((resolve, reject) => {
     (
       listener as unknown as (
         m: { "@type": string; [k: string]: unknown },
         s: chrome.runtime.MessageSender,
-        r: (arg: { error?: Error }) => void,
+        r: (arg: { error?: Error; response?: unknown }) => void,
       ) => void
     )(
       { "@type": type, ...payload },
       { tab: { id: TAB }, frameId: 0 } as chrome.runtime.MessageSender,
-      (arg) => (arg.error ? reject(arg.error) : resolve()),
+      (arg) => (arg.error ? reject(arg.error) : resolve(arg.response)),
     );
   });
 }
@@ -60,39 +63,43 @@ void describe("hint session and the frame path table", () => {
   });
 
   void test("AttachHints starts a session and tells every frame", async () => {
-    await call("AttachHints", { sessionId: "s1" });
+    await call("AttachHints");
     assert.deepEqual(syncStates(), [true]);
     framePaths.report(TAB, ["0"], 9);
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
   });
 
-  void test("AttachHints echoes the session id in the SyncHintingState(true) broadcast", async () => {
-    await call("AttachHints", { sessionId: "s1" });
+  void test("AttachHints answers and broadcasts the id content-root assigned, after content-root accepts", async () => {
+    const reply = await call("AttachHints");
+    assert.deepEqual(
+      sent.map((m) => m.type),
+      ["AttachHintsInTab", "SyncHintingState"],
+    );
     const sync = sent.find((m) => m.type === "SyncHintingState");
-    assert.equal(sync?.sessionId, "s1");
+    assert.deepEqual(reply, { sessionId: sync?.sessionId });
   });
 
   void test("a second AttachHints drops what the first session reported", async () => {
-    await call("AttachHints", { sessionId: "s1" });
+    await call("AttachHints");
     framePaths.report(TAB, ["0"], 9);
-    await call("AttachHints", { sessionId: "s2" });
+    await call("AttachHints");
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
   });
 
   void test("RemoveHints ends the session and drops reports made after it", async () => {
-    await call("AttachHints", { sessionId: "s1" });
+    const { sessionId } = (await call("AttachHints")) as { sessionId: number };
     framePaths.report(TAB, ["0"], 9);
-    await call("RemoveHints", { options: {}, execute: false });
-    assert.deepEqual(syncStates(), [true, false]);
+    sent.length = 0;
+    await call("RemoveHints", { sessionId, options: {}, execute: false });
+    assert.deepEqual(syncStates(), [false]);
+    assert.equal(sent[0]?.sessionId, sessionId);
     framePaths.report(TAB, ["0"], 9);
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
   });
 
-  void test("a failed AttachHints ends the session", async () => {
+  void test("a rejected AttachHints broadcasts nothing", async () => {
     attachFails = true;
-    await assert.rejects(call("AttachHints", { sessionId: "s1" }));
-    assert.deepEqual(syncStates(), [true, false]);
-    framePaths.report(TAB, ["0"], 9);
-    assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
+    await assert.rejects(call("AttachHints"));
+    assert.deepEqual(syncStates(), []);
   });
 });
