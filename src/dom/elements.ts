@@ -327,24 +327,48 @@ export function* listAll(d: ParentNode = document): Generator<Element> {
   if (d instanceof Document) d = d.body;
   for (const e of d.querySelectorAll("*")) {
     yield e;
-    if (e.shadowRoot) yield* listAll(e.shadowRoot);
+    const root = shadowRootOf(e);
+    if (root) yield* listAll(root);
   }
 }
 
 /**
- * Yields iframes that live inside open shadow roots reachable from `d`.
- * Skips light-DOM iframes — callers should combine this with
- * `document.getElementsByTagName("iframe")` for the cheap light-DOM pass.
- * Walking every element is unavoidable here: there is no DOM API to
- * enumerate shadow roots directly.
+ * The open or closed shadow root attached to `element`, or null. Closed roots
+ * are found only for elements of this frame's own document.
  */
-export function* listIframesInShadowRoots(
-  d: ParentNode = document,
-): Generator<HTMLIFrameElement> {
-  for (const host of d.querySelectorAll("*")) {
-    const root = host.shadowRoot;
-    if (!root) continue;
-    for (const iframe of root.querySelectorAll("iframe")) yield iframe;
-    yield* listIframesInShadowRoots(root);
-  }
+export function shadowRootOf(element: Element): ShadowRoot | null {
+  if (element.shadowRoot) return element.shadowRoot;
+  /* WHY: frames share DOM wrappers, and chrome.dom.openOrClosedShadowRoot()
+     creates the root's wrapper in the caller's realm. If a child frame called
+     it on its parent's element first, `instanceof` checks in the parent frame
+     would fail for that root and everything found through it. */
+  if (element.ownerDocument !== document || !(element instanceof HTMLElement))
+    return null;
+  return chrome.dom.openOrClosedShadowRoot(element);
+}
+
+/**
+ * Returns iframes that live inside shadow roots reachable from `d`, split by
+ * whether reaching them needs a closed shadow root. Skips light-DOM iframes —
+ * callers should combine this with `document.getElementsByTagName("iframe")`
+ * for the cheap light-DOM pass. Walking every element is unavoidable here:
+ * there is no DOM API to enumerate shadow roots directly.
+ */
+export function listIframesInShadowRoots(d: ParentNode = document): {
+  open: HTMLIFrameElement[];
+  closed: HTMLIFrameElement[];
+} {
+  const open: HTMLIFrameElement[] = [];
+  const closed: HTMLIFrameElement[] = [];
+  const walk = (node: ParentNode, throughClosed: boolean) => {
+    for (const host of node.querySelectorAll("*")) {
+      const root = shadowRootOf(host);
+      if (!root) continue;
+      const isClosed = throughClosed || root !== host.shadowRoot;
+      (isClosed ? closed : open).push(...root.querySelectorAll("iframe"));
+      walk(root, isClosed);
+    }
+  };
+  walk(d, false);
+  return { open, closed };
 }

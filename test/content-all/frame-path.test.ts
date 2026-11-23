@@ -3,7 +3,18 @@ import assert from "node:assert/strict";
 
 const sentToRuntime: { type: string; payload: unknown }[] = [];
 
+class FakeHTMLElement {
+  readonly closedRoot: unknown;
+  constructor(closedRoot: unknown = null) {
+    this.closedRoot = closedRoot;
+  }
+}
+(globalThis as Record<string, unknown>).HTMLElement = FakeHTMLElement;
+
 (globalThis as Record<string, unknown>).chrome = {
+  dom: {
+    openOrClosedShadowRoot: (e: FakeHTMLElement) => e.closedRoot,
+  },
   runtime: {
     sendMessage: (msg: { "@type": string }) => {
       sentToRuntime.push({ type: msg["@type"], payload: msg });
@@ -61,6 +72,32 @@ function documentWithShadowIframes(iframes: unknown[]) {
     ],
     getElementsByTagName: () => [],
   };
+}
+
+/**
+ * A document with a host of a closed shadow root holding `closedIframes`,
+ * followed by a host of an open one holding `openIframes`.
+ */
+function documentWithClosedAndOpenShadowIframes(
+  closedIframes: unknown[],
+  openIframes: unknown[],
+) {
+  const doc = {
+    querySelectorAll: () => [closedHost, openHost],
+    getElementsByTagName: () => [],
+  };
+  const closedHost = Object.assign(
+    new FakeHTMLElement({
+      querySelectorAll: (s: string) => (s === "iframe" ? closedIframes : []),
+    }),
+    { shadowRoot: null, ownerDocument: doc },
+  );
+  const openHost = {
+    shadowRoot: {
+      querySelectorAll: (s: string) => (s === "iframe" ? openIframes : []),
+    },
+  };
+  return doc;
 }
 
 const { FramePath } = await import("../../src/content-all/frame-path.js");
@@ -449,6 +486,29 @@ void describe("FramePath.announce", () => {
     setGlobals(top, documentWithShadowIframes([iframe]));
     await new FramePath().announce();
     assert.deepEqual(shadowChild.posted, []);
+  });
+
+  void test("posts to a same-origin iframe in a closed shadow root, numbered after the open ones", async () => {
+    const top = makeWindow();
+    const closedChild = makeWindow(top);
+    const openChild = makeWindow(top);
+    const iframe = (w: FakeWindow) =>
+      ({
+        contentWindow: w,
+        contentDocument: {},
+      }) as unknown as HTMLIFrameElement;
+    setGlobals(
+      top,
+      documentWithClosedAndOpenShadowIframes(
+        [iframe(closedChild)],
+        [iframe(openChild)],
+      ),
+    );
+    await new FramePath().announce();
+    assert.deepEqual(closedChild.posted, [
+      { "@type": ASSIGNMENT, path: ["s1"] },
+    ]);
+    assert.deepEqual(openChild.posted, []);
   });
 
   void test("reports a path assigned before hinting started, when hinting starts", async () => {

@@ -12,8 +12,8 @@ interface FramePathAssignment {
 /**
  * A frame's address within its tab: one segment per hop from the top frame.
  *   - "<n>": `window.frames[n]` of the parent.
- *   - "s<n>": the n-th iframe of `listIframesInShadowRoots()` in the parent.
- *     Such iframes are not in `window.frames`.
+ *   - "s<n>": the n-th iframe of `shadowIframes()` in the parent. Such
+ *     iframes are not in `window.frames`.
  * The top frame's path is `[]`.
  *
  * Chrome has no content-script API that maps a Window or iframe element to a
@@ -142,8 +142,10 @@ export class FramePath {
         "*",
       );
 
-    shadowIframes().forEach((iframe, i) => {
-      if (needsAssignment(computed, iframe, true)) {
+    const { open, closed } = listIframesInShadowRoots();
+    [...open, ...closed].forEach((iframe, i) => {
+      // WHY: a child cannot see its parent's closed shadow roots (see shadowRootOf()), so it never computes a path through one.
+      if (i >= open.length || needsAssignment(computed, iframe, true)) {
         post(iframe.contentWindow, encodeSegment(true, i));
       }
     });
@@ -188,9 +190,15 @@ function parseSegment(
   return m ? { shadow: m[1] === "s", index: Number(m[2]) } : undefined;
 }
 
-/** The iframes in shadow roots of `doc`, in the order segments count them. */
+/**
+ * The iframes in shadow roots of `doc`, in the order segments count them.
+ * INVARIANT: iframes behind a closed shadow root come last, so a child frame,
+ * which lists its parent's iframes without them, numbers the others the same
+ * way the parent does.
+ */
 function shadowIframes(doc: Document = document): HTMLIFrameElement[] {
-  return [...listIframesInShadowRoots(doc)];
+  const { open, closed } = listIframesInShadowRoots(doc);
+  return [...open, ...closed];
 }
 
 function samePath(a: readonly string[], b: readonly string[]): boolean {
