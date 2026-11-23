@@ -193,6 +193,10 @@ export class HinterContentRoot {
     );
   }
 
+  isLiveSession(id: SessionId): boolean {
+    return this.context?.id === id;
+  }
+
   async removeHints(id: SessionId, options: ActionOptions, execute: boolean) {
     const context = this.live(id);
     if (!context) return;
@@ -215,6 +219,9 @@ export function buildHinterRouter(hinter: HinterContentRoot) {
     .add("AttachHintsInTab", () => ({ sessionId: hinter.attachHints() }))
     .add("HitHintInTab", ({ sessionId, key }) => hinter.hitHint(sessionId, key))
     .add("CycleHintInTab", ({ sessionId }) => hinter.cycleHint(sessionId))
+    .add("IsLiveSessionInTab", ({ sessionId }) =>
+      hinter.isLiveSession(sessionId),
+    )
     .add("RemoveHintsInTab", ({ sessionId, options, execute }) =>
       hinter.removeHints(sessionId, options, execute),
     );

@@ -54,8 +54,23 @@ export const router = Router.newRuntimeInstance()
   })
   .add("RemoveHints", async ({ sessionId, options, execute }, sender) => {
     const tabId = requireTabId(sender);
-    syncHintingState(tabId, false, sessionId);
-    framePaths.end(tabId, sessionId);
+    /* WHY: a frame that still believes it owns an older session sends its
+       id; a false for it would stop frames that have not seen the next
+       session's true yet. If content-root cannot answer, broadcast anyway so
+       no frame keeps swallowing keys. */
+    const live = await sendToTab(
+      tabId,
+      "IsLiveSessionInTab",
+      { sessionId },
+      { frameId: 0 },
+    ).catch((e: unknown) => {
+      printError(e);
+      return true;
+    });
+    if (live) {
+      syncHintingState(tabId, false, sessionId);
+      framePaths.end(tabId, sessionId);
+    }
     return await sendToTab(
       tabId,
       "RemoveHintsInTab",

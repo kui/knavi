@@ -9,6 +9,7 @@ interface Sent {
 const sent: Sent[] = [];
 let attachFails = false;
 let nextSessionId = 1;
+let liveSessionId: number | null = null;
 
 (globalThis as Record<string, unknown>).chrome = {
   tabs: {
@@ -23,8 +24,13 @@ let nextSessionId = 1;
       });
       if (message["@type"] === "AttachHintsInTab") {
         if (attachFails) return Promise.reject(new Error("no receiver"));
-        return Promise.resolve({ response: { sessionId: nextSessionId++ } });
+        liveSessionId = nextSessionId++;
+        return Promise.resolve({ response: { sessionId: liveSessionId } });
       }
+      if (message["@type"] === "IsLiveSessionInTab")
+        return Promise.resolve({
+          response: message.sessionId === liveSessionId,
+        });
       return Promise.resolve({ response: undefined });
     },
   },
@@ -92,7 +98,7 @@ void describe("hint session and the frame path table", () => {
     sent.length = 0;
     await call("RemoveHints", { sessionId, options: {}, execute: false });
     assert.deepEqual(syncStates(), [false]);
-    assert.equal(sent[0]?.sessionId, sessionId);
+    assert.ok(sent.every((m) => m.sessionId === sessionId));
     framePaths.report(TAB, ["0"], 9);
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
   });
@@ -119,5 +125,25 @@ void describe("hint session and the frame path table", () => {
     framePaths.report(TAB, ["0"], 9);
     await call("RemoveHints", { sessionId: old, options: {}, execute: false });
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
+  });
+
+  void test("RemoveHints broadcasts false before content-root runs the action", async () => {
+    const { sessionId } = (await call("AttachHints")) as { sessionId: number };
+    sent.length = 0;
+    await call("RemoveHints", { sessionId, options: {}, execute: true });
+    assert.deepEqual(
+      sent.map((m) => m.type),
+      ["IsLiveSessionInTab", "SyncHintingState", "RemoveHintsInTab"],
+    );
+  });
+
+  void test("RemoveHints of an older session broadcasts nothing", async () => {
+    const { sessionId: old } = (await call("AttachHints")) as {
+      sessionId: number;
+    };
+    await call("AttachHints");
+    sent.length = 0;
+    await call("RemoveHints", { sessionId: old, options: {}, execute: false });
+    assert.deepEqual(syncStates(), []);
   });
 });
