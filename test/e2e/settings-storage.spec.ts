@@ -6,6 +6,8 @@ import {
   setSettings,
   getSettings,
   attachHints,
+  attachHintsSticky,
+  findHintFor,
 } from "./fixtures";
 
 const CANCEL_KEY = "Escape";
@@ -188,6 +190,66 @@ test.describe("settings read directly from storage", () => {
         await page.keyboard.up("Space");
       }
     }).toPass({ timeout: 10_000 });
+  });
+
+  test("blacklisting the page during a sticky session ends it without running the action", async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    await setSettings(context, { stickyKey: "KeyQ", cancelKey: CANCEL_KEY });
+    // WHY: the button's onclick calls alert(), so a dialog proves the action ran.
+    let dialogs = 0;
+    page.on("dialog", (d) => {
+      dialogs++;
+      d.dismiss().catch(() => undefined);
+    });
+    try {
+      await gotoTest(page, "input.html");
+      await attachHintsSticky(page, "KeyQ");
+      const hint = await findHintFor(page, "input[type=button]");
+      for (const ch of hint) await page.keyboard.press(ch);
+      await expect(page.locator(".hint[data-state='hit']")).toHaveCount(1);
+      await setSettings(context, {
+        blackList: new URL("input.html", baseURL).href,
+      });
+      await expect(page.locator(".hint")).toHaveCount(0);
+      expect(await spaceReachesPage(page)).toBe(true);
+      expect(dialogs).toBe(0);
+    } finally {
+      await setSettings(context, {
+        stickyKey: "",
+        cancelKey: "",
+        blackList: "",
+      });
+    }
+  });
+
+  test("switching to a storage area that blacklists the page ends a sticky session", async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    await setSettings(context, { stickyKey: "KeyQ", cancelKey: CANCEL_KEY });
+    // WHY: fill every key in local so that no back-fill write accompanies the switch and `_area` is the only change.
+    await setSettings(
+      context,
+      {
+        ...(await getSettings(context)),
+        blackList: new URL("input.html", baseURL).href,
+      },
+      "local",
+    );
+    try {
+      await gotoTest(page, "input.html");
+      await attachHintsSticky(page, "KeyQ");
+      await setSettings(context, { _area: "chrome-local" }, "local");
+      await expect(page.locator(".hint")).toHaveCount(0);
+      expect(await spaceReachesPage(page)).toBe(true);
+    } finally {
+      await setSettings(context, { _area: "chrome-sync" }, "local");
+      await setSettings(context, { stickyKey: "", cancelKey: "" });
+    }
   });
 
   test("switching the storage area updates hint letters in both content scripts", async ({
