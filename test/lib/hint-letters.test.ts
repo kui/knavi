@@ -29,3 +29,9 @@ void describe("validateHintLetters", () => {
     assert.match(validateHintLetters("aA") ?? "", /twice/);
   });
 });
+
+void describe("validateHintLetters (non-BMP)", () => {
+  void test("rejects a character outside the Basic Multilingual Plane", () => {
+    assert.match(validateHintLetters("a😀") ?? "", /Basic Multilingual/);
+  });
+});
