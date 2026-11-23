@@ -421,4 +421,32 @@ void describe("HinterContentRoot", () => {
     assert.equal(view.hits.length, 0);
     assert.ok(!sentTypes.includes("ExecuteAction"));
   });
+
+  void test("a Hint Letters change during a session applies from the next session", async () => {
+    hinter.setup("asdf");
+    const id = hinter.attachHints();
+    await tick();
+    const four = [...RECTS, ...RECTS, ...RECTS, ...RECTS];
+    aggregator.handleRects(requestId + 1, four);
+    await tick();
+    hinter.setup("jkl;");
+    aggregator.handleRects(requestId + 1, RECTS);
+    await tick();
+    hinter.hitHint(id, "a" as SingleLetter);
+    hinter.hitHint(id, "a" as SingleLetter);
+
+    assert.deepEqual(
+      view.batches.map((b) => b.map((t) => t.hint)),
+      [["a", "s", "d", "f"], ["aa"]],
+    );
+    assert.equal(view.batches[1][0].state, "hit");
+    await hinter.removeHints(id, OPTIONS, false);
+
+    const next = hinter.attachHints();
+    await tick();
+    aggregator.handleRects(requestId + 2, RECTS);
+    await tick();
+    assert.equal(view.batches[2][0].hint, "j");
+    await hinter.removeHints(next, OPTIONS, false);
+  });
 });

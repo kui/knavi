@@ -9,6 +9,11 @@ import { printError } from "../lib/errors";
 
 interface HintContext {
   id: SessionId;
+  /**
+   * The hint letters of this session, fixed when rendering starts so that a
+   * settings change applies from the next session. Undefined until then.
+   */
+  hintLetters?: string | undefined;
   targets: HintedElement[];
   inputSequence: string[];
   hitTarget?: HintedElement | undefined;
@@ -77,20 +82,22 @@ export class HinterContentRoot {
     if (this.context !== context) return;
     await waitUntil(() => Boolean(document.body));
     if (this.context !== context) return;
-    if (this.hintLetters.length === 0)
+    const letters = this.hintLetters;
+    if (letters.length === 0)
       throw Error("Ilegal state invocation: hintLetters is empty");
+    context.hintLetters = letters;
     /* WHY: letters typed before setup() were kept unchecked. */
     context.inputSequence = context.inputSequence.filter((l) =>
-      this.hintLetters.includes(l),
+      letters.includes(l),
     );
 
-    const hintTextGenerator = this.generateHintTexts();
+    const hintTextGenerator = generateHintTexts(letters);
     for await (const elementRects of this.rectAggregator.aggregate()) {
       if (this.context !== context) break;
       if (!this.view.isStarted()) this.view.start();
       if (elementRects.length === 0) continue;
       const hintTexts = take(hintTextGenerator, elementRects.length);
-      hintTexts.sort(this.compareByHintLettersOrder());
+      hintTexts.sort(compareByHintLettersOrder(letters));
       const targets: HintedElement[] = [
         ...map(
           zip(elementRects, hintTexts),
@@ -126,55 +133,17 @@ export class HinterContentRoot {
     return null;
   }
 
-  *generateHintTexts(): Generator<string> {
-    const history: string[] = [];
-
-    for (const t of this.hintLetters) {
-      history.push(t);
-      yield t;
-    }
-
-    // WHY: Emit repeated 2-same-letter hints first because they're easier to type.
-    for (const t of this.hintLetters) {
-      const h = t + t;
-      history.push(h);
-      yield h;
-    }
-
-    let index = 0;
-    while (true) {
-      const suffix = history[index];
-      for (const t of this.hintLetters) {
-        if (suffix === t) continue; // WHY: already emitted as a 2-same-letter hint above
-        const h = t + suffix;
-        history.push(h);
-        yield h;
-      }
-      index++;
-    }
-  }
-
-  compareByHintLettersOrder() {
-    const letters = this.hintLetters;
-    return (a: string, b: string) => {
-      const m = Math.min(a.length, b.length);
-      for (let i = 0; i < m; i++) {
-        const aIndex = letters.indexOf(a[i]);
-        const bIndex = letters.indexOf(b[i]);
-        if (aIndex < bIndex) return -1;
-        if (aIndex > bIndex) return 1;
-      }
-      return a.length - b.length;
-    };
-  }
-
   hitHint(id: SessionId, inputLetter: SingleLetter) {
     const context = this.live(id);
     if (!context) return;
 
-    /* WHY: before setup() the hint letters are unknown, so keep the letter
+    /* WHY: until render() fixes the session's hint letters, keep the letter
        for render() to check. */
-    if (this.isSetUp && !this.hintLetters.includes(inputLetter)) return;
+    if (
+      context.hintLetters != null &&
+      !context.hintLetters.includes(inputLetter)
+    )
+      return;
 
     delete context.cycle;
 
@@ -297,4 +266,45 @@ function take<T>(iter: Generator<T>, length: number): T[] {
     result.push(r.value);
   }
   return result;
+}
+
+function* generateHintTexts(letters: string): Generator<string> {
+  const history: string[] = [];
+
+  for (const t of letters) {
+    history.push(t);
+    yield t;
+  }
+
+  // WHY: Emit repeated 2-same-letter hints first because they're easier to type.
+  for (const t of letters) {
+    const h = t + t;
+    history.push(h);
+    yield h;
+  }
+
+  let index = 0;
+  while (true) {
+    const suffix = history[index];
+    for (const t of letters) {
+      if (suffix === t) continue; // WHY: already emitted as a 2-same-letter hint above
+      const h = t + suffix;
+      history.push(h);
+      yield h;
+    }
+    index++;
+  }
+}
+
+function compareByHintLettersOrder(letters: string) {
+  return (a: string, b: string) => {
+    const m = Math.min(a.length, b.length);
+    for (let i = 0; i < m; i++) {
+      const aIndex = letters.indexOf(a[i]);
+      const bIndex = letters.indexOf(b[i]);
+      if (aIndex < bIndex) return -1;
+      if (aIndex > bIndex) return 1;
+    }
+    return a.length - b.length;
+  };
 }
