@@ -75,14 +75,17 @@ chrome.storage.onChanged.addListener((changes) => {
     /* WHY: blacklisting the site, or switching to a storage area whose
        blacklist matches (no `blackList` key changes then), must end a running
        (sticky) session now, while the other key settings wait for it so they
-       do not change mid-session. */
-    try {
-      await refreshBlacklist();
-    } catch (e) {
-      // WHY: a failed match must not keep the other changed settings from being applied.
-      printError(e);
+       do not change mid-session. Without a session, setupKeyboardHandler()
+       below matches the blacklist itself. */
+    if (hinterClient.isHinting) {
+      try {
+        await refreshBlacklist();
+      } catch (e) {
+        // WHY: a failed refresh must not stop the handler from reaching the settings reload.
+        printError(e);
+      }
+      signal.throwIfAborted();
     }
-    signal.throwIfAborted();
     while (hinterClient.isHinting) {
       await wait(200, signal);
     }

@@ -245,6 +245,7 @@ test.describe("settings read directly from storage", () => {
       await attachHintsSticky(page, "KeyQ");
       await setSettings(context, { _area: "chrome-local" }, "local");
       await expect(page.locator(".hint")).toHaveCount(0);
+      expect(await spaceReachesPage(page)).toBe(true);
     } finally {
       await setSettings(context, { _area: "chrome-sync" }, "local");
       await setSettings(context, { stickyKey: "", cancelKey: "" });
