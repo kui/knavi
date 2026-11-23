@@ -54,11 +54,7 @@ export class KeyboardHandlerContentAll {
     return ++this.latestBlacklistTicket;
   }
 
-  setup(
-    settings: KeySettings,
-    matchedBlacklist: string[],
-    ticket = this.newBlacklistTicket(),
-  ) {
+  setup(settings: KeySettings, matchedBlacklist: string[], ticket: number) {
     const prev = this.settings;
     this.settings = settings;
     /* WHY: a matcher holds the keys currently pressed. Rebuilding it while the
@@ -79,10 +75,7 @@ export class KeyboardHandlerContentAll {
     this.updateBlacklist(matchedBlacklist, ticket);
   }
 
-  updateBlacklist(
-    matchedBlacklist: string[],
-    ticket = this.newBlacklistTicket(),
-  ) {
+  updateBlacklist(matchedBlacklist: string[], ticket: number) {
     if (ticket !== this.latestBlacklistTicket) return;
     this.matchedBlacklist = matchedBlacklist;
     /* WHY: knavi does nothing on a blacklisted page, so a session that this

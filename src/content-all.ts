@@ -58,7 +58,6 @@ const RELEVANT_KEYS: (keyof Settings)[] = [
 ];
 
 let debounceController: AbortController | null = null;
-let blacklistChanged = false;
 
 async function refreshBlacklist() {
   const ticket = keyboardHandler.newBlacklistTicket();
@@ -69,18 +68,21 @@ async function refreshBlacklist() {
 chrome.storage.onChanged.addListener((changes) => {
   (async () => {
     if (!isRelevantChange(changes, RELEVANT_KEYS)) return;
-    if ("blackList" in changes) blacklistChanged = true;
     debounceController?.abort();
     debounceController = new AbortController();
     const { signal } = debounceController;
     await wait(200, signal);
-    /* WHY: blacklisting the site must end a running (sticky) session now,
-       while the other key settings wait for it so they do not change
-       mid-session. */
-    if (blacklistChanged) {
-      blacklistChanged = false;
+    /* WHY: blacklisting the site, or switching to a storage area whose
+       blacklist matches (no `blackList` key changes then), must end a running
+       (sticky) session now, while the other key settings wait for it so they
+       do not change mid-session. */
+    try {
       await refreshBlacklist();
+    } catch (e) {
+      // WHY: a failed match must not keep the other changed settings from being applied.
+      printError(e);
     }
+    signal.throwIfAborted();
     while (hinterClient.isHinting) {
       await wait(200, signal);
     }
