@@ -29,6 +29,33 @@ that kind. Existing fakes such as `FakeNode` in `test/dom/elements.test.ts`
 stay, but do not extend them to model more browser behavior; cover that in
 E2E.
 
+### Message ordering across frames
+
+Hint session messages between frames, the background and content-root
+arrive in no fixed order. `test/protocol/hint-session.test.ts` wires several
+`HinterClient` and `KeyboardHandlerContentAll` instances, the background hint
+router and `HinterContentRoot` through a fake `chrome.runtime` /
+`chrome.tabs`, and lets a fast-check scheduler pick the order of every
+delivery, reply and key event. After each run it checks that the frames agree
+with content-root and that the session can still be ended and restarted.
+
+When a change touches that protocol (session ids, `SyncHintingState`,
+`HinterClient`'s queue), extend this test with the invariant the change
+relies on rather than writing a test that fixes one order by hand. To search
+harder, raise the run count with `KNAVI_PROTOCOL_RUNS`:
+
+```sh
+KNAVI_PROTOCOL_RUNS=50000 npx tsx --test test/protocol/hint-session.test.ts
+```
+
+A failure prints the shrunk key events and delivery order, and the seed and
+path to replay it with `fc.assert`'s `seed` and `path` options.
+
+The fake delivers in any order, so it cannot catch a change that only delays
+a message (for example, broadcasting `SyncHintingState(false)` after
+`RemoveHintsInTab` settles instead of before); cover those with an example
+test.
+
 ### E2E fixture pages
 
 Each page in `docs/tests/` guards one behavior. When a fix needs a new case,
