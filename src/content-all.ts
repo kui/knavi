@@ -65,9 +65,9 @@ async function refreshBlacklist() {
   keyboardHandler.updateBlacklist(matched, ticket);
 }
 
-chrome.storage.onChanged.addListener((changes) => {
+chrome.storage.onChanged.addListener((changes, areaName) => {
   (async () => {
-    if (!isRelevantChange(changes, RELEVANT_KEYS)) return;
+    if (!(await isRelevantChange(changes, areaName, RELEVANT_KEYS))) return;
     debounceController?.abort();
     debounceController = new AbortController();
     const { signal } = debounceController;

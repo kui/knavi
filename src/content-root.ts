@@ -28,9 +28,10 @@ const settingsLoader = new SettingsLoader(
 );
 settingsLoader.load().catch(printError);
 
-chrome.storage.onChanged.addListener((changes) => {
-  if (isRelevantChange(changes, ROOT_KEYS))
-    settingsLoader.load().catch(printError);
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  isRelevantChange(changes, areaName, ROOT_KEYS)
+    .then((relevant) => (relevant ? settingsLoader.load() : undefined))
+    .catch(printError);
 });
 
 chrome.runtime.onMessage.addListener(
