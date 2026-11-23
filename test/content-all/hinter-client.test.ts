@@ -274,6 +274,42 @@ void describe("HinterClient", () => {
     assert.deepEqual(sent, ["AttachHints", "RemoveHints", "HitHint:a@5"]);
   });
 
+  void test("the frame owns its session while the attach reply is pending", async () => {
+    const client = new HinterClient();
+    const attaching = client.attachHints();
+    await flush();
+    assert.equal(client.ownsSession, true);
+    releaseAttach();
+    await attaching;
+  });
+
+  void test("removing a pending attach leaves nothing live when the reply arrives", async () => {
+    const client = new HinterClient();
+    const attaching = client.attachHints();
+    await flush();
+    const removing = client.removeHints(options, false);
+    releaseAttach();
+    await attaching;
+    assert.equal(client.isHinting, false);
+    assert.equal(client.ownsSession, false);
+    await flush();
+    releaseRemove();
+    await removing;
+  });
+
+  void test("letters and cycles queued behind a failed attach are not sent", async () => {
+    failAttach = true;
+    const client = new HinterClient();
+    const attaching = client.attachHints();
+    const hit = client.hitHint("a" as SingleLetter);
+    const cycling = client.cycleHint();
+    await flush();
+    releaseAttach();
+    await assert.rejects(attaching, /attach failed/);
+    await Promise.all([hit, cycling]);
+    assert.deepEqual(sent, ["AttachHints"]);
+  });
+
   void test("a session announced by another frame is not owned", async () => {
     const client = new HinterClient();
     const attaching = client.attachHints();

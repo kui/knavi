@@ -187,13 +187,71 @@ void describe("HinterContentRoot", () => {
 
   void test("an empty hint letter setting loaded after attach leaves the session for RemoveHints", async () => {
     const id = hinter.attachHints();
+    sentTypes.length = 0;
     hinter.setup("");
     await tick();
+    assert.ok(!sentTypes.includes("AllRectsRequest"));
+    aggregator.handleRects(requestId + 1, RECTS);
+    await tick();
+    assert.equal(view.rendered, 0);
     assert.equal(view.isStarted(), false);
     assert.throws(() => hinter.attachHints(), /already started/);
     await hinter.removeHints(id, OPTIONS, false);
     hinter.setup("asdf");
     assert.doesNotThrow(() => hinter.attachHints());
+  });
+
+  void test("a session ended before setup() does not wait for document.body", async () => {
+    const doc = globalThis.document as unknown as { body: unknown };
+    const body = doc.body;
+    let frames = 0;
+    (globalThis as Record<string, unknown>).requestAnimationFrame = (
+      cb: (t: number) => void,
+    ) => {
+      frames++;
+      return setTimeout(() => cb(0), 0);
+    };
+    doc.body = null;
+    try {
+      const id = hinter.attachHints();
+      await hinter.removeHints(id, OPTIONS, false);
+      hinter.setup("asdf");
+      await tick();
+      await tick();
+      assert.equal(frames, 0);
+    } finally {
+      doc.body = body;
+      await tick();
+      Reflect.deleteProperty(globalThis, "requestAnimationFrame");
+    }
+  });
+
+  void test("a session ended while waiting for document.body renders nothing", async () => {
+    const doc = globalThis.document as unknown as { body: unknown };
+    const body = doc.body;
+    (globalThis as Record<string, unknown>).requestAnimationFrame = (
+      cb: (t: number) => void,
+    ) => setTimeout(() => cb(0), 0);
+    doc.body = null;
+    try {
+      hinter.setup("asdf");
+      const id = hinter.attachHints();
+      await tick();
+      await hinter.removeHints(id, OPTIONS, false);
+      sentTypes.length = 0;
+      doc.body = body;
+      await tick();
+      await tick();
+      // WHY: starting the aggregation would leave it waiting for rects of an ended session.
+      assert.ok(!sentTypes.includes("AllRectsRequest"));
+      aggregator.handleRects(requestId + 1, RECTS);
+      await tick();
+      assert.equal(view.rendered, 0);
+      assert.equal(view.isStarted(), false);
+    } finally {
+      doc.body = body;
+      Reflect.deleteProperty(globalThis, "requestAnimationFrame");
+    }
   });
 
   void test("a second attachHints while a session is live rejects", async () => {
