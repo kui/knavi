@@ -10,7 +10,7 @@ test("options page does not save invalid Hint Letters", async ({
   const initial = (await getSettings(context)).hints;
   expect(initial).toBe(await hints.inputValue());
 
-  // Each invalid value must leave the last saved value in storage.
+  // WHY: each invalid value must leave the last saved value in storage.
   for (const invalid of ["", "a", "aa"]) {
     await hints.fill(invalid);
     await expect(page.locator("#key-conflicts")).toBeVisible();
