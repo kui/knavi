@@ -167,7 +167,7 @@ void describe("background AllRectsRequest routing", () => {
 
   void test("does not create a session when looking up", async () => {
     framePaths.end(TAB, 1);
-    assert.equal(await framePaths.lookup(TAB, 1, [], 10), undefined);
+    assert.equal(await framePaths.lookup(TAB, 1, ["1"], 10), undefined);
     await report(["0"], 9);
     framePaths.reset(TAB, 1);
     assert.equal(await framePaths.lookup(TAB, 1, ["0"], 10), undefined);

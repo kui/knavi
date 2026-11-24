@@ -13,76 +13,97 @@ import type { SessionId } from "../lib/chrome-messages";
 const LOOKUP_TIMEOUT_MS = 300;
 
 type Waiter = (frameId: number | undefined) => void;
-type Waiters = Map<string, Waiter[]>;
 
-interface Session {
-  id: SessionId;
+interface Table {
   frames: Map<string, number>;
-  waiters: Waiters;
+  waiters: Map<string, Waiter[]>;
 }
 
-const sessions = new Map<number, Session>();
-/**
- * Lookups of a session whose table has not started yet, by tab and session
- * id. The table is started only once content-root has accepted the session,
- * and frame 0 can already be requesting its child frames' rects by then.
- */
-const early = new Map<number, Map<SessionId, Waiters>>();
+interface Tab {
+  /**
+   * The session whose table takes path reports. Other tables hold lookups of
+   * a session whose table has not started yet: it starts only once
+   * content-root has accepted the session, and frame 0 can already be
+   * requesting its child frames' rects by then.
+   */
+  live: SessionId | null;
+  tables: Map<SessionId, Table>;
+}
+
+const tabs = new Map<number, Tab>();
 
 function key(path: readonly string[]): string {
   return JSON.stringify(path);
 }
 
-function newSession(id: SessionId, waiters: Waiters): Session {
-  // INVARIANT: the top frame is always frame 0.
-  return { id, frames: new Map([[key([]), 0]]), waiters };
+function tabOf(tabId: number): Tab {
+  let tab = tabs.get(tabId);
+  if (!tab) {
+    tab = { live: null, tables: new Map() };
+    tabs.set(tabId, tab);
+  }
+  return tab;
 }
 
-function settleWaiters(waiters: Waiters) {
-  for (const list of waiters.values()) {
+function tableOf(tab: Tab, sessionId: SessionId): Table {
+  let table = tab.tables.get(sessionId);
+  if (!table) {
+    table = { frames: new Map(), waiters: new Map() };
+    tab.tables.set(sessionId, table);
+  }
+  return table;
+}
+
+function drop(tab: Tab, sessionId: SessionId) {
+  const table = tab.tables.get(sessionId);
+  if (!table) return;
+  tab.tables.delete(sessionId);
+  for (const list of table.waiters.values()) {
     for (const resolve of list) resolve(undefined);
   }
 }
 
+function pruneTab(tabId: number, tab: Tab) {
+  if (tab.live === null && tab.tables.size === 0) tabs.delete(tabId);
+}
+
 /**
  * Starts the table of session `sessionId`, which content-root has accepted,
- * dropping the previous one.
+ * dropping every other one.
  */
 export function reset(tabId: number, sessionId: SessionId): void {
-  const old = sessions.get(tabId);
-  if (old) settleWaiters(old.waiters);
-  const pending = early.get(tabId);
-  early.delete(tabId);
-  const waiters = pending?.get(sessionId) ?? new Map<string, Waiter[]>();
-  pending?.delete(sessionId);
-  pending?.forEach(settleWaiters);
-  sessions.set(tabId, newSession(sessionId, waiters));
+  const tab = tabOf(tabId);
+  for (const id of tab.tables.keys()) {
+    if (id !== sessionId || tab.live === sessionId) drop(tab, id);
+  }
+  tab.live = sessionId;
+  tableOf(tab, sessionId);
 }
 
 /** Drops the table if it belongs to session `sessionId`. */
 export function end(tabId: number, sessionId: SessionId): void {
-  const old = sessions.get(tabId);
-  if (!old) return;
-  if (old.id !== sessionId) {
+  const tab = tabs.get(tabId);
+  if (tab?.live == null) return;
+  if (tab.live !== sessionId) {
     console.debug(
       "Keep the frame paths of",
-      old.id,
+      tab.live,
       "on the end of",
       sessionId,
     );
     return;
   }
-  settleWaiters(old.waiters);
-  sessions.delete(tabId);
+  tab.live = null;
+  drop(tab, sessionId);
+  pruneTab(tabId, tab);
 }
 
 /** Drops everything kept for the tab, whichever session it belongs to. */
 export function forgetTab(tabId: number): void {
-  const old = sessions.get(tabId);
-  if (old) settleWaiters(old.waiters);
-  sessions.delete(tabId);
-  early.get(tabId)?.forEach(settleWaiters);
-  early.delete(tabId);
+  const tab = tabs.get(tabId);
+  if (!tab) return;
+  tabs.delete(tabId);
+  for (const id of tab.tables.keys()) drop(tab, id);
 }
 
 /** Ignored outside a hint session, so a late report cannot leak a table. */
@@ -91,21 +112,24 @@ export function report(
   path: readonly string[],
   frameId: number,
 ): void {
-  const session = sessions.get(tabId);
-  if (!session) return;
-  if (path.length === 0 && frameId !== 0) {
-    console.debug("Frame", frameId, "reported the top frame's path");
+  const tab = tabs.get(tabId);
+  const table = tab?.live == null ? undefined : tab.tables.get(tab.live);
+  if (!table) return;
+  if (path.length === 0) {
+    if (frameId !== 0) {
+      console.debug("Frame", frameId, "reported the top frame's path");
+    }
     return;
   }
   const k = key(path);
-  const registered = session.frames.get(k);
+  const registered = table.frames.get(k);
   if (registered != null && registered !== frameId) {
     console.debug("Frame", frameId, "reported", path, "held by", registered);
     return;
   }
-  session.frames.set(k, frameId);
-  const waiters = session.waiters.get(k);
-  session.waiters.delete(k);
+  table.frames.set(k, frameId);
+  const waiters = table.waiters.get(k);
+  table.waiters.delete(k);
   waiters?.forEach((resolve) => resolve(frameId));
 }
 
@@ -122,25 +146,35 @@ export function lookup(
   path: readonly string[],
   timeoutMs = LOOKUP_TIMEOUT_MS,
 ): Promise<number | undefined> {
-  const session = sessions.get(tabId);
+  // INVARIANT: the top frame is always frame 0.
+  if (path.length === 0) return Promise.resolve(0);
+  const tab = tabOf(tabId);
   // WHY: session ids only grow within a tab, so this session has ended.
-  if (session && session.id > sessionId) return Promise.resolve(undefined);
+  if (tab.live !== null && tab.live > sessionId) {
+    return Promise.resolve(undefined);
+  }
+  const table = tableOf(tab, sessionId);
   const k = key(path);
-  const own = session?.id === sessionId ? session : undefined;
-  const known = own?.frames.get(k);
+  const known = table.frames.get(k);
   if (known != null) return Promise.resolve(known);
 
   const { promise, resolve } = Promise.withResolvers<number | undefined>();
-  const bucket = own?.waiters ?? earlyWaiters(tabId, sessionId);
-  const waiters = bucket.get(k) ?? [];
-  bucket.set(k, waiters);
+  const waiters = table.waiters.get(k) ?? [];
+  table.waiters.set(k, waiters);
   const timer = setTimeout(() => {
     const i = waiters.indexOf(settle);
     if (i >= 0) waiters.splice(i, 1);
-    if (waiters.length === 0 && bucket.get(k) === waiters) bucket.delete(k);
-    const pending = early.get(tabId);
-    if (pending?.get(sessionId)?.size === 0) pending.delete(sessionId);
-    if (pending?.size === 0) early.delete(tabId);
+    if (waiters.length === 0 && table.waiters.get(k) === waiters) {
+      table.waiters.delete(k);
+    }
+    if (
+      tab.live !== sessionId &&
+      table.waiters.size === 0 &&
+      tab.tables.get(sessionId) === table
+    ) {
+      tab.tables.delete(sessionId);
+      if (tabs.get(tabId) === tab) pruneTab(tabId, tab);
+    }
     resolve(undefined);
   }, timeoutMs);
   function settle(frameId: number | undefined) {
@@ -149,18 +183,4 @@ export function lookup(
   }
   waiters.push(settle);
   return promise;
-}
-
-function earlyWaiters(tabId: number, sessionId: SessionId): Waiters {
-  let pending = early.get(tabId);
-  if (!pending) {
-    pending = new Map();
-    early.set(tabId, pending);
-  }
-  let waiters = pending.get(sessionId);
-  if (!waiters) {
-    waiters = new Map();
-    pending.set(sessionId, waiters);
-  }
-  return waiters;
 }
