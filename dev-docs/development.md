@@ -77,5 +77,5 @@ For a user-visible change, add a changelog fragment as described in
 4. Create and push the release tag by either:
    - Running the [tag-for-release workflow](https://github.com/kui/knavi/actions/workflows/tag-for-release.yaml)
      on GitHub Actions ("Run workflow" button, or `gh workflow run tag-for-release.yaml`)
-   - Executing `scripts/tag_for_release.bash` locally and pushing the tag
+   - Running `npm run tag` locally and pushing the tag
 5. Bump minor version in [package.json](../package.json) for next release
