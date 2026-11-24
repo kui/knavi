@@ -1,10 +1,11 @@
 import { sendToRuntime } from "../lib/chrome-messages";
+import type { SessionId } from "../lib/chrome-messages";
 import { createQueue } from "../lib/generators";
 import * as vp from "./viewports";
 import { printError } from "../lib/errors";
 
 export class RectAggregatorClient {
-  private requestIndex = 0;
+  private requestId: SessionId | null = null;
   private callback:
     | ((elementRects: ElementRects[] | "Complete") => void)
     | null = null;
@@ -18,14 +19,15 @@ export class RectAggregatorClient {
   /* WHY: Requests route through the background service worker via
    * chrome.runtime so that rects from elements inside iframes can be
    * aggregated too. */
-  async *aggregate(): AsyncGenerator<ElementRects[]> {
+  async *aggregate(sessionId: SessionId): AsyncGenerator<ElementRects[]> {
     if (this.callback) throw Error("Illegal state: already fetching");
 
     const { enqueue, dequeue } = createQueue<ElementRects[] | "Complete">();
     this.callback = (rects) => enqueue.next(rects);
 
+    this.requestId = sessionId;
     sendToRuntime("AllRectsRequest", {
-      id: ++this.requestIndex,
+      id: sessionId,
       targetPath: [],
       viewport: {
         type: "actual-viewport",
@@ -47,7 +49,7 @@ export class RectAggregatorClient {
   }
 
   handleRects(requestId: number, rects: ElementRects[]) {
-    if (requestId !== this.requestIndex) {
+    if (requestId !== this.requestId) {
       console.warn("Unexpected requestId: ", requestId);
       return;
     }

@@ -77,7 +77,10 @@ void describe("hint session and the frame path table", () => {
     await call("AttachHints");
     assert.deepEqual(syncStates(), [true]);
     framePaths.report(TAB, ["0"], 9);
-    assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
+    assert.equal(
+      await framePaths.lookup(TAB, liveSessionId ?? 0, ["0"], 10),
+      9,
+    );
   });
 
   void test("AttachHints answers and broadcasts the id content-root assigned, after content-root accepts", async () => {
@@ -94,7 +97,10 @@ void describe("hint session and the frame path table", () => {
     await call("AttachHints");
     framePaths.report(TAB, ["0"], 9);
     await call("AttachHints");
-    assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
+    assert.equal(
+      await framePaths.lookup(TAB, liveSessionId ?? 0, ["0"], 10),
+      undefined,
+    );
   });
 
   void test("RemoveHints ends the session and drops reports made after it", async () => {
@@ -105,7 +111,10 @@ void describe("hint session and the frame path table", () => {
     assert.deepEqual(syncStates(), [false]);
     assert.ok(sent.every((m) => m.sessionId === sessionId));
     framePaths.report(TAB, ["0"], 9);
-    assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
+    assert.equal(
+      await framePaths.lookup(TAB, liveSessionId ?? 0, ["0"], 10),
+      undefined,
+    );
   });
 
   void test("a rejected AttachHints broadcasts nothing", async () => {
@@ -119,7 +128,10 @@ void describe("hint session and the frame path table", () => {
     framePaths.report(TAB, ["0"], 9);
     attachFails = true;
     await assert.rejects(call("AttachHints"));
-    assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
+    assert.equal(
+      await framePaths.lookup(TAB, liveSessionId ?? 0, ["0"], 10),
+      9,
+    );
   });
 
   void test("RemoveHints of an older session keeps the live session's frame paths", async () => {
@@ -129,7 +141,10 @@ void describe("hint session and the frame path table", () => {
     await call("AttachHints");
     framePaths.report(TAB, ["0"], 9);
     await call("RemoveHints", { sessionId: old, options: {}, execute: false });
-    assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
+    assert.equal(
+      await framePaths.lookup(TAB, liveSessionId ?? 0, ["0"], 10),
+      9,
+    );
   });
 
   void test("RemoveHints broadcasts false before content-root runs the action", async () => {

@@ -56,7 +56,8 @@ export interface RuntimeMessages {
   };
   AllRectsRequest: {
     payload: {
-      id: number;
+      /** The hint session's id; frames pass it on to their child frames. */
+      id: SessionId;
       targetPath: string[];
       viewport: RectJSON<"actual-viewport", "root-viewport">;
       offsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
@@ -132,7 +133,8 @@ export interface TabMessages {
   };
   AllRectsRequest: {
     payload: {
-      id: number;
+      /** The hint session's id; frames pass it on to their child frames. */
+      id: SessionId;
       targetPath: string[];
       viewport: RectJSON<"actual-viewport", "root-viewport">;
       offsets: CoordinatesJSON<"layout-viewport", "root-viewport">;

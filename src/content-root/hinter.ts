@@ -93,7 +93,9 @@ export class HinterContentRoot {
     );
 
     const hintTextGenerator = generateHintTexts(letters);
-    for await (const elementRects of this.rectAggregator.aggregate()) {
+    for await (const elementRects of this.rectAggregator.aggregate(
+      context.id,
+    )) {
       if (this.context !== context) break;
       if (!this.view.isStarted()) this.view.start();
       if (elementRects.length === 0) continue;

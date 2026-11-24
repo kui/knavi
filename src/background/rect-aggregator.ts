@@ -33,7 +33,7 @@ export const router = Router.newRuntimeInstance()
       const frameId =
         targetPath.length === 0
           ? 0
-          : await framePaths.lookup(tabId, targetPath);
+          : await framePaths.lookup(tabId, id, targetPath);
       if (frameId == null) {
         console.debug("No frame reported its path as", targetPath);
         return;

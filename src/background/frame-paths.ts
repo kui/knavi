@@ -23,11 +23,11 @@ interface Session {
 
 const sessions = new Map<number, Session>();
 /**
- * Lookups made while the tab has no table. The table is started only once
- * content-root has accepted the session, and frame 0 can already be
- * requesting its child frames' rects by then, so the next table takes them.
+ * Lookups of a session whose table has not started yet, by tab and session
+ * id. The table is started only once content-root has accepted the session,
+ * and frame 0 can already be requesting its child frames' rects by then.
  */
-const early = new Map<number, Waiters>();
+const early = new Map<number, Map<SessionId, Waiters>>();
 
 function key(path: readonly string[]): string {
   return JSON.stringify(path);
@@ -51,8 +51,11 @@ function settleWaiters(waiters: Waiters) {
 export function reset(tabId: number, sessionId: SessionId): void {
   const old = sessions.get(tabId);
   if (old) settleWaiters(old.waiters);
-  const waiters: Waiters = early.get(tabId) ?? new Map<string, Waiter[]>();
+  const pending = early.get(tabId);
   early.delete(tabId);
+  const waiters = pending?.get(sessionId) ?? new Map<string, Waiter[]>();
+  pending?.delete(sessionId);
+  pending?.forEach(settleWaiters);
   sessions.set(tabId, newSession(sessionId, waiters));
 }
 
@@ -78,8 +81,7 @@ export function forgetTab(tabId: number): void {
   const old = sessions.get(tabId);
   if (old) settleWaiters(old.waiters);
   sessions.delete(tabId);
-  const waiters = early.get(tabId);
-  if (waiters) settleWaiters(waiters);
+  early.get(tabId)?.forEach(settleWaiters);
   early.delete(tabId);
 }
 
@@ -108,33 +110,37 @@ export function report(
 }
 
 /**
- * Resolves as soon as the frame at `path` has reported, or to undefined after
- * a timeout. A request can overtake the path report of a frame whose content
- * script has only just started (#95, #109).
+ * Resolves as soon as the frame at `path` has reported in the table of
+ * session `sessionId`, or to undefined after a timeout or once another
+ * session's table starts. A request can overtake the path report of a frame
+ * whose content script has only just started (#95, #109), and the start of
+ * its own session's table.
  */
 export function lookup(
   tabId: number,
+  sessionId: SessionId,
   path: readonly string[],
   timeoutMs = LOOKUP_TIMEOUT_MS,
 ): Promise<number | undefined> {
   const session = sessions.get(tabId);
+  // WHY: session ids only grow within a tab, so this session has ended.
+  if (session && session.id > sessionId) return Promise.resolve(undefined);
   const k = key(path);
-  const known = session?.frames.get(k);
+  const own = session?.id === sessionId ? session : undefined;
+  const known = own?.frames.get(k);
   if (known != null) return Promise.resolve(known);
 
   const { promise, resolve } = Promise.withResolvers<number | undefined>();
-  let bucket = session?.waiters ?? early.get(tabId);
-  if (!bucket) {
-    bucket = new Map();
-    early.set(tabId, bucket);
-  }
+  const bucket = own?.waiters ?? earlyWaiters(tabId, sessionId);
   const waiters = bucket.get(k) ?? [];
   bucket.set(k, waiters);
   const timer = setTimeout(() => {
     const i = waiters.indexOf(settle);
     if (i >= 0) waiters.splice(i, 1);
     if (waiters.length === 0 && bucket.get(k) === waiters) bucket.delete(k);
-    if (early.get(tabId)?.size === 0) early.delete(tabId);
+    const pending = early.get(tabId);
+    if (pending?.get(sessionId)?.size === 0) pending.delete(sessionId);
+    if (pending?.size === 0) early.delete(tabId);
     resolve(undefined);
   }, timeoutMs);
   function settle(frameId: number | undefined) {
@@ -143,4 +149,18 @@ export function lookup(
   }
   waiters.push(settle);
   return promise;
+}
+
+function earlyWaiters(tabId: number, sessionId: SessionId): Waiters {
+  let pending = early.get(tabId);
+  if (!pending) {
+    pending = new Map();
+    early.set(tabId, pending);
+  }
+  let waiters = pending.get(sessionId);
+  if (!waiters) {
+    waiters = new Map();
+    pending.set(sessionId, waiters);
+  }
+  return waiters;
 }
