@@ -113,13 +113,9 @@ export interface TabMessages {
    * AttachHints, so frames drop one whose sessionId is older than the latest
    * they have seen.
    * INVARIANT: dispatch true as soon as content-root accepts the session and
-   * false as soon as BeginRemoveHintsInTab confirms that RemoveHints is for
-   * the live session, before RemoveHintsInTab runs the action, not after the
-   * RPC settles: by then the next session's keystrokes can already be in
-   * flight. A RemoveHints of an ended session broadcasts nothing. Waiting
-   * for that answer keeps other frames swallowing keys for one more tab
-   * message, longer while frame 0 is busy; that delay is accepted so that a
-   * stale RemoveHints cannot stop frames of the live session.
+   * false once RemoveHints is confirmed for the live session, before its
+   * action runs (see RemoveHints in background/hinter.ts). A RemoveHints of
+   * an ended session broadcasts nothing.
    */
   SyncHintingState: {
     payload: { active: boolean; sessionId: SessionId };
