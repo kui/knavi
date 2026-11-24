@@ -1,6 +1,7 @@
 import { ActionFinder } from "./action-handlers";
 import { CachedFetcher } from "../lib/cache";
 import { sendToRuntime } from "../lib/chrome-messages";
+import type { SessionId } from "../lib/chrome-messages";
 import { getClientRects, getContentRects, listAll } from "../dom/elements";
 import { flatMap } from "../lib/iters";
 import { Timers } from "../lib/metrics";
@@ -22,7 +23,7 @@ interface ElementProfile {
 }
 
 interface AggregationContext {
-  requestId: number;
+  sessionId: SessionId;
   currentViewport: Rect<"actual-viewport", "root-viewport">;
   frameOffsets: Coordinates<"layout-viewport", "root-viewport">;
   clientRectsFetcher: CachedFetcher<
@@ -39,7 +40,7 @@ export class RectAggregatorContentAll {
   constructor(private readonly framePath: FramePath) {}
 
   async handleAllRectsRequest(
-    requestId: number,
+    sessionId: SessionId,
     currentViewport: Rect<"actual-viewport", "root-viewport">,
     frameOffsets: Coordinates<"layout-viewport", "root-viewport">,
   ) {
@@ -53,7 +54,7 @@ export class RectAggregatorContentAll {
     );
 
     const context: AggregationContext = {
-      requestId,
+      sessionId,
       currentViewport,
       frameOffsets,
       clientRectsFetcher: new CachedFetcher((e: Element) => getClientRects(e)),
@@ -66,7 +67,7 @@ export class RectAggregatorContentAll {
     console.debug("Aggrigate rects", this.elements);
 
     await sendToRuntime("ResponseRectsFragment", {
-      requestId,
+      sessionId,
       rects: this.elements,
     });
 
@@ -130,7 +131,7 @@ export class RectAggregatorContentAll {
     rect: Rect<"element-border", "root-viewport"> | null,
     childPath: string[] | undefined,
     {
-      requestId,
+      sessionId,
       frameOffsets,
       clientRectsFetcher,
       styleFetcher,
@@ -168,7 +169,7 @@ export class RectAggregatorContentAll {
     }
 
     sendToRuntime("AllRectsRequest", {
-      id: requestId,
+      sessionId,
       targetPath: childPath,
       viewport: iframeViewport,
       offsets: { ...contentRect, type: "layout-viewport" as const },

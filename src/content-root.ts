@@ -39,7 +39,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 chrome.runtime.onMessage.addListener(
   ChromeMessageRouter.newTabInstance()
     .add("ResponseRectsFragment", (m) =>
-      rectAggregator.handleRects(m.requestId, m.rects),
+      rectAggregator.handleRects(m.sessionId, m.rects),
     )
     .merge(buildHinterRouter(hinter))
     .add("BlurRoot", ({ rect }) => blurer.handleBlurRoot(rect))

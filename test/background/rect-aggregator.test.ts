@@ -91,7 +91,7 @@ void describe("background AllRectsRequest routing", () => {
   void test("routes the empty path to the top frame without a report", async () => {
     await call(
       "AllRectsRequest",
-      { id: 1, targetPath: [], viewport: VIEWPORT, offsets: OFFSETS },
+      { sessionId: 1, targetPath: [], viewport: VIEWPORT, offsets: OFFSETS },
       { tab: { id: TAB }, frameId: 0 },
     );
 
@@ -100,7 +100,7 @@ void describe("background AllRectsRequest routing", () => {
       tabId: TAB,
       type: "AllRectsRequest",
       payload: {
-        id: 1,
+        sessionId: 1,
         targetPath: [],
         viewport: VIEWPORT,
         offsets: OFFSETS,
@@ -113,7 +113,12 @@ void describe("background AllRectsRequest routing", () => {
     await report(["1", "s0"], 5);
     await call(
       "AllRectsRequest",
-      { id: 1, targetPath: ["1", "s0"], viewport: VIEWPORT, offsets: OFFSETS },
+      {
+        sessionId: 1,
+        targetPath: ["1", "s0"],
+        viewport: VIEWPORT,
+        offsets: OFFSETS,
+      },
       { tab: { id: TAB }, frameId: 0 },
     );
 
@@ -124,7 +129,7 @@ void describe("background AllRectsRequest routing", () => {
   void test("waits for a path that is reported after the request", async () => {
     const request = call(
       "AllRectsRequest",
-      { id: 1, targetPath: ["0"], viewport: VIEWPORT, offsets: OFFSETS },
+      { sessionId: 1, targetPath: ["0"], viewport: VIEWPORT, offsets: OFFSETS },
       { tab: { id: TAB }, frameId: 0 },
     );
     await new Promise<void>((resolve) => setImmediate(resolve));
@@ -183,7 +188,7 @@ void describe("background AllRectsRequest routing", () => {
     framePaths.forgetTab(TAB);
     await call(
       "AllRectsRequest",
-      { id: 4, targetPath: [], viewport: VIEWPORT, offsets: OFFSETS },
+      { sessionId: 4, targetPath: [], viewport: VIEWPORT, offsets: OFFSETS },
       { tab: { id: TAB }, frameId: 0 },
     );
     assert.equal(sent.length, 1);
@@ -194,7 +199,7 @@ void describe("background AllRectsRequest routing", () => {
     framePaths.forgetTab(TAB);
     const request = call(
       "AllRectsRequest",
-      { id: 2, targetPath: ["0"], viewport: VIEWPORT, offsets: OFFSETS },
+      { sessionId: 2, targetPath: ["0"], viewport: VIEWPORT, offsets: OFFSETS },
       { tab: { id: TAB }, frameId: 0 },
     );
     await new Promise<void>((resolve) => setImmediate(resolve));
@@ -210,7 +215,7 @@ void describe("background AllRectsRequest routing", () => {
     await report(["0"], 5);
     const request = call(
       "AllRectsRequest",
-      { id: 2, targetPath: ["0"], viewport: VIEWPORT, offsets: OFFSETS },
+      { sessionId: 2, targetPath: ["0"], viewport: VIEWPORT, offsets: OFFSETS },
       { tab: { id: TAB }, frameId: 0 },
     );
     await new Promise<void>((resolve) => setImmediate(resolve));
@@ -227,7 +232,7 @@ void describe("background AllRectsRequest routing", () => {
     framePaths.end(TAB, 1);
     const request = call(
       "AllRectsRequest",
-      { id: 1, targetPath: ["0"], viewport: VIEWPORT, offsets: OFFSETS },
+      { sessionId: 1, targetPath: ["0"], viewport: VIEWPORT, offsets: OFFSETS },
       { tab: { id: TAB }, frameId: 0 },
     );
     await new Promise<void>((resolve) => setImmediate(resolve));
@@ -236,7 +241,7 @@ void describe("background AllRectsRequest routing", () => {
     await request;
     await call(
       "AllRectsRequest",
-      { id: 1, targetPath: ["0"], viewport: VIEWPORT, offsets: OFFSETS },
+      { sessionId: 1, targetPath: ["0"], viewport: VIEWPORT, offsets: OFFSETS },
       { tab: { id: TAB }, frameId: 0 },
     );
 

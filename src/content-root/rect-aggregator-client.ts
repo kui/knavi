@@ -5,7 +5,7 @@ import * as vp from "./viewports";
 import { printError } from "../lib/errors";
 
 export class RectAggregatorClient {
-  private requestId: SessionId | null = null;
+  private sessionId: SessionId | null = null;
   private callback:
     | ((elementRects: ElementRects[] | "Complete") => void)
     | null = null;
@@ -25,9 +25,9 @@ export class RectAggregatorClient {
     const { enqueue, dequeue } = createQueue<ElementRects[] | "Complete">();
     this.callback = (rects) => enqueue.next(rects);
 
-    this.requestId = sessionId;
+    this.sessionId = sessionId;
     sendToRuntime("AllRectsRequest", {
-      id: sessionId,
+      sessionId,
       targetPath: [],
       viewport: {
         type: "actual-viewport",
@@ -48,9 +48,9 @@ export class RectAggregatorClient {
     }
   }
 
-  handleRects(requestId: number, rects: ElementRects[]) {
-    if (requestId !== this.requestId) {
-      console.warn("Unexpected requestId: ", requestId);
+  handleRects(sessionId: SessionId, rects: ElementRects[]) {
+    if (sessionId !== this.sessionId) {
+      console.warn("Unexpected sessionId: ", sessionId);
       return;
     }
     if (!this.callback) {

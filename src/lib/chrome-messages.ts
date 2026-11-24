@@ -49,15 +49,14 @@ export interface RuntimeMessages {
   };
   ResponseRectsFragment: {
     payload: {
-      requestId: number;
+      sessionId: SessionId;
       rects: ElementRects[];
     };
     response: void;
   };
   AllRectsRequest: {
     payload: {
-      /** The hint session's id; frames pass it on to their child frames. */
-      id: SessionId;
+      sessionId: SessionId;
       targetPath: string[];
       viewport: RectJSON<"actual-viewport", "root-viewport">;
       offsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
@@ -128,15 +127,14 @@ export interface TabMessages {
   };
   ResponseRectsFragment: {
     payload: {
-      requestId: number;
+      sessionId: SessionId;
       rects: ElementRects[];
     };
     response: void;
   };
   AllRectsRequest: {
     payload: {
-      /** The hint session's id; frames pass it on to their child frames. */
-      id: SessionId;
+      sessionId: SessionId;
       targetPath: string[];
       viewport: RectJSON<"actual-viewport", "root-viewport">;
       offsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
