@@ -64,6 +64,8 @@ class ManualWait {
 let hinting: boolean;
 let calls: string[];
 let matchBlacklist: () => Promise<string[]>;
+let readSettings: () => Promise<void>;
+let loaded: unknown[];
 let timers: ManualWait;
 let watcher: SettingsWatcher;
 
@@ -71,6 +73,8 @@ beforeEach(() => {
   hinting = false;
   calls = [];
   matchBlacklist = () => Promise.resolve([]);
+  readSettings = () => Promise.resolve();
+  loaded = [];
   timers = new ManualWait();
   watcher = new SettingsWatcher({
     hinterClient: {
@@ -80,14 +84,23 @@ beforeEach(() => {
     },
     keyboardHandler: {
       newBlacklistTicket: () => 1,
-      setup: () => calls.push("setup"),
+      setup: (settings) => {
+        calls.push("setup");
+        loaded.push(settings);
+      },
       updateBlacklist: () => calls.push("updateBlacklist"),
     },
     settingsClient: {
-      getWithBlacklistMatch: <K extends keyof typeof SETTINGS>(names: K[]) => {
+      getWithBlacklistMatch: async <K extends keyof typeof SETTINGS>(
+        names: K[],
+      ) => {
         calls.push("getWithBlacklistMatch");
+        await readSettings();
         const picked = Object.fromEntries(names.map((n) => [n, SETTINGS[n]]));
-        return Promise.resolve([picked as Pick<Settings, K>, []]);
+        return [picked as Pick<Settings, K>, []] as [
+          Pick<Settings, K>,
+          string[],
+        ];
       },
       matchBlacklist: () => {
         calls.push("matchBlacklist");
@@ -98,6 +111,23 @@ beforeEach(() => {
     onLoaded: () => calls.push("onLoaded"),
     wait: timers.wait,
     activeArea: () => Promise.resolve("sync"),
+  });
+});
+
+void describe("SettingsWatcher.load", () => {
+  void test("loads only the key settings", async () => {
+    await watcher.load();
+    assert.deepEqual(loaded, [
+      {
+        magicKey: "Space",
+        blurKey: "",
+        hints: "asdfghjkl",
+        stickyKey: "",
+        actionKey: "",
+        cancelKey: "",
+        cycleKey: "Tab",
+      },
+    ]);
   });
 });
 
@@ -153,9 +183,10 @@ void describe("SettingsWatcher.handleStorageChange", () => {
   });
 
   void test("reaches the settings reload when the blacklist refresh fails", async (t) => {
-    t.mock.method(console, "error", () => undefined);
+    const error = t.mock.method(console, "error", () => undefined);
     hinting = true;
-    matchBlacklist = () => Promise.reject(new Error("storage read failed"));
+    const failure = new Error("storage read failed");
+    matchBlacklist = () => Promise.reject(failure);
     const done = watcher.handleStorageChange({ blackList: {} }, "sync");
     await timers.fire();
     hinting = false;
@@ -167,6 +198,38 @@ void describe("SettingsWatcher.handleStorageChange", () => {
       "setup",
       "onLoaded",
     ]);
+    assert.deepEqual(
+      error.mock.calls.map((c): unknown => c.arguments[0]),
+      [failure],
+    );
+  });
+
+  void test("prints a failed settings reload", async (t) => {
+    const error = t.mock.method(console, "error", () => undefined);
+    /* WHY: a DOMException that is not an AbortError must still be printed;
+       only a superseded debounce is silent. */
+    const failure = new DOMException(
+      "storage read failed",
+      "InvalidStateError",
+    );
+    readSettings = () => Promise.reject(failure);
+    const done = watcher.handleStorageChange({ hints: {} }, "sync");
+    await timers.fire();
+    await done;
+    assert.deepEqual(
+      error.mock.calls.map((c): unknown => c.arguments[0]),
+      [failure],
+    );
+  });
+
+  void test("prints nothing for a change superseded by a newer one", async (t) => {
+    const error = t.mock.method(console, "error", () => undefined);
+    const first = watcher.handleStorageChange({ hints: {} }, "sync");
+    await flush();
+    const second = watcher.handleStorageChange({ magicKey: {} }, "sync");
+    await timers.fire();
+    await Promise.all([first, second]);
+    assert.equal(error.mock.callCount(), 0);
   });
 
   void test("stops when a newer change arrives during the blacklist refresh", async () => {

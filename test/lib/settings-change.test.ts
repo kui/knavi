@@ -1,7 +1,8 @@
-import { describe, it } from "node:test";
+import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import {
   isRelevantChange,
+  readActiveArea,
   type SettingsArea,
 } from "../../src/lib/settings-change";
 
@@ -57,5 +58,37 @@ void describe("isRelevantChange", () => {
       ),
       false,
     );
+  });
+});
+
+void describe("readActiveArea", () => {
+  const g = globalThis as Record<string, unknown>;
+  const fakeLocal = (stored: Record<string, unknown>) => {
+    g.chrome = {
+      storage: {
+        local: {
+          get: (key: string) =>
+            Promise.resolve(key in stored ? { [key]: stored[key] } : {}),
+        },
+      },
+    };
+  };
+  afterEach(() => {
+    delete g.chrome;
+  });
+
+  void it("is local when the marker is chrome-local", async () => {
+    fakeLocal({ _area: "chrome-local" });
+    assert.equal(await readActiveArea(), "local");
+  });
+
+  void it("is sync when the marker is chrome-sync", async () => {
+    fakeLocal({ _area: "chrome-sync" });
+    assert.equal(await readActiveArea(), "sync");
+  });
+
+  void it("is sync when the marker is not set", async () => {
+    fakeLocal({});
+    assert.equal(await readActiveArea(), "sync");
   });
 });
