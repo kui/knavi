@@ -17,6 +17,11 @@ interface HintContext {
   hintLetters: string | null;
   targets: HintedElement[];
   inputSequence: string[];
+  /**
+   * Set by beginRemoveHints(): the hit target is then fixed for the action
+   * that RemoveHintsInTab runs, so input that arrives meanwhile is ignored.
+   */
+  removing: boolean;
   hitTarget?: HintedElement | undefined;
   /**
    * Snapshot taken on the first Cycle Key press. Fixed set of targets whose
@@ -68,6 +73,7 @@ export class HinterContentRoot {
       hintLetters: this.isSetUp ? this.hintLetters : null,
       inputSequence: [],
       targets: [],
+      removing: false,
     };
     this.context = context;
     /* WHY: the session is ended only by RemoveHints, so a failure while
@@ -138,7 +144,7 @@ export class HinterContentRoot {
 
   hitHint(id: SessionId, inputLetter: SingleLetter) {
     const context = this.live(id);
-    if (!context) return;
+    if (!context || context.removing) return;
 
     /* WHY: until render() fixes the session's hint letters, keep the letter
        for render() to check. */
@@ -168,7 +174,7 @@ export class HinterContentRoot {
 
   cycleHint(id: SessionId) {
     const context = this.live(id);
-    if (!context) return;
+    if (!context || context.removing) return;
     if (!context.hitTarget) return;
 
     if (!context.cycle) {
@@ -196,8 +202,12 @@ export class HinterContentRoot {
     );
   }
 
-  isLiveSession(id: SessionId): boolean {
-    return this.live(id) !== null;
+  /** Returns whether `id` is the live session, and stops its input if so. */
+  beginRemoveHints(id: SessionId): boolean {
+    const context = this.live(id);
+    if (!context) return false;
+    context.removing = true;
+    return true;
   }
 
   async removeHints(id: SessionId, options: ActionOptions, execute: boolean) {
@@ -222,8 +232,8 @@ export function buildHinterRouter(hinter: HinterContentRoot) {
     .add("AttachHintsInTab", () => ({ sessionId: hinter.attachHints() }))
     .add("HitHintInTab", ({ sessionId, key }) => hinter.hitHint(sessionId, key))
     .add("CycleHintInTab", ({ sessionId }) => hinter.cycleHint(sessionId))
-    .add("IsLiveSessionInTab", ({ sessionId }) =>
-      hinter.isLiveSession(sessionId),
+    .add("BeginRemoveHintsInTab", ({ sessionId }) =>
+      hinter.beginRemoveHints(sessionId),
     )
     .add("RemoveHintsInTab", ({ sessionId, options, execute }) =>
       hinter.removeHints(sessionId, options, execute),

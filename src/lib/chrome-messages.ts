@@ -90,8 +90,11 @@ export interface TabMessages {
     payload: { sessionId: SessionId };
     response: void;
   };
-  /** Whether `sessionId` is the live session, answered without awaiting. */
-  IsLiveSessionInTab: {
+  /**
+   * Answers without awaiting whether `sessionId` is the live session, and if
+   * so stops its input until RemoveHintsInTab ends it.
+   */
+  BeginRemoveHintsInTab: {
     payload: { sessionId: SessionId };
     response: boolean;
   };
@@ -110,10 +113,10 @@ export interface TabMessages {
    * AttachHints, so frames drop one whose sessionId is older than the latest
    * they have seen.
    * INVARIANT: dispatch true as soon as content-root accepts the session and
-   * false as soon as content-root confirms that RemoveHints is for the live
-   * session, before RemoveHintsInTab runs the action, not after the RPC
-   * settles: by then the next session's keystrokes can already be in flight.
-   * A RemoveHints of an ended session broadcasts nothing.
+   * false as soon as BeginRemoveHintsInTab confirms that RemoveHints is for
+   * the live session, before RemoveHintsInTab runs the action, not after the
+   * RPC settles: by then the next session's keystrokes can already be in
+   * flight. A RemoveHints of an ended session broadcasts nothing.
    */
   SyncHintingState: {
     payload: { active: boolean; sessionId: SessionId };

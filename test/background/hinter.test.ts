@@ -27,7 +27,7 @@ let liveSessionId: number | null = null;
         liveSessionId = nextSessionId++;
         return Promise.resolve({ response: { sessionId: liveSessionId } });
       }
-      if (message["@type"] === "IsLiveSessionInTab")
+      if (message["@type"] === "BeginRemoveHintsInTab")
         return Promise.resolve({
           response: message.sessionId === liveSessionId,
         });
@@ -153,7 +153,7 @@ void describe("hint session and the frame path table", () => {
     await call("RemoveHints", { sessionId, options: {}, execute: true });
     assert.deepEqual(
       sent.map((m) => m.type),
-      ["IsLiveSessionInTab", "SyncHintingState", "RemoveHintsInTab"],
+      ["BeginRemoveHintsInTab", "SyncHintingState", "RemoveHintsInTab"],
     );
   });
 
@@ -174,7 +174,7 @@ void describe("hint session and the frame path table", () => {
     await call("RemoveHints", { sessionId, options: {}, execute: false });
     assert.deepEqual(
       sent.map((m) => m.type),
-      ["IsLiveSessionInTab"],
+      ["BeginRemoveHintsInTab"],
     );
   });
 });
