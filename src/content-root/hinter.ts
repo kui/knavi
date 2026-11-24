@@ -10,8 +10,9 @@ import { printError } from "../lib/errors";
 interface HintContext {
   id: SessionId;
   /**
-   * The hint letters of this session, fixed when rendering starts so that a
-   * settings change applies from the next session. Null until then.
+   * The hint letters of this session, fixed when it starts, or when setup()
+   * runs if that is later, so that a settings change applies from the next
+   * session. Null until then.
    */
   hintLetters: string | null;
   targets: HintedElement[];
@@ -64,7 +65,7 @@ export class HinterContentRoot {
     this.lastSessionId = Math.max(this.lastSessionId + 1, Date.now());
     const context: HintContext = {
       id: this.lastSessionId,
-      hintLetters: null,
+      hintLetters: this.isSetUp ? this.hintLetters : null,
       inputSequence: [],
       targets: [],
     };
@@ -81,12 +82,11 @@ export class HinterContentRoot {
        leave hints no session can remove. */
     await this.setupDone.promise;
     if (this.context !== context) return;
+    const letters = (context.hintLetters ??= this.hintLetters);
     await waitUntil(() => Boolean(document.body));
     if (this.context !== context) return;
-    const letters = this.hintLetters;
     if (letters.length === 0)
       throw Error("Ilegal state invocation: hintLetters is empty");
-    context.hintLetters = letters;
     /* WHY: letters typed before setup() were kept unchecked. */
     context.inputSequence = context.inputSequence.filter((l) =>
       letters.includes(l),

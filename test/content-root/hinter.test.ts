@@ -445,4 +445,19 @@ void describe("HinterContentRoot", () => {
     assert.equal(view.batches[2][0].hint, "j");
     await hinter.removeHints(next, OPTIONS, false);
   });
+
+  void test("a Hint Letters change before the session starts rendering applies from the next session", async () => {
+    hinter.setup("asdf");
+    const id = hinter.attachHints();
+    hinter.setup("jkl;");
+    hinter.hitHint(id, "j" as SingleLetter);
+    hinter.hitHint(id, "a" as SingleLetter);
+    await tick();
+    aggregator.handleRects(id, RECTS);
+    await tick();
+
+    assert.equal(view.batches[0][0].hint, "a");
+    assert.equal(view.batches[0][0].state, "hit");
+    await hinter.removeHints(id, OPTIONS, false);
+  });
 });
