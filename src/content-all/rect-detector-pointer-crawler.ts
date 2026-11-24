@@ -1,6 +1,6 @@
 import { Timers } from "../lib/metrics";
 import { Rect } from "../dom/rects";
-import { shadowRootOf } from "../dom/elements";
+import { shadowRootOf } from "../dom/shadow-roots";
 
 const MIN_POINT_SPACING_PX = 4;
 const EDGE_INSET_PX = 1;

@@ -53,6 +53,7 @@ class FakeShadowRoot extends FakeNode {
 (globalThis as Record<string, unknown>).HTMLInputElement = FakeInput;
 (globalThis as Record<string, unknown>).HTMLTextAreaElement = FakeTextarea;
 (globalThis as Record<string, unknown>).ShadowRoot = FakeShadowRoot;
+(globalThis as Record<string, unknown>).Element = FakeNode;
 // WHY: no FakeNode belongs to this document, so shadowRootOf() never looks for a closed shadow root.
 (globalThis as Record<string, unknown>).document = {};
 

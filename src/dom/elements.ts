@@ -1,5 +1,6 @@
 import { map } from "../lib/iters";
 import { Coordinates, Rect } from "./rects";
+import { assignedSlotOf, shadowRootOf } from "./shadow-roots";
 
 export const Z_INDEX_OFFSET = 2147483647;
 
@@ -88,11 +89,9 @@ export function* traverseComposedParent(
 }
 
 function composedParent(element: Element): Element | null {
-  const slot = assignedSlotOf(element);
-  if (slot) return slot;
-  if (element.parentElement) return element.parentElement;
-  const parent = element.parentNode;
-  return parent instanceof ShadowRoot ? parent.host : null;
+  const parent = flatParent(element);
+  const p = parent instanceof ShadowRoot ? parent.host : parent;
+  return p instanceof Element ? p : null;
 }
 
 /**
@@ -113,20 +112,6 @@ function flatParent(node: Node): Node | null {
   const slot = assignedSlotOf(node);
   if (slot) return slot;
   return node.parentNode;
-}
-
-/** Like `assignedSlot`, but also finds a `<slot>` in a closed shadow root. */
-function assignedSlotOf(node: Node): HTMLSlotElement | null {
-  const slot = (node as Partial<Slottable>).assignedSlot;
-  if (slot) return slot;
-  const host = node.parentElement;
-  if (!host || host.shadowRoot) return null;
-  const root = shadowRootOf(host);
-  if (!root) return null;
-  for (const s of root.querySelectorAll("slot")) {
-    if (s.assignedNodes().includes(node)) return s;
-  }
-  return null;
 }
 
 export function* traverseFirstChild(
@@ -343,75 +328,4 @@ export function* listAll(d: ParentNode = document): Generator<Element> {
     const root = shadowRootOf(e);
     if (root) yield* listAll(root);
   }
-}
-
-/**
- * The open or closed shadow root attached to `element`, or null. Closed roots
- * are found only for elements of this frame's own document.
- */
-export function shadowRootOf(element: Element): ShadowRoot | null {
-  if (element.shadowRoot) return element.shadowRoot;
-  /* WHY: frames share DOM wrappers, and chrome.dom.openOrClosedShadowRoot()
-     creates the root's wrapper in the caller's realm. If a child frame called
-     it on its parent's element first, `instanceof` checks in the parent frame
-     would fail for that root and everything found through it. */
-  if (element.ownerDocument !== document || !(element instanceof HTMLElement))
-    return null;
-  // WHY: the call is slow enough to delay hints on large pages, so skip elements that cannot have a shadow root.
-  if (!canHostShadowRoot(element)) return null;
-  return chrome.dom.openOrClosedShadowRoot(element);
-}
-
-/** The elements `attachShadow()` accepts. */
-const SHADOW_HOST_NAMES = new Set([
-  "article",
-  "aside",
-  "blockquote",
-  "body",
-  "div",
-  "footer",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "header",
-  "main",
-  "nav",
-  "p",
-  "section",
-  "span",
-]);
-
-function canHostShadowRoot(element: HTMLElement): boolean {
-  return (
-    element.localName.includes("-") || SHADOW_HOST_NAMES.has(element.localName)
-  );
-}
-
-/**
- * Returns iframes that live inside shadow roots reachable from `d`, split by
- * whether reaching them needs a closed shadow root. Skips light-DOM iframes —
- * callers should combine this with `document.getElementsByTagName("iframe")`
- * for the cheap light-DOM pass. Walking every element is unavoidable here:
- * there is no DOM API to enumerate shadow roots directly.
- */
-export function listIframesInShadowRoots(d: ParentNode = document): {
-  open: HTMLIFrameElement[];
-  closed: HTMLIFrameElement[];
-} {
-  const open: HTMLIFrameElement[] = [];
-  const closed: HTMLIFrameElement[] = [];
-  const walk = (node: ParentNode, throughClosed: boolean) => {
-    for (const host of node.querySelectorAll("*")) {
-      const root = shadowRootOf(host);
-      if (!root) continue;
-      const isClosed = throughClosed || root !== host.shadowRoot;
-      (isClosed ? closed : open).push(...root.querySelectorAll("iframe"));
-      walk(root, isClosed);
-    }
-  };
-  walk(d, false);
-  return { open, closed };
 }
