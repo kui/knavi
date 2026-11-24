@@ -1,6 +1,3 @@
-import type Settings from "../lib/settings";
-import { printError } from "../lib/errors";
-
 const BACKDROP_RULE =
   ":host::backdrop { background-color: transparent !important; }";
 
@@ -102,10 +99,4 @@ async function handleUpdate(
   const storage = await settings.getStorage();
   if (isOlderThan400(previousVersion)) await migrate400(storage);
   if (isOlderThan420(previousVersion)) await migrate420(storage);
-}
-
-export function init(settings: typeof Settings) {
-  chrome.runtime.onInstalled.addListener((details) => {
-    onInstalled(details, settings).catch(printError);
-  });
 }

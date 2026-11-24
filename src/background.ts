@@ -5,10 +5,17 @@ import * as migration from "./background/migration";
 import * as actionIcon from "./background/action-icon";
 import * as framePaths from "./background/frame-paths";
 import libSettings from "./lib/settings";
+import { printError } from "./lib/errors";
 
 globalThis.KNAVI_FILE = "background";
 
-migration.init(libSettings);
+chrome.runtime.onInstalled.addListener((details) => {
+  migration.onInstalled(details, libSettings).catch(printError);
+});
+chrome.tabs.onActivated.addListener(actionIcon.onActivated);
+chrome.tabs.onUpdated.addListener(actionIcon.onUpdated);
+chrome.storage.onChanged.addListener(actionIcon.onStorageChanged);
+chrome.storage.onChanged.addListener(settings.onStorageChanged);
 actionIcon.init();
 
 chrome.runtime.onMessage.addListener(
