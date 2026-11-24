@@ -67,10 +67,9 @@ export const router = Router.newRuntimeInstance()
       printError(e);
       return true;
     });
-    if (live) {
-      syncHintingState(tabId, false, sessionId);
-      framePaths.end(tabId, sessionId);
-    }
+    if (!live) return;
+    syncHintingState(tabId, false, sessionId);
+    framePaths.end(tabId, sessionId);
     return await sendToTab(
       tabId,
       "RemoveHintsInTab",

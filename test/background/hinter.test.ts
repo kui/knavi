@@ -31,6 +31,11 @@ let liveSessionId: number | null = null;
         return Promise.resolve({
           response: message.sessionId === liveSessionId,
         });
+      if (
+        message["@type"] === "RemoveHintsInTab" &&
+        message.sessionId === liveSessionId
+      )
+        liveSessionId = null;
       return Promise.resolve({ response: undefined });
     },
   },
@@ -65,7 +70,7 @@ void describe("hint session and the frame path table", () => {
   beforeEach(() => {
     sent.length = 0;
     attachFails = false;
-    framePaths.end(TAB);
+    framePaths.forgetTab(TAB);
   });
 
   void test("AttachHints starts a session and tells every frame", async () => {
@@ -145,5 +150,16 @@ void describe("hint session and the frame path table", () => {
     sent.length = 0;
     await call("RemoveHints", { sessionId: old, options: {}, execute: false });
     assert.deepEqual(syncStates(), []);
+  });
+
+  void test("a second RemoveHints of the same session broadcasts nothing", async () => {
+    const { sessionId } = (await call("AttachHints")) as { sessionId: number };
+    await call("RemoveHints", { sessionId, options: {}, execute: false });
+    sent.length = 0;
+    await call("RemoveHints", { sessionId, options: {}, execute: false });
+    assert.deepEqual(
+      sent.map((m) => m.type),
+      ["IsLiveSessionInTab"],
+    );
   });
 });

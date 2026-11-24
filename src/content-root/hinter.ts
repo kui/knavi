@@ -11,9 +11,9 @@ interface HintContext {
   id: SessionId;
   /**
    * The hint letters of this session, fixed when rendering starts so that a
-   * settings change applies from the next session. Undefined until then.
+   * settings change applies from the next session. Null until then.
    */
-  hintLetters?: string | undefined;
+  hintLetters: string | null;
   targets: HintedElement[];
   inputSequence: string[];
   hitTarget?: HintedElement | undefined;
@@ -64,6 +64,7 @@ export class HinterContentRoot {
     this.lastSessionId = Math.max(this.lastSessionId + 1, Date.now());
     const context: HintContext = {
       id: this.lastSessionId,
+      hintLetters: null,
       inputSequence: [],
       targets: [],
     };
@@ -140,7 +141,7 @@ export class HinterContentRoot {
     /* WHY: until render() fixes the session's hint letters, keep the letter
        for render() to check. */
     if (
-      context.hintLetters != null &&
+      context.hintLetters !== null &&
       !context.hintLetters.includes(inputLetter)
     )
       return;
@@ -194,7 +195,7 @@ export class HinterContentRoot {
   }
 
   isLiveSession(id: SessionId): boolean {
-    return this.context?.id === id;
+    return this.live(id) !== null;
   }
 
   async removeHints(id: SessionId, options: ActionOptions, execute: boolean) {
