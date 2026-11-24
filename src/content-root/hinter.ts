@@ -17,10 +17,7 @@ interface HintContext {
   hintLetters: string | null;
   targets: HintedElement[];
   inputSequence: string[];
-  /**
-   * Set by beginRemoveHints(): the hit target is then fixed for the action
-   * that RemoveHintsInTab runs, so input that arrives meanwhile is ignored.
-   */
+  /** Set by beginRemoveHints(); the session then takes no more input. */
   removing: boolean;
   hitTarget?: HintedElement | undefined;
   /**
@@ -33,9 +30,9 @@ interface HintContext {
 
 export class HinterContentRoot {
   private context: HintContext | null = null;
-  private hintLetters = "";
+  /** Null until setup(). */
+  private hintLetters: string | null = null;
   private lastSessionId: SessionId = 0;
-  private isSetUp = false;
   /* WHY: the root frame loads its settings apart from the frame that catches
      the magic key, and right after install that load waits on the slow
      default CSS fetch, so AttachHintsInTab can arrive before setup(). */
@@ -48,7 +45,6 @@ export class HinterContentRoot {
 
   setup(hintLetters: string) {
     this.hintLetters = hintLetters;
-    this.isSetUp = true;
     this.setupDone.resolve();
   }
 
@@ -59,7 +55,7 @@ export class HinterContentRoot {
   attachHints(): SessionId {
     if (this.context)
       throw Error("Ilegal state invocation: already started hinting");
-    if (this.isSetUp && this.hintLetters.length === 0)
+    if (this.hintLetters === "")
       throw Error("Ilegal state invocation: hintLetters is empty");
 
     /* WHY: ids must keep growing across top-frame documents of a tab,
@@ -70,7 +66,7 @@ export class HinterContentRoot {
     this.lastSessionId = Math.max(this.lastSessionId + 1, Date.now());
     const context: HintContext = {
       id: this.lastSessionId,
-      hintLetters: this.isSetUp ? this.hintLetters : null,
+      hintLetters: this.hintLetters,
       inputSequence: [],
       targets: [],
       removing: false,
@@ -91,8 +87,7 @@ export class HinterContentRoot {
     const letters = (context.hintLetters ??= this.hintLetters);
     await waitUntil(() => Boolean(document.body));
     if (this.context !== context) return;
-    if (letters.length === 0)
-      throw Error("Ilegal state invocation: hintLetters is empty");
+    if (!letters) throw Error("Ilegal state invocation: hintLetters is empty");
     /* WHY: letters typed before setup() were kept unchecked. */
     context.inputSequence = context.inputSequence.filter((l) =>
       letters.includes(l),
@@ -117,8 +112,7 @@ export class HinterContentRoot {
       /* WHY: letters typed before these targets existed are only in
          inputSequence; without applying them here the targets stay "init" and
          later letters match against a sequence that no chip reflects. Once
-         removal has begun, the action runs on the hit the user saw, so a
-         later batch must not pick another target. */
+         removal has begun, a later batch must not pick another target. */
       const changes =
         context.inputSequence.length > 0 && !context.removing
           ? applyInput(context, targets)
@@ -146,9 +140,15 @@ export class HinterContentRoot {
     return null;
   }
 
-  hitHint(id: SessionId, inputLetter: SingleLetter) {
+  /** The context of session `id` if it is live and still takes input. */
+  private acceptingInput(id: SessionId): HintContext | null {
     const context = this.live(id);
-    if (!context || context.removing) return;
+    return context?.removing ? null : context;
+  }
+
+  hitHint(id: SessionId, inputLetter: SingleLetter) {
+    const context = this.acceptingInput(id);
+    if (!context) return;
 
     /* WHY: until render() fixes the session's hint letters, keep the letter
        for render() to check. */
@@ -177,8 +177,8 @@ export class HinterContentRoot {
   }
 
   cycleHint(id: SessionId) {
-    const context = this.live(id);
-    if (!context || context.removing) return;
+    const context = this.acceptingInput(id);
+    if (!context) return;
     if (!context.hitTarget) return;
 
     if (!context.cycle) {
