@@ -495,4 +495,43 @@ void describe("HinterContentRoot", () => {
     assert.equal(view.hits.length, 0);
     assert.ok(!sentTypes.includes("ExecuteAction"));
   });
+
+  void test("rects of an ended session's request are ignored", async () => {
+    hinter.setup("asdf");
+    const old = hinter.attachHints();
+    await tick();
+    await hinter.removeHints(old, OPTIONS, false);
+    const id = hinter.attachHints();
+    await tick();
+    aggregator.handleRects(old, RECTS);
+    await tick();
+    assert.equal(view.rendered, 0);
+    aggregator.handleRects(id, RECTS);
+    await tick();
+    assert.equal(view.rendered, 1);
+    await hinter.removeHints(id, OPTIONS, false);
+  });
+
+  void test("a letter outside the session's hint letters is not taken as input", async () => {
+    hinter.setup("asdf");
+    const id = hinter.attachHints();
+    await tick();
+    aggregator.handleRects(id, RECTS);
+    await tick();
+    hinter.hitHint(id, "j" as SingleLetter);
+    assert.equal(view.hits.length, 0);
+    assert.equal(view.batches[0][0].state, "init");
+    await hinter.removeHints(id, OPTIONS, false);
+  });
+
+  void test("a batch that arrives before any input keeps its targets init", async () => {
+    hinter.setup("asdf");
+    const id = hinter.attachHints();
+    await tick();
+    aggregator.handleRects(id, RECTS);
+    await tick();
+    assert.equal(view.batches[0][0].state, "init");
+    assert.equal(view.hits.length, 0);
+    await hinter.removeHints(id, OPTIONS, false);
+  });
 });

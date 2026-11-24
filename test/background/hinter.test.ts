@@ -8,6 +8,7 @@ interface Sent {
 }
 const sent: Sent[] = [];
 let attachFails = false;
+let beginRemoveFails = false;
 let nextSessionId = 1;
 let liveSessionId: number | null = null;
 
@@ -27,10 +28,12 @@ let liveSessionId: number | null = null;
         liveSessionId = nextSessionId++;
         return Promise.resolve({ response: { sessionId: liveSessionId } });
       }
-      if (message["@type"] === "BeginRemoveHintsInTab")
+      if (message["@type"] === "BeginRemoveHintsInTab") {
+        if (beginRemoveFails) return Promise.reject(new Error("no receiver"));
         return Promise.resolve({
           response: message.sessionId === liveSessionId,
         });
+      }
       if (
         message["@type"] === "RemoveHintsInTab" &&
         message.sessionId === liveSessionId
@@ -70,6 +73,7 @@ void describe("hint session and the frame path table", () => {
   beforeEach(() => {
     sent.length = 0;
     attachFails = false;
+    beginRemoveFails = false;
     framePaths.forgetTab(TAB);
   });
 
@@ -173,5 +177,14 @@ void describe("hint session and the frame path table", () => {
       sent.map((m) => m.type),
       ["BeginRemoveHintsInTab"],
     );
+  });
+
+  void test("RemoveHints broadcasts false when content-root cannot answer", async (t) => {
+    t.mock.method(console, "error", () => undefined);
+    const { sessionId } = (await call("AttachHints")) as { sessionId: number };
+    sent.length = 0;
+    beginRemoveFails = true;
+    await call("RemoveHints", { sessionId, options: {}, execute: false });
+    assert.deepEqual(syncStates(), [false]);
   });
 });
