@@ -1,0 +1,18 @@
+<!-- WHY: same as slotted-shadow-button.html, but the shadow root is closed, so `assignedSlot` of the slotted label is null. -->
+<body style="margin: 0; padding: 40px">
+  <x-btn style="display: block; width: 200px">
+    <span style="display: block; height: 40px">slotted label</span>
+  </x-btn>
+  <script>
+    customElements.define(
+      "x-btn",
+      class extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: "closed" }).innerHTML =
+            '<button style="display: block; width: 100%; padding: 0; border: 0" onclick="window.clicked = true"><slot></slot></button>';
+        }
+      },
+    );
+  </script>
+</body>

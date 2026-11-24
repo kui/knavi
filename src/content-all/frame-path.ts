@@ -44,7 +44,7 @@ export class FramePath {
       if (!own || !w) return undefined;
       const index = indexInFrames(window, w);
       if (index >= 0) return [...own, encodeSegment(false, index)];
-      shadow ??= shadowIframes();
+      shadow ??= shadowIframes().iframes;
       const shadowIndex = shadow.indexOf(iframe);
       return shadowIndex >= 0
         ? [...own, encodeSegment(true, shadowIndex)]
@@ -55,7 +55,7 @@ export class FramePath {
   findChild(segment: string): HTMLIFrameElement | undefined {
     const parsed = parseSegment(segment);
     if (!parsed) return undefined;
-    if (parsed.shadow) return shadowIframes()[parsed.index];
+    if (parsed.shadow) return shadowIframes().iframes[parsed.index];
     const w = window.frames[parsed.index] as Window | undefined;
     if (!w) return undefined;
     for (const iframe of document.getElementsByTagName("iframe")) {
@@ -142,10 +142,10 @@ export class FramePath {
         "*",
       );
 
-    const { open, closed } = listIframesInShadowRoots();
-    [...open, ...closed].forEach((iframe, i) => {
+    const { iframes, firstClosed } = shadowIframes();
+    iframes.forEach((iframe, i) => {
       // WHY: a child cannot see its parent's closed shadow roots (see shadowRootOf()), so it never computes a path through one.
-      if (i >= open.length || needsAssignment(computed, iframe, true)) {
+      if (i >= firstClosed || needsAssignment(computed, iframe, true)) {
         post(iframe.contentWindow, encodeSegment(true, i));
       }
     });
@@ -191,14 +191,18 @@ function parseSegment(
 }
 
 /**
- * The iframes in shadow roots of `doc`, in the order segments count them.
+ * The iframes in shadow roots of `doc`, in the order segments count them, and
+ * the index of the first one behind a closed shadow root.
  * INVARIANT: iframes behind a closed shadow root come last, so a child frame,
  * which lists its parent's iframes without them, numbers the others the same
  * way the parent does.
  */
-function shadowIframes(doc: Document = document): HTMLIFrameElement[] {
+function shadowIframes(doc: Document = document): {
+  iframes: HTMLIFrameElement[];
+  firstClosed: number;
+} {
   const { open, closed } = listIframesInShadowRoots(doc);
-  return [...open, ...closed];
+  return { iframes: [...open, ...closed], firstClosed: open.length };
 }
 
 function samePath(a: readonly string[], b: readonly string[]): boolean {
@@ -220,7 +224,7 @@ function segmentInParent(child: Window): string | undefined {
     const iframe = child.frameElement;
     if (!iframe) return undefined;
     // WHY: the parent's elements belong to another realm, so `instanceof` is false.
-    const shadowIndex = shadowIframes(iframe.ownerDocument).indexOf(
+    const shadowIndex = shadowIframes(iframe.ownerDocument).iframes.indexOf(
       iframe as HTMLIFrameElement,
     );
     return shadowIndex >= 0 ? encodeSegment(true, shadowIndex) : undefined;

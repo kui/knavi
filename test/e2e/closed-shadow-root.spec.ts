@@ -1,5 +1,13 @@
 import type { Frame, Page } from "@playwright/test";
-import { test, expect, gotoTest, attachHints, findHintNear } from "./fixtures";
+import {
+  test,
+  expect,
+  gotoTest,
+  attachHints,
+  countHintsFor,
+  findHintFor,
+  findHintNear,
+} from "./fixtures";
 
 declare global {
   interface Window {
@@ -75,5 +83,36 @@ test.describe("hints inside closed shadow roots", () => {
     expect(box).toBeTruthy();
     await hitHintNear(page, box!);
     await expect(button).toHaveText("clicked");
+  });
+
+  for (const mode of ["closed", "open"])
+    test(`a button in a same-origin iframe in the ${mode} shadow root, when the closed one comes first`, async ({
+      page,
+    }) => {
+      await gotoTest(page, "closed-then-open-shadow-iframe.html");
+      const button = childFrame(
+        page,
+        `/tests/cross-origin-iframe-grandchild.html?${mode}`,
+      ).locator("#grandchild-button");
+      const box = await button.boundingBox();
+      expect(box).toBeTruthy();
+      await hitHintNear(page, box!);
+      await expect(button).toHaveText("clicked");
+    });
+
+  test("a button whose only content is slotted into a closed shadow root", async ({
+    page,
+  }) => {
+    await gotoTest(page, "closed-shadow-root-slotted-button.html");
+    await attachHints(page);
+    expect(await countHintsFor(page, "x-btn")).toBe(1);
+    const hint = await findHintFor(page, "x-btn");
+    for (const ch of hint) await page.keyboard.press(ch);
+    await page.keyboard.up("Space");
+    await expect
+      .poll(() =>
+        page.evaluate(() => (window as { clicked?: boolean }).clicked),
+      )
+      .toBe(true);
   });
 });

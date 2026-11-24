@@ -74,8 +74,7 @@ export function* traverseParent(
 /**
  * Like `traverseParent()`, but walks the flat tree, as `containsComposed()`
  * does: a slotted node steps to the `<slot>` it is assigned to, and a shadow
- * root steps to its host. `assignedSlot` is null for a node slotted into a
- * closed shadow root, so the walk goes up the light DOM there instead.
+ * root steps to its host.
  */
 export function* traverseComposedParent(
   element: Element,
@@ -89,7 +88,7 @@ export function* traverseComposedParent(
 }
 
 function composedParent(element: Element): Element | null {
-  const slot = (element as Partial<Slottable>).assignedSlot;
+  const slot = assignedSlotOf(element);
   if (slot) return slot;
   if (element.parentElement) return element.parentElement;
   const parent = element.parentNode;
@@ -111,9 +110,23 @@ export function containsComposed(ancestor: Node, node: Node | null): boolean {
 
 function flatParent(node: Node): Node | null {
   if (node instanceof ShadowRoot) return node.host;
-  const slot = (node as Partial<Slottable>).assignedSlot;
+  const slot = assignedSlotOf(node);
   if (slot) return slot;
   return node.parentNode;
+}
+
+/** Like `assignedSlot`, but also finds a `<slot>` in a closed shadow root. */
+function assignedSlotOf(node: Node): HTMLSlotElement | null {
+  const slot = (node as Partial<Slottable>).assignedSlot;
+  if (slot) return slot;
+  const host = node.parentElement;
+  if (!host || host.shadowRoot) return null;
+  const root = shadowRootOf(host);
+  if (!root) return null;
+  for (const s of root.querySelectorAll("slot")) {
+    if (s.assignedNodes().includes(node)) return s;
+  }
+  return null;
 }
 
 export function* traverseFirstChild(
@@ -344,7 +357,37 @@ export function shadowRootOf(element: Element): ShadowRoot | null {
      would fail for that root and everything found through it. */
   if (element.ownerDocument !== document || !(element instanceof HTMLElement))
     return null;
+  // WHY: the call is slow enough to delay hints on large pages, so skip elements that cannot have a shadow root.
+  if (!canHostShadowRoot(element)) return null;
   return chrome.dom.openOrClosedShadowRoot(element);
+}
+
+/** The elements `attachShadow()` accepts. */
+const SHADOW_HOST_NAMES = new Set([
+  "article",
+  "aside",
+  "blockquote",
+  "body",
+  "div",
+  "footer",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "header",
+  "main",
+  "nav",
+  "p",
+  "section",
+  "span",
+]);
+
+function canHostShadowRoot(element: HTMLElement): boolean {
+  return (
+    element.localName.includes("-") || SHADOW_HOST_NAMES.has(element.localName)
+  );
 }
 
 /**

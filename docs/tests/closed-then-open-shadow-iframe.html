@@ -1,0 +1,21 @@
+<!-- WHY: the iframe in the closed shadow root comes first in document order, but frame paths number it after the one in the open shadow root. -->
+<style>
+  iframe {
+    width: 300px;
+    height: 80px;
+  }
+</style>
+
+<div id="closed-host"></div>
+<div id="open-host"></div>
+
+<script>
+  for (const [id, mode] of [
+    ["closed-host", "closed"],
+    ["open-host", "open"],
+  ]) {
+    const iframe = document.createElement("iframe");
+    iframe.src = `cross-origin-iframe-grandchild.html?${mode}`;
+    document.getElementById(id).attachShadow({ mode }).appendChild(iframe);
+  }
+</script>

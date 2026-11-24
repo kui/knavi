@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 const sentToRuntime: { type: string; payload: unknown }[] = [];
 
 class FakeHTMLElement {
+  readonly localName = "x-host";
   readonly closedRoot: unknown;
   constructor(closedRoot: unknown = null) {
     this.closedRoot = closedRoot;
@@ -403,6 +404,40 @@ void describe("FramePath.findChild", () => {
       const [path] = framePath.childPaths([iframe]);
       assert.equal(framePath.findChild(path!.at(-1)!), iframe);
     }
+  });
+
+  void test("numbers an open-root iframe the same in the child and the parent when a closed-root iframe comes first", () => {
+    const top = makeWindow();
+    const closedChild = makeWindow(top);
+    const openChild = makeWindow(top);
+    const closedIframe = {
+      contentWindow: closedChild,
+    } as unknown as HTMLIFrameElement;
+    const openFake: { contentWindow: FakeWindow; ownerDocument?: unknown } = {
+      contentWindow: openChild,
+    };
+    const openIframe = openFake as unknown as HTMLIFrameElement;
+    const topDocument = documentWithClosedAndOpenShadowIframes(
+      [closedIframe],
+      [openIframe],
+    );
+    openFake.ownerDocument = topDocument;
+    openChild.frameElement = openIframe;
+
+    setGlobals(openChild);
+    const computedByChild = new FramePath().current();
+
+    setGlobals(top, topDocument);
+    const framePath = new FramePath();
+    const [openPath, closedPath] = framePath.childPaths([
+      openIframe,
+      closedIframe,
+    ]);
+    assert.deepEqual(computedByChild, ["s0"]);
+    assert.deepEqual(openPath, ["s0"]);
+    assert.deepEqual(closedPath, ["s1"]);
+    assert.equal(framePath.findChild("s0"), openIframe);
+    assert.equal(framePath.findChild("s1"), closedIframe);
   });
 
   void test("resolves nothing for an unknown or malformed segment", () => {
