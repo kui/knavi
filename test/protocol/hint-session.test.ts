@@ -295,10 +295,8 @@ void test("frames, the background and content-root settle on one session state i
         assertSettled(w);
 
         /* WHY: whatever state the actions left, the user can still end the
-           session from any frame, even one whose blacklist matches (#196). */
+           session from any frame. */
         const f = w.frames[FRAME_COUNT - 1];
-        f.setBlacklisted(true);
-        await s.waitIdle();
         f.keys.handleBlur();
         f.keys.handleKeydown(keyEvent("keydown", "Escape"));
         await s.waitIdle();
@@ -315,6 +313,22 @@ void test("frames, the background and content-root settle on one session state i
         assertSettled(w);
         assert.equal(w.view.started, true, "the sticky key starts a session");
         assert.equal(g.client.ownsSession, true);
+
+        /* WHY: a frame that does not own the session can still end it after
+           its page starts matching the blacklist (#196). */
+        const h = w.frames[1];
+        h.setBlacklisted(true);
+        await s.waitIdle();
+        assert.equal(w.view.started, true, "the owner's session stays live");
+        h.keys.handleBlur();
+        h.keys.handleKeydown(keyEvent("keydown", "Escape"));
+        await s.waitIdle();
+        assertSettled(w);
+        assert.equal(
+          w.view.started,
+          false,
+          "Escape from a blacklisted frame ends the session",
+        );
       },
     ),
     { numRuns: NUM_RUNS },

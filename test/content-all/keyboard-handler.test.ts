@@ -202,6 +202,14 @@ void describe("KeyboardHandlerContentAll", () => {
     assert.deepEqual(hinter.calls, ["removeHints(cancel)"]);
   });
 
+  void test("keypress reaches a blacklisted page during another frame's session", () => {
+    hinter.isHinting = true;
+    assert.equal(handler.handleKeypress(), true);
+    handler.updateBlacklist(["example.com"], handler.newBlacklistTicket());
+
+    assert.equal(handler.handleKeypress(), false);
+  });
+
   void test("the cancel key does nothing on a blacklisted page while not hinting", () => {
     handler.setup(
       { ...SETTINGS, cancelKey: "Escape" },
