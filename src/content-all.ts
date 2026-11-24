@@ -9,6 +9,7 @@ import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
 import { Coordinates, Rect } from "./dom/rects";
 import { FramePath } from "./content-all/frame-path";
 import { SettingsWatcher } from "./content-all/settings-watcher";
+import { readActiveArea } from "./lib/settings-change";
 
 globalThis.KNAVI_FILE = "content-all";
 
@@ -29,6 +30,7 @@ const settingsWatcher = new SettingsWatcher({
   keyboardHandler,
   settingsClient,
   url: () => location.href,
+  activeArea: readActiveArea,
   onLoaded: () => {
     document.documentElement.dataset.knaviReady = "1";
   },

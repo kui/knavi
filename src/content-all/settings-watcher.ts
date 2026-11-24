@@ -1,3 +1,4 @@
+import type settingsClient from "../lib/settings-client";
 import type { KeyboardHandlerContentAll } from "./keyboard-handler";
 import { isRelevantChange, type SettingsArea } from "../lib/settings-change";
 import { printError } from "../lib/errors";
@@ -12,7 +13,6 @@ const KEY_SETTINGS = [
   "cancelKey",
   "cycleKey",
 ] as const;
-type KeySettingName = (typeof KEY_SETTINGS)[number];
 const RELEVANT_KEYS: readonly (keyof Settings)[] = [
   ...KEY_SETTINGS,
   "blackList",
@@ -25,17 +25,14 @@ export interface SettingsWatcherDeps {
     KeyboardHandlerContentAll,
     "newBlacklistTicket" | "setup" | "updateBlacklist"
   >;
-  settingsClient: {
-    getWithBlacklistMatch(
-      names: KeySettingName[],
-      url: string,
-    ): Promise<[Pick<Settings, KeySettingName>, string[]]>;
-    matchBlacklist(url: string): Promise<string[]>;
-  };
+  settingsClient: Pick<
+    typeof settingsClient,
+    "getWithBlacklistMatch" | "matchBlacklist"
+  >;
   url: () => string;
   onLoaded: () => void;
   wait?: (ms: number, signal: AbortSignal) => Promise<void>;
-  activeArea?: () => Promise<SettingsArea>;
+  activeArea: () => Promise<SettingsArea>;
 }
 
 export class SettingsWatcher {
@@ -58,7 +55,7 @@ export class SettingsWatcher {
     onLoaded();
   }
 
-  async refreshBlacklist(): Promise<void> {
+  private async refreshBlacklist(): Promise<void> {
     const { keyboardHandler, settingsClient, url } = this.deps;
     const ticket = keyboardHandler.newBlacklistTicket();
     const matched = await settingsClient.matchBlacklist(url());

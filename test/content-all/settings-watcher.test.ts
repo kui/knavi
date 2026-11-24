@@ -2,7 +2,7 @@ import { describe, test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { SettingsWatcher } from "../../src/content-all/settings-watcher";
 
-const KEY_SETTINGS = {
+const SETTINGS: Omit<Settings, "css"> = {
   magicKey: "Space",
   blurKey: "",
   hints: "asdfghjkl",
@@ -10,6 +10,8 @@ const KEY_SETTINGS = {
   actionKey: "",
   cancelKey: "",
   cycleKey: "Tab",
+  blackList: "",
+  additionalSelectors: "{}",
 };
 
 interface Deferred<T> {
@@ -82,9 +84,10 @@ beforeEach(() => {
       updateBlacklist: () => calls.push("updateBlacklist"),
     },
     settingsClient: {
-      getWithBlacklistMatch: () => {
+      getWithBlacklistMatch: <K extends keyof typeof SETTINGS>(names: K[]) => {
         calls.push("getWithBlacklistMatch");
-        return Promise.resolve([KEY_SETTINGS, []]);
+        const picked = Object.fromEntries(names.map((n) => [n, SETTINGS[n]]));
+        return Promise.resolve([picked as Pick<Settings, K>, []]);
       },
       matchBlacklist: () => {
         calls.push("matchBlacklist");
@@ -110,6 +113,13 @@ void describe("SettingsWatcher.handleStorageChange", () => {
     await watcher.handleStorageChange({ hints: {} }, "local");
     assert.equal(timers.waiting, 0);
     assert.deepEqual(calls, []);
+  });
+
+  void test("reloads on a storage area switch even when the other area was active", async () => {
+    const done = watcher.handleStorageChange({ _area: {} }, "local");
+    await timers.fire();
+    await done;
+    assert.deepEqual(calls, ["getWithBlacklistMatch", "setup", "onLoaded"]);
   });
 
   void test("reloads only once for changes within the debounce", async () => {
@@ -184,5 +194,21 @@ void describe("SettingsWatcher.handleStorageChange", () => {
       "setup",
       "onLoaded",
     ]);
+  });
+});
+
+void describe("SettingsWatcher.handleNavigateSuccess", () => {
+  void test("refreshes the blacklist", async () => {
+    await watcher.handleNavigateSuccess();
+    assert.deepEqual(calls, ["matchBlacklist", "updateBlacklist"]);
+  });
+
+  void test("prints a failed refresh instead of rejecting", async (t) => {
+    const error = t.mock.method(console, "error", () => undefined);
+    const failure = new Error("storage read failed");
+    matchBlacklist = () => Promise.reject(failure);
+    await watcher.handleNavigateSuccess();
+    assert.deepEqual(calls, ["matchBlacklist"]);
+    assert.equal(error.mock.calls[0]?.arguments[0], failure);
   });
 });
