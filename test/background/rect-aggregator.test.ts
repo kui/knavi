@@ -159,14 +159,14 @@ void describe("background AllRectsRequest routing", () => {
   });
 
   void test("ignores a report made outside a session", async () => {
-    framePaths.end(TAB);
+    framePaths.end(TAB, 1);
     await report(["0"], 9);
     framePaths.reset(TAB, 1);
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
   });
 
   void test("does not create a session when looking up", async () => {
-    framePaths.end(TAB);
+    framePaths.end(TAB, 1);
     assert.equal(await framePaths.lookup(TAB, [], 10), undefined);
     await report(["0"], 9);
     framePaths.reset(TAB, 1);
@@ -177,6 +177,33 @@ void describe("background AllRectsRequest routing", () => {
     await report(["0"], 9);
     framePaths.reset(TAB, 1);
     assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
+  });
+
+  void test("routes the empty path to the top frame before the session's table starts", async () => {
+    framePaths.forgetTab(TAB);
+    await call(
+      "AllRectsRequest",
+      { id: 4, targetPath: [], viewport: VIEWPORT, offsets: OFFSETS },
+      { tab: { id: TAB }, frameId: 0 },
+    );
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].options?.frameId, 0);
+  });
+
+  void test("a child request made before the session's table starts waits for it", async () => {
+    framePaths.forgetTab(TAB);
+    const request = call(
+      "AllRectsRequest",
+      { id: 5, targetPath: ["0"], viewport: VIEWPORT, offsets: OFFSETS },
+      { tab: { id: TAB }, frameId: 0 },
+    );
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    framePaths.reset(TAB, 2);
+    await report(["0"], 9);
+    await request;
+
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].options?.frameId, 9);
   });
 });
 

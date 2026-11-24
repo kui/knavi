@@ -25,4 +25,4 @@ chrome.runtime.onMessage.addListener(
     .buildListener(),
 );
 
-chrome.tabs.onRemoved.addListener((tabId) => framePaths.end(tabId));
+chrome.tabs.onRemoved.addListener((tabId) => framePaths.forgetTab(tabId));

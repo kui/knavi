@@ -7,7 +7,7 @@ const TAB = 300;
 
 void describe("frame path lookups that are waiting", () => {
   beforeEach(() => {
-    framePaths.end(TAB);
+    framePaths.forgetTab(TAB);
   });
 
   void test("resolve as soon as the path is reported", async () => {
@@ -27,7 +27,7 @@ void describe("frame path lookups that are waiting", () => {
   void test("resolve to undefined when the session ends", async () => {
     framePaths.reset(TAB, 1);
     const pending = framePaths.lookup(TAB, ["3"], 10_000);
-    framePaths.end(TAB);
+    framePaths.end(TAB, 1);
     assert.equal(await pending, undefined);
   });
 
@@ -39,5 +39,15 @@ void describe("frame path lookups that are waiting", () => {
     framePaths.report(TAB, ["4"], 8);
     assert.equal(await pending, 8);
     assert.equal(await framePaths.lookup(TAB, ["3"], 10), 7);
+  });
+
+  void test("resolve to undefined when the tab is closed", async () => {
+    framePaths.reset(TAB, 1);
+    const pending = framePaths.lookup(TAB, ["3"], 10_000);
+    const early = framePaths.lookup(TAB + 1, ["3"], 10_000);
+    framePaths.forgetTab(TAB);
+    framePaths.forgetTab(TAB + 1);
+    assert.equal(await pending, undefined);
+    assert.equal(await early, undefined);
   });
 });

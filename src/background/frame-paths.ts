@@ -12,26 +12,35 @@ import type { SessionId } from "../lib/chrome-messages";
 
 const LOOKUP_TIMEOUT_MS = 300;
 
+type Waiter = (frameId: number | undefined) => void;
+type Waiters = Map<string, Waiter[]>;
+
 interface Session {
   id: SessionId;
   frames: Map<string, number>;
-  waiters: Map<string, ((frameId: number | undefined) => void)[]>;
+  waiters: Waiters;
 }
 
 const sessions = new Map<number, Session>();
+/**
+ * Lookups made while the tab has no table. The table is started only once
+ * content-root has accepted the session, and frame 0 can already be
+ * requesting its child frames' rects by then, so the next table takes them.
+ */
+const early = new Map<number, Waiters>();
 
 function key(path: readonly string[]): string {
   return JSON.stringify(path);
 }
 
-function newSession(id: SessionId): Session {
+function newSession(id: SessionId, waiters: Waiters): Session {
   // INVARIANT: the top frame is always frame 0.
-  return { id, frames: new Map([[key([]), 0]]), waiters: new Map() };
+  return { id, frames: new Map([[key([]), 0]]), waiters };
 }
 
-function settleWaiters(session: Session) {
-  for (const waiters of session.waiters.values()) {
-    for (const resolve of waiters) resolve(undefined);
+function settleWaiters(waiters: Waiters) {
+  for (const list of waiters.values()) {
+    for (const resolve of list) resolve(undefined);
   }
 }
 
@@ -41,18 +50,17 @@ function settleWaiters(session: Session) {
  */
 export function reset(tabId: number, sessionId: SessionId): void {
   const old = sessions.get(tabId);
-  if (old) settleWaiters(old);
-  sessions.set(tabId, newSession(sessionId));
+  if (old) settleWaiters(old.waiters);
+  const waiters: Waiters = early.get(tabId) ?? new Map<string, Waiter[]>();
+  early.delete(tabId);
+  sessions.set(tabId, newSession(sessionId, waiters));
 }
 
-/**
- * Drops the table if it belongs to session `sessionId`, or whatever table the
- * tab has when the id is omitted.
- */
-export function end(tabId: number, sessionId?: SessionId): void {
+/** Drops the table if it belongs to session `sessionId`. */
+export function end(tabId: number, sessionId: SessionId): void {
   const old = sessions.get(tabId);
   if (!old) return;
-  if (sessionId != null && old.id !== sessionId) {
+  if (old.id !== sessionId) {
     console.debug(
       "Keep the frame paths of",
       old.id,
@@ -61,8 +69,18 @@ export function end(tabId: number, sessionId?: SessionId): void {
     );
     return;
   }
-  settleWaiters(old);
+  settleWaiters(old.waiters);
   sessions.delete(tabId);
+}
+
+/** Drops everything kept for the tab, whichever session it belongs to. */
+export function forgetTab(tabId: number): void {
+  const old = sessions.get(tabId);
+  if (old) settleWaiters(old.waiters);
+  sessions.delete(tabId);
+  const waiters = early.get(tabId);
+  if (waiters) settleWaiters(waiters);
+  early.delete(tabId);
 }
 
 /** Ignored outside a hint session, so a late report cannot leak a table. */
@@ -100,17 +118,23 @@ export function lookup(
   timeoutMs = LOOKUP_TIMEOUT_MS,
 ): Promise<number | undefined> {
   const session = sessions.get(tabId);
-  if (!session) return Promise.resolve(undefined);
   const k = key(path);
-  const known = session.frames.get(k);
+  const known = session?.frames.get(k);
   if (known != null) return Promise.resolve(known);
 
   const { promise, resolve } = Promise.withResolvers<number | undefined>();
-  const waiters = session.waiters.get(k) ?? [];
-  session.waiters.set(k, waiters);
+  let bucket = session?.waiters ?? early.get(tabId);
+  if (!bucket) {
+    bucket = new Map();
+    early.set(tabId, bucket);
+  }
+  const waiters = bucket.get(k) ?? [];
+  bucket.set(k, waiters);
   const timer = setTimeout(() => {
     const i = waiters.indexOf(settle);
     if (i >= 0) waiters.splice(i, 1);
+    if (waiters.length === 0 && bucket.get(k) === waiters) bucket.delete(k);
+    if (early.get(tabId)?.size === 0) early.delete(tabId);
     resolve(undefined);
   }, timeoutMs);
   function settle(frameId: number | undefined) {

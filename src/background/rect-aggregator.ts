@@ -28,7 +28,12 @@ export const router = Router.newRuntimeInstance()
     "AllRectsRequest",
     async ({ id, targetPath, viewport, offsets }, sender) => {
       const tabId = requireTabId(sender);
-      const frameId = await framePaths.lookup(tabId, targetPath);
+      /* INVARIANT: the top frame is always frame 0. Routed without the
+         table, which content-root's first request can overtake. */
+      const frameId =
+        targetPath.length === 0
+          ? 0
+          : await framePaths.lookup(tabId, targetPath);
       if (frameId == null) {
         console.debug("No frame reported its path as", targetPath);
         return;
