@@ -18,8 +18,6 @@ export function tagMessage(v: string, root = ROOT): string {
 }
 
 /** Runs `git tag -a <version> -F -` with the message on stdin; returns its exit code. */
-export type GitTag = (version: string, message: string) => number;
-
 function gitTag(v: string, message: string): number {
   const result = spawnSync("git", ["tag", "-a", v, "-F", "-"], {
     cwd: ROOT,
@@ -31,11 +29,7 @@ function gitTag(v: string, message: string): number {
 }
 
 /** Checks the release and creates the tag. Returns the process exit code. */
-export function tagForRelease(
-  v: string,
-  root = ROOT,
-  tag: GitTag = gitTag,
-): number {
+export function tagForRelease(v: string, root = ROOT, tag = gitTag): number {
   const errors = checkRelease(v, root);
   for (const e of errors) console.error(e);
   if (errors.length > 0) return 1;
