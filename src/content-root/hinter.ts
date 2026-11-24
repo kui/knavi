@@ -116,9 +116,13 @@ export class HinterContentRoot {
       context.targets.push(...targets);
       /* WHY: letters typed before these targets existed are only in
          inputSequence; without applying them here the targets stay "init" and
-         later letters match against a sequence that no chip reflects. */
+         later letters match against a sequence that no chip reflects. Once
+         removal has begun, the action runs on the hit the user saw, so a
+         later batch must not pick another target. */
       const changes =
-        context.inputSequence.length > 0 ? applyInput(context, targets) : [];
+        context.inputSequence.length > 0 && !context.removing
+          ? applyInput(context, targets)
+          : [];
       this.view.render(targets);
       /* WHY: HintView.hit hides the active overlay and clears the cycle badge
          unless `changes` contains the hit, so calling it for a batch without

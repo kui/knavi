@@ -480,4 +480,19 @@ void describe("HinterContentRoot", () => {
     assert.ok(sentTypes.includes("ExecuteAction"));
     assert.equal(hinter.beginRemoveHints(id), false);
   });
+
+  void test("a batch that arrives after beginRemoveHints does not set the target of the action", async () => {
+    hinter.setup("asdf");
+    const id = hinter.attachHints();
+    await tick();
+    hinter.hitHint(id, "a" as SingleLetter);
+    assert.equal(hinter.beginRemoveHints(id), true);
+    aggregator.handleRects(id, RECTS);
+    await tick();
+    sentTypes.length = 0;
+    await hinter.removeHints(id, OPTIONS, true);
+
+    assert.equal(view.hits.length, 0);
+    assert.ok(!sentTypes.includes("ExecuteAction"));
+  });
 });

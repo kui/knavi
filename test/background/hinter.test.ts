@@ -111,10 +111,7 @@ void describe("hint session and the frame path table", () => {
     assert.deepEqual(syncStates(), [false]);
     assert.ok(sent.every((m) => m.sessionId === sessionId));
     framePaths.report(TAB, ["0"], 9);
-    assert.equal(
-      await framePaths.lookup(TAB, liveSessionId ?? 0, ["0"], 10),
-      undefined,
-    );
+    assert.equal(await framePaths.lookup(TAB, sessionId, ["0"], 10), undefined);
   });
 
   void test("a rejected AttachHints broadcasts nothing", async () => {
