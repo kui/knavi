@@ -177,6 +177,53 @@ void describe("KeyboardHandlerContentAll", () => {
     assert.deepEqual(hinter.calls, []);
   });
 
+  void test("the cancel key ends another frame's session after this frame starts matching the blacklist", () => {
+    handler.setup(
+      { ...SETTINGS, cancelKey: "Escape", actionKey: "Enter" },
+      [],
+      handler.newBlacklistTicket(),
+    );
+    hinter.isHinting = true;
+    handler.updateBlacklist(["example.com"], handler.newBlacklistTicket());
+
+    assert.equal(
+      handler.handleKeydown(keyEvent("keydown", "a", "KeyA")),
+      false,
+    );
+    assert.equal(
+      handler.handleKeydown(keyEvent("keydown", "Enter", "Enter")),
+      false,
+    );
+    handler.handleKeyup(keyEvent("keyup", "Enter", "Enter"));
+    assert.equal(
+      handler.handleKeydown(keyEvent("keydown", "Escape", "Escape")),
+      true,
+    );
+    assert.deepEqual(hinter.calls, ["removeHints(cancel)"]);
+  });
+
+  void test("keypress reaches a blacklisted page during another frame's session", () => {
+    hinter.isHinting = true;
+    assert.equal(handler.handleKeypress(), true);
+    handler.updateBlacklist(["example.com"], handler.newBlacklistTicket());
+
+    assert.equal(handler.handleKeypress(), false);
+  });
+
+  void test("the cancel key does nothing on a blacklisted page while not hinting", () => {
+    handler.setup(
+      { ...SETTINGS, cancelKey: "Escape" },
+      ["example.com"],
+      handler.newBlacklistTicket(),
+    );
+
+    assert.equal(
+      handler.handleKeydown(keyEvent("keydown", "Escape", "Escape")),
+      false,
+    );
+    assert.deepEqual(hinter.calls, []);
+  });
+
   void test("a blacklist match while not hinting does nothing", () => {
     handler.updateBlacklist(["example.com"], handler.newBlacklistTicket());
     assert.deepEqual(hinter.calls, []);

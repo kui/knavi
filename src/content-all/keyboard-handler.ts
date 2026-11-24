@@ -107,15 +107,19 @@ export class KeyboardHandlerContentAll {
     const cancelMatcher = this.cancelMatcher?.keydown(event);
     const cycleMatcher = this.cycleMatcher?.keydown(event);
 
+    /* WHY: a session another frame owns stays visible while this frame
+       matches the blacklist. A blacklisted page handles only the key needed
+       to end that session and passes every other key to the page. */
+    if (this.hinter.isHinting && cancelMatcher?.match()) {
+      this.endSession(modifiers(event), false);
+      return true;
+    }
+
     if (this.isBlacklisted()) {
       return false;
     }
 
     if (this.hinter.isHinting) {
-      if (cancelMatcher?.match()) {
-        this.endSession(modifiers(event), false);
-        return true;
-      }
       if (actionMatcher?.match()) {
         this.endSession(modifiers(event), true);
         return true;
@@ -199,7 +203,7 @@ export class KeyboardHandlerContentAll {
    * Returns true if the event is handled.
    */
   handleKeypress() {
-    return this.hinter.isHinting;
+    return this.hinter.isHinting && !this.isBlacklisted();
   }
 
   private isBlacklisted() {

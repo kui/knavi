@@ -101,6 +101,7 @@ class FakeView {
 
 class Frame {
   readonly client = new HinterClient();
+  blacklisted = false;
   readonly keys = new KeyboardHandlerContentAll(null as never, this.client);
   readonly listener = Router.newTabInstance()
     .add("SyncHintingState", ({ active, sessionId }) => {
@@ -110,6 +111,14 @@ class Frame {
 
   constructor() {
     this.keys.setup(SETTINGS, [], this.keys.newBlacklistTicket());
+  }
+
+  setBlacklisted(blacklisted: boolean) {
+    this.blacklisted = blacklisted;
+    this.keys.updateBlacklist(
+      blacklisted ? ["example.com"] : [],
+      this.keys.newBlacklistTicket(),
+    );
   }
 }
 
@@ -160,8 +169,13 @@ class World {
     return this.scheduler.schedule(Promise.resolve(reply), `reply ${type}`);
   }
 
-  press({ frame, type, code }: KeyAction) {
-    const f = this.frames[frame];
+  press(action: Action) {
+    const f = this.frames[action.frame];
+    if (action.type === "blacklist") {
+      f.setBlacklisted(action.match);
+      return;
+    }
+    const { type, code } = action;
     if (type === "blur") {
       f.keys.handleBlur();
       return;
@@ -177,6 +191,15 @@ interface KeyAction {
   type: "keydown" | "keyup" | "blur";
   code: keyof typeof KEYS;
 }
+
+/** The frame's page starts or stops matching the blacklist, e.g. an in-page navigation. */
+interface BlacklistAction {
+  frame: number;
+  type: "blacklist";
+  match: boolean;
+}
+
+type Action = KeyAction | BlacklistAction;
 
 const KEYS = {
   Space: " ",
@@ -205,6 +228,17 @@ const keyAction: fc.Arbitrary<KeyAction> = fc.record({
   code: fc.constantFrom(...(Object.keys(KEYS) as (keyof typeof KEYS)[])),
 });
 
+const blacklistAction: fc.Arbitrary<BlacklistAction> = fc.record({
+  frame: fc.integer({ min: 0, max: FRAME_COUNT - 1 }),
+  type: fc.constant("blacklist"),
+  match: fc.boolean(),
+});
+
+const action: fc.Arbitrary<Action> = fc.oneof(
+  { arbitrary: keyAction, weight: 4 },
+  { arbitrary: blacklistAction, weight: 1 },
+);
+
 /** Errors the protocol reports by design, not bugs. */
 function isExpectedError(e: unknown) {
   /* WHY: two frames can start a session at once; content-root accepts the
@@ -225,6 +259,11 @@ function assertSettled(w: World) {
     w.view.started ? 1 : 0,
     "a live session has exactly one owning frame",
   );
+  assert.equal(
+    w.frames.some((f) => f.blacklisted && f.client.ownsSession),
+    false,
+    "a frame whose blacklist matches owns no session",
+  );
   assert.deepEqual(
     errors.filter((e) => !isExpectedError(e)),
     [],
@@ -235,14 +274,17 @@ void test("frames, the background and content-root settle on one session state i
   await fc.assert(
     fc.asyncProperty(
       fc.scheduler(),
-      fc.array(keyAction, { maxLength: 16 }),
+      fc.array(action, { maxLength: 16 }),
       async (s, actions) => {
         errors.length = 0;
         const w = new World(s);
         world = w;
         s.scheduleSequence(
           actions.map((a) => ({
-            label: `${a.type} ${a.code} in frame ${a.frame}`,
+            label:
+              a.type === "blacklist"
+                ? `blacklist ${a.match} in frame ${a.frame}`
+                : `${a.type} ${a.code} in frame ${a.frame}`,
             builder: () => {
               w.press(a);
               return Promise.resolve();
@@ -264,12 +306,29 @@ void test("frames, the background and content-root settle on one session state i
         /* WHY: and can start the next one, from a frame other than the one
            that ended it. */
         const g = w.frames[0];
+        g.setBlacklisted(false);
         g.keys.handleBlur();
         g.keys.handleKeydown(keyEvent("keydown", "KeyQ"));
         await s.waitIdle();
         assertSettled(w);
         assert.equal(w.view.started, true, "the sticky key starts a session");
         assert.equal(g.client.ownsSession, true);
+
+        /* WHY: a frame that does not own the session can still end it after
+           its page starts matching the blacklist (#196). */
+        const h = w.frames[1];
+        h.setBlacklisted(true);
+        await s.waitIdle();
+        assert.equal(w.view.started, true, "the owner's session stays live");
+        h.keys.handleBlur();
+        h.keys.handleKeydown(keyEvent("keydown", "Escape"));
+        await s.waitIdle();
+        assertSettled(w);
+        assert.equal(
+          w.view.started,
+          false,
+          "Escape from a blacklisted frame ends the session",
+        );
       },
     ),
     { numRuns: NUM_RUNS },
