@@ -1,3 +1,5 @@
+import { readActiveArea } from "./settings-change";
+
 const DEFAULT_BLACK_LIST = `# Example (Start with # if you want comments)
 http://k-ui.jp/*
 `;
@@ -171,6 +173,5 @@ async function fetchCss() {
 }
 
 async function isLocal() {
-  const { _area } = await chrome.storage.local.get("_area");
-  return _area === "chrome-local";
+  return (await readActiveArea()) === "local";
 }

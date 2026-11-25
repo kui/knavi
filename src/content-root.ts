@@ -4,7 +4,7 @@ import { BlurerContentRoot } from "./content-root/blurer";
 import { Router as ChromeMessageRouter } from "./lib/chrome-messages";
 import { RectAggregatorClient } from "./content-root/rect-aggregator-client";
 import { SettingsLoader, ROOT_KEYS } from "./content-root/settings-loader";
-import { isRelevantChange } from "./lib/settings-change";
+import { isRelevantChange, readActiveArea } from "./lib/settings-change";
 import { HintView } from "./content-root/hinter-view";
 import BlurView from "./content-root/blurer-view";
 import { printError } from "./lib/errors";
@@ -28,9 +28,12 @@ const settingsLoader = new SettingsLoader(
 );
 settingsLoader.load().catch(printError);
 
-chrome.storage.onChanged.addListener((changes) => {
-  if (isRelevantChange(changes, ROOT_KEYS))
-    settingsLoader.load().catch(printError);
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  (async () => {
+    if (!(await isRelevantChange(changes, areaName, ROOT_KEYS, readActiveArea)))
+      return;
+    await settingsLoader.load();
+  })().catch(printError);
 });
 
 chrome.runtime.onMessage.addListener(
