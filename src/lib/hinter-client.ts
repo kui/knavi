@@ -1,10 +1,12 @@
 import { sendToRuntime } from "./chrome-messages";
-import type { SessionId } from "./chrome-messages";
+import type { HintSession, SessionId, TabMessages } from "./chrome-messages";
 import type { SingleLetter } from "./strings";
 
 function noop() {
   /* WHY: intentionally empty — settled callback that keeps the queue from rejecting. */
 }
+
+type HintingState = TabMessages["SyncHintingState"]["payload"];
 
 /**
  * This frame's view of the tab's live session, built from SyncHintingState
@@ -14,20 +16,26 @@ function noop() {
 export class TabSession {
   /* WHY: below every id content-root issues. */
   private latest: SessionId = 0;
-  private active = false;
+  private session: HintSession | null = null;
 
   /** The live session's id, or null. */
   get id(): SessionId | null {
-    return this.active ? this.latest : null;
+    return this.session?.sessionId ?? null;
+  }
+
+  /** The live session's hint letters; null when unknown or none is live. */
+  get hintLetters(): string | null {
+    return this.session?.hintLetters ?? null;
   }
 
   /** Returns false when the update is stale and ignored. */
-  apply(active: boolean, id: SessionId): boolean {
+  apply(state: HintingState): boolean {
+    const id = state.sessionId;
     if (id < this.latest) return false;
     /* WHY: the true broadcast of a session can arrive after its false. */
-    if (id === this.latest && active && !this.active) return false;
+    if (id === this.latest && state.active && !this.session) return false;
     this.latest = id;
-    this.active = active;
+    this.session = state.active ? state : null;
     return true;
   }
 }
@@ -75,9 +83,17 @@ export default class HinterClient {
     return own?.kind === "started" && t.id === own.id;
   }
 
+  /**
+   * The hint letters of the session that this frame's input goes to; null
+   * until they are known.
+   */
+  get hintLetters(): string | null {
+    return "own" in this.inputTarget() ? null : this.tab.hintLetters;
+  }
+
   /** Returns false when the message was stale and ignored. */
-  syncHinting(active: boolean, sessionId: SessionId): boolean {
-    return this.tab.apply(active, sessionId);
+  syncHinting(state: HintingState): boolean {
+    return this.tab.apply(state);
   }
 
   /** Resolves once content-root has accepted the session. */
@@ -86,17 +102,17 @@ export default class HinterClient {
     const own: OwnAttach = { state: { kind: "pending", removed: false } };
     this.own = own;
     await this.enqueue(async () => {
-      let id: SessionId;
+      let session: HintSession;
       try {
-        id = (await sendToRuntime("AttachHints", undefined)).sessionId;
+        session = await sendToRuntime("AttachHints", undefined);
       } catch (e) {
         own.state = { kind: "failed" };
         throw e;
       }
       const removed = own.state.kind === "pending" && own.state.removed;
-      own.state = { kind: "started", id };
+      own.state = { kind: "started", id: session.sessionId };
       /* WHY: the reply can arrive before the true broadcast of the session. */
-      this.tab.apply(!removed, id);
+      this.tab.apply({ ...session, active: !removed });
     });
   }
 
@@ -127,7 +143,7 @@ export default class HinterClient {
     if ("own" in t) {
       t.own.state = { kind: "pending", removed: true };
     } else if (t.id !== null) {
-      this.tab.apply(false, t.id);
+      this.tab.apply({ active: false, sessionId: t.id });
     }
     await this.enqueue(async () => {
       const sessionId = target();

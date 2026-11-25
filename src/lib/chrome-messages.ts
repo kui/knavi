@@ -7,6 +7,17 @@ import type { SingleLetter } from "./strings";
  */
 export type SessionId = number;
 
+/** A hint session as content-root accepted it. */
+export interface HintSession {
+  sessionId: SessionId;
+  /**
+   * The letters content-root takes as input during the session, so that every
+   * frame routes the same ones whenever it loads its own settings (#212).
+   * Null when content-root's settings had not loaded yet.
+   */
+  hintLetters: string | null;
+}
+
 export interface RuntimeMessages {
   GetSettings: {
     payload: { names: (keyof Settings)[] };
@@ -24,7 +35,7 @@ export interface RuntimeMessages {
   AttachHints: {
     payload: void;
     /** Answered as soon as content-root accepts the session, not when it ends. */
-    response: { sessionId: SessionId };
+    response: HintSession;
   };
   HitHint: {
     payload: { sessionId: SessionId; key: SingleLetter };
@@ -79,7 +90,7 @@ export interface RuntimeMessages {
 export interface TabMessages {
   AttachHintsInTab: {
     payload: void;
-    response: { sessionId: SessionId };
+    response: HintSession;
   };
   HitHintInTab: {
     payload: { sessionId: SessionId; key: SingleLetter };
@@ -117,7 +128,9 @@ export interface TabMessages {
    * an ended session broadcasts nothing.
    */
   SyncHintingState: {
-    payload: { active: boolean; sessionId: SessionId };
+    payload:
+      | ({ active: true } & HintSession)
+      | { active: false; sessionId: SessionId };
     response: void;
   };
 

@@ -128,7 +128,7 @@ export class KeyboardHandlerContentAll {
         this.hinter.cycleHint().catch(printError);
         return true;
       }
-      if (isSingleLetter(event.key) && this.hintLetters.includes(event.key)) {
+      if (isSingleLetter(event.key) && this.isHintLetter(event.key)) {
         this.hinter.hitHint(event.key).catch(printError);
         return true;
       }
@@ -204,6 +204,13 @@ export class KeyboardHandlerContentAll {
    */
   handleKeypress() {
     return this.hinter.isHinting && !this.isBlacklisted();
+  }
+
+  private isHintLetter(key: string) {
+    /* WHY: this frame reloads its settings later than content-root, so its own
+       letters can differ from the session's. They only fill in until the
+       session's are known. */
+    return (this.hinter.hintLetters ?? this.hintLetters).includes(key);
   }
 
   private isBlacklisted() {

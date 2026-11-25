@@ -450,6 +450,7 @@ void describe("HinterContentRoot", () => {
     hinter.setup("asdf");
     const id = hinter.attachHints();
     hinter.setup("jkl;");
+    assert.equal(hinter.sessionHintLetters, "asdf");
     hinter.hitHint(id, "j" as SingleLetter);
     hinter.hitHint(id, "a" as SingleLetter);
     await tick();

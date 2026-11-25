@@ -5,6 +5,7 @@ interface Sent {
   type: string;
   active?: boolean;
   sessionId?: number;
+  hintLetters?: string;
 }
 const sent: Sent[] = [];
 let attachFails = false;
@@ -16,17 +17,25 @@ let liveSessionId: number | null = null;
   tabs: {
     sendMessage: (
       _tabId: number,
-      message: { "@type": string; active?: boolean; sessionId?: number },
+      message: {
+        "@type": string;
+        active?: boolean;
+        sessionId?: number;
+        hintLetters?: string;
+      },
     ) => {
       sent.push({
         type: message["@type"],
         active: message.active,
         sessionId: message.sessionId,
+        hintLetters: message.hintLetters,
       });
       if (message["@type"] === "AttachHintsInTab") {
         if (attachFails) return Promise.reject(new Error("no receiver"));
         liveSessionId = nextSessionId++;
-        return Promise.resolve({ response: { sessionId: liveSessionId } });
+        return Promise.resolve({
+          response: { sessionId: liveSessionId, hintLetters: "asdf" },
+        });
       }
       if (message["@type"] === "BeginRemoveHintsInTab") {
         if (beginRemoveFails) return Promise.reject(new Error("no receiver"));
@@ -87,14 +96,16 @@ void describe("hint session and the frame path table", () => {
     );
   });
 
-  void test("AttachHints answers and broadcasts the id content-root assigned, after content-root accepts", async () => {
+  void test("AttachHints answers and broadcasts the id and hint letters content-root assigned, after content-root accepts", async () => {
     const reply = await call("AttachHints");
     assert.deepEqual(
       sent.map((m) => m.type),
       ["AttachHintsInTab", "SyncHintingState"],
     );
     const sync = sent.find((m) => m.type === "SyncHintingState");
-    assert.deepEqual(reply, { sessionId: sync?.sessionId });
+    assert.deepEqual(reply, { sessionId: liveSessionId, hintLetters: "asdf" });
+    assert.equal(sync?.sessionId, liveSessionId);
+    assert.equal(sync?.hintLetters, "asdf");
   });
 
   void test("a second AttachHints drops what the first session reported", async () => {
