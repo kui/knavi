@@ -1,6 +1,11 @@
 import settings from "../lib/settings";
 import { BlackList } from "../lib/blacklist";
 import { printError, printErrorUnlessTargetGone } from "../lib/errors";
+import {
+  AREA_MARKER,
+  isRelevantChange,
+  readActiveArea,
+} from "../lib/settings-change";
 
 const ENABLED_ICON = {
   16: "icon16.png",
@@ -13,16 +18,25 @@ const DISABLED_ICON = {
   128: "icon-disabled128.png",
 };
 
-let cachedList: BlackList | undefined;
+/* WHY: caches the promise, not the list, so an invalidation during a read
+   cannot be overwritten by that read's stale result: the invalidation clears
+   this variable and the stale read only fills its own (discarded) promise. */
+let cachedList: Promise<BlackList> | undefined;
 
-async function loadBlackList(): Promise<BlackList> {
+function loadBlackList(): Promise<BlackList> {
   if (cachedList) return cachedList;
   /* WHY: getStorage() is read-only (back-fill runs only on install/update), so
      updating the icon never writes default settings. getSingle still yields
      the default blacklist before any back-fill has run. */
-  const storage = await settings.getStorage();
-  cachedList = new BlackList(await storage.getSingle("blackList"));
-  return cachedList;
+  const loading = settings
+    .getStorage()
+    .then((storage) => storage.getSingle("blackList"))
+    .then((text) => new BlackList(text));
+  cachedList = loading;
+  loading.catch(() => {
+    if (cachedList === loading) cachedList = undefined;
+  });
+  return loading;
 }
 
 function isDisabled(url: string | undefined, list: BlackList): boolean {
@@ -102,10 +116,35 @@ export function onStorageChanged(
   changes: Record<string, chrome.storage.StorageChange>,
   area: chrome.storage.AreaName,
 ) {
-  if (area !== "sync" && area !== "local") return;
-  if (!("blackList" in changes)) return;
+  void handleStorageChange(changes, area);
+}
+
+/** Never rejects; errors are printed. */
+export async function handleStorageChange(
+  changes: Record<string, chrome.storage.StorageChange>,
+  area: chrome.storage.AreaName,
+): Promise<void> {
+  try {
+    await reloadOnChange(changes, area);
+  } catch (e) {
+    printError(e);
+  }
+}
+
+async function reloadOnChange(
+  changes: Record<string, chrome.storage.StorageChange>,
+  area: chrome.storage.AreaName,
+): Promise<void> {
+  if (!(await isRelevantChange(changes, area, ["blackList"], readActiveArea)))
+    return;
   cachedList = undefined;
-  updateActiveTabs().catch(printError);
+  /* WHY: settings.getStorage() memoizes the area, and the settings module
+     resets it from its own listener. Resetting here too keeps the icon
+     correct whichever listener runs first. */
+  if (area === "local" && AREA_MARKER in changes) {
+    await settings.getStorage(true);
+  }
+  await updateActiveTabs();
 }
 
 export function init() {
