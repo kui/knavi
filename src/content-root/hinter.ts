@@ -9,8 +9,16 @@ import { printError } from "../lib/errors";
 
 interface HintContext {
   id: SessionId;
+  /**
+   * The hint letters of this session, fixed when it starts, or when setup()
+   * runs if that is later, so that a settings change applies from the next
+   * session. Null until then.
+   */
+  hintLetters: string | null;
   targets: HintedElement[];
   inputSequence: string[];
+  /** Set by beginRemoveHints(); the session then takes no more input. */
+  removing: boolean;
   hitTarget?: HintedElement | undefined;
   /**
    * Snapshot taken on the first Cycle Key press. Fixed set of targets whose
@@ -22,9 +30,9 @@ interface HintContext {
 
 export class HinterContentRoot {
   private context: HintContext | null = null;
-  private hintLetters = "";
+  /** Null until setup(). */
+  private hintLetters: string | null = null;
   private lastSessionId: SessionId = 0;
-  private isSetUp = false;
   /* WHY: the root frame loads its settings apart from the frame that catches
      the magic key, and right after install that load waits on the slow
      default CSS fetch, so AttachHintsInTab can arrive before setup(). */
@@ -37,7 +45,6 @@ export class HinterContentRoot {
 
   setup(hintLetters: string) {
     this.hintLetters = hintLetters;
-    this.isSetUp = true;
     this.setupDone.resolve();
   }
 
@@ -48,7 +55,7 @@ export class HinterContentRoot {
   attachHints(): SessionId {
     if (this.context)
       throw Error("Ilegal state invocation: already started hinting");
-    if (this.isSetUp && this.hintLetters.length === 0)
+    if (this.hintLetters === "")
       throw Error("Ilegal state invocation: hintLetters is empty");
 
     /* WHY: ids must keep growing across top-frame documents of a tab,
@@ -59,8 +66,10 @@ export class HinterContentRoot {
     this.lastSessionId = Math.max(this.lastSessionId + 1, Date.now());
     const context: HintContext = {
       id: this.lastSessionId,
+      hintLetters: this.hintLetters,
       inputSequence: [],
       targets: [],
+      removing: false,
     };
     this.context = context;
     /* WHY: the session is ended only by RemoveHints, so a failure while
@@ -75,22 +84,24 @@ export class HinterContentRoot {
        leave hints no session can remove. */
     await this.setupDone.promise;
     if (this.context !== context) return;
+    const letters = (context.hintLetters ??= this.hintLetters);
     await waitUntil(() => Boolean(document.body));
     if (this.context !== context) return;
-    if (this.hintLetters.length === 0)
-      throw Error("Ilegal state invocation: hintLetters is empty");
+    if (!letters) throw Error("Ilegal state invocation: hintLetters is empty");
     /* WHY: letters typed before setup() were kept unchecked. */
     context.inputSequence = context.inputSequence.filter((l) =>
-      this.hintLetters.includes(l),
+      letters.includes(l),
     );
 
-    const hintTextGenerator = this.generateHintTexts();
-    for await (const elementRects of this.rectAggregator.aggregate()) {
+    const hintTextGenerator = generateHintTexts(letters);
+    for await (const elementRects of this.rectAggregator.aggregate(
+      context.id,
+    )) {
       if (this.context !== context) break;
       if (!this.view.isStarted()) this.view.start();
       if (elementRects.length === 0) continue;
       const hintTexts = take(hintTextGenerator, elementRects.length);
-      hintTexts.sort(this.compareByHintLettersOrder());
+      hintTexts.sort(compareByHintLettersOrder(letters));
       const targets: HintedElement[] = [
         ...map(
           zip(elementRects, hintTexts),
@@ -100,9 +111,12 @@ export class HinterContentRoot {
       context.targets.push(...targets);
       /* WHY: letters typed before these targets existed are only in
          inputSequence; without applying them here the targets stay "init" and
-         later letters match against a sequence that no chip reflects. */
+         later letters match against a sequence that no chip reflects. Once
+         removal has begun, a later batch must not pick another target. */
       const changes =
-        context.inputSequence.length > 0 ? applyInput(context, targets) : [];
+        context.inputSequence.length > 0 && !context.removing
+          ? applyInput(context, targets)
+          : [];
       this.view.render(targets);
       /* WHY: HintView.hit hides the active overlay and clears the cycle badge
          unless `changes` contains the hit, so calling it for a batch without
@@ -126,55 +140,23 @@ export class HinterContentRoot {
     return null;
   }
 
-  *generateHintTexts(): Generator<string> {
-    const history: string[] = [];
-
-    for (const t of this.hintLetters) {
-      history.push(t);
-      yield t;
-    }
-
-    // WHY: Emit repeated 2-same-letter hints first because they're easier to type.
-    for (const t of this.hintLetters) {
-      const h = t + t;
-      history.push(h);
-      yield h;
-    }
-
-    let index = 0;
-    while (true) {
-      const suffix = history[index];
-      for (const t of this.hintLetters) {
-        if (suffix === t) continue; // WHY: already emitted as a 2-same-letter hint above
-        const h = t + suffix;
-        history.push(h);
-        yield h;
-      }
-      index++;
-    }
-  }
-
-  compareByHintLettersOrder() {
-    const letters = this.hintLetters;
-    return (a: string, b: string) => {
-      const m = Math.min(a.length, b.length);
-      for (let i = 0; i < m; i++) {
-        const aIndex = letters.indexOf(a[i]);
-        const bIndex = letters.indexOf(b[i]);
-        if (aIndex < bIndex) return -1;
-        if (aIndex > bIndex) return 1;
-      }
-      return a.length - b.length;
-    };
+  /** The context of session `id` if it is live and still takes input. */
+  private acceptingInput(id: SessionId): HintContext | null {
+    const context = this.live(id);
+    return context?.removing ? null : context;
   }
 
   hitHint(id: SessionId, inputLetter: SingleLetter) {
-    const context = this.live(id);
+    const context = this.acceptingInput(id);
     if (!context) return;
 
-    /* WHY: before setup() the hint letters are unknown, so keep the letter
+    /* WHY: until render() fixes the session's hint letters, keep the letter
        for render() to check. */
-    if (this.isSetUp && !this.hintLetters.includes(inputLetter)) return;
+    if (
+      context.hintLetters !== null &&
+      !context.hintLetters.includes(inputLetter)
+    )
+      return;
 
     delete context.cycle;
 
@@ -195,7 +177,7 @@ export class HinterContentRoot {
   }
 
   cycleHint(id: SessionId) {
-    const context = this.live(id);
+    const context = this.acceptingInput(id);
     if (!context) return;
     if (!context.hitTarget) return;
 
@@ -224,6 +206,14 @@ export class HinterContentRoot {
     );
   }
 
+  /** Returns whether `id` is the live session, and stops its input if so. */
+  beginRemoveHints(id: SessionId): boolean {
+    const context = this.live(id);
+    if (!context) return false;
+    context.removing = true;
+    return true;
+  }
+
   async removeHints(id: SessionId, options: ActionOptions, execute: boolean) {
     const context = this.live(id);
     if (!context) return;
@@ -246,6 +236,9 @@ export function buildHinterRouter(hinter: HinterContentRoot) {
     .add("AttachHintsInTab", () => ({ sessionId: hinter.attachHints() }))
     .add("HitHintInTab", ({ sessionId, key }) => hinter.hitHint(sessionId, key))
     .add("CycleHintInTab", ({ sessionId }) => hinter.cycleHint(sessionId))
+    .add("BeginRemoveHintsInTab", ({ sessionId }) =>
+      hinter.beginRemoveHints(sessionId),
+    )
     .add("RemoveHintsInTab", ({ sessionId, options, execute }) =>
       hinter.removeHints(sessionId, options, execute),
     );
@@ -297,4 +290,45 @@ function take<T>(iter: Generator<T>, length: number): T[] {
     result.push(r.value);
   }
   return result;
+}
+
+function* generateHintTexts(letters: string): Generator<string> {
+  const history: string[] = [];
+
+  for (const t of letters) {
+    history.push(t);
+    yield t;
+  }
+
+  // WHY: Emit repeated 2-same-letter hints first because they're easier to type.
+  for (const t of letters) {
+    const h = t + t;
+    history.push(h);
+    yield h;
+  }
+
+  let index = 0;
+  while (true) {
+    const suffix = history[index];
+    for (const t of letters) {
+      if (suffix === t) continue; // WHY: already emitted as a 2-same-letter hint above
+      const h = t + suffix;
+      history.push(h);
+      yield h;
+    }
+    index++;
+  }
+}
+
+function compareByHintLettersOrder(letters: string) {
+  return (a: string, b: string) => {
+    const m = Math.min(a.length, b.length);
+    for (let i = 0; i < m; i++) {
+      const aIndex = letters.indexOf(a[i]);
+      const bIndex = letters.indexOf(b[i]);
+      if (aIndex < bIndex) return -1;
+      if (aIndex > bIndex) return 1;
+    }
+    return a.length - b.length;
+  };
 }

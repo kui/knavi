@@ -26,9 +26,9 @@ export const router = Router.newRuntimeInstance()
 
   .add(
     "AllRectsRequest",
-    async ({ id, targetPath, viewport, offsets }, sender) => {
+    async ({ sessionId, targetPath, viewport, offsets }, sender) => {
       const tabId = requireTabId(sender);
-      const frameId = await framePaths.lookup(tabId, targetPath);
+      const frameId = await framePaths.lookup(tabId, sessionId, targetPath);
       if (frameId == null) {
         console.debug("No frame reported its path as", targetPath);
         return;
@@ -36,7 +36,7 @@ export const router = Router.newRuntimeInstance()
       await sendToTab(
         tabId,
         "AllRectsRequest",
-        { id, targetPath, viewport, offsets },
+        { sessionId, targetPath, viewport, offsets },
         { frameId },
       );
     },

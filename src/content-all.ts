@@ -50,18 +50,21 @@ chrome.runtime.onMessage.addListener(
     .add("ExecuteActionInFrame", ({ id, options }) =>
       rectAggregator.handleExecuteAction(id.index, options),
     )
-    .add("AllRectsRequest", async ({ id, targetPath, viewport, offsets }) => {
-      if (!framePath.matches(targetPath)) {
-        // WHY: the frame tree changed after the path was reported.
-        console.warn("AllRectsRequest for another frame:", targetPath);
-        return;
-      }
-      await rectAggregator.handleAllRectsRequest(
-        id,
-        new Rect(viewport),
-        new Coordinates(offsets),
-      );
-    })
+    .add(
+      "AllRectsRequest",
+      async ({ sessionId, targetPath, viewport, offsets }) => {
+        if (!framePath.matches(targetPath)) {
+          // WHY: the frame tree changed after the path was reported.
+          console.warn("AllRectsRequest for another frame:", targetPath);
+          return;
+        }
+        await rectAggregator.handleAllRectsRequest(
+          sessionId,
+          new Rect(viewport),
+          new Coordinates(offsets),
+        );
+      },
+    )
     .add("BlurRelay", ({ targetPath, childSegment, rect }) => {
       blurer.handleBlurRelay(targetPath, childSegment, rect);
     })

@@ -8,7 +8,9 @@ interface Sent {
 }
 const sent: Sent[] = [];
 let attachFails = false;
+let beginRemoveFails = false;
 let nextSessionId = 1;
+let liveSessionId: number | null = null;
 
 (globalThis as Record<string, unknown>).chrome = {
   tabs: {
@@ -23,8 +25,20 @@ let nextSessionId = 1;
       });
       if (message["@type"] === "AttachHintsInTab") {
         if (attachFails) return Promise.reject(new Error("no receiver"));
-        return Promise.resolve({ response: { sessionId: nextSessionId++ } });
+        liveSessionId = nextSessionId++;
+        return Promise.resolve({ response: { sessionId: liveSessionId } });
       }
+      if (message["@type"] === "BeginRemoveHintsInTab") {
+        if (beginRemoveFails) return Promise.reject(new Error("no receiver"));
+        return Promise.resolve({
+          response: message.sessionId === liveSessionId,
+        });
+      }
+      if (
+        message["@type"] === "RemoveHintsInTab" &&
+        message.sessionId === liveSessionId
+      )
+        liveSessionId = null;
       return Promise.resolve({ response: undefined });
     },
   },
@@ -59,14 +73,18 @@ void describe("hint session and the frame path table", () => {
   beforeEach(() => {
     sent.length = 0;
     attachFails = false;
-    framePaths.end(TAB);
+    beginRemoveFails = false;
+    framePaths.forgetTab(TAB);
   });
 
   void test("AttachHints starts a session and tells every frame", async () => {
     await call("AttachHints");
     assert.deepEqual(syncStates(), [true]);
     framePaths.report(TAB, ["0"], 9);
-    assert.equal(await framePaths.lookup(TAB, ["0"], 10), 9);
+    assert.equal(
+      await framePaths.lookup(TAB, liveSessionId ?? 0, ["0"], 10),
+      9,
+    );
   });
 
   void test("AttachHints answers and broadcasts the id content-root assigned, after content-root accepts", async () => {
@@ -83,7 +101,10 @@ void describe("hint session and the frame path table", () => {
     await call("AttachHints");
     framePaths.report(TAB, ["0"], 9);
     await call("AttachHints");
-    assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
+    assert.equal(
+      await framePaths.lookup(TAB, liveSessionId ?? 0, ["0"], 10),
+      undefined,
+    );
   });
 
   void test("RemoveHints ends the session and drops reports made after it", async () => {
@@ -92,14 +113,78 @@ void describe("hint session and the frame path table", () => {
     sent.length = 0;
     await call("RemoveHints", { sessionId, options: {}, execute: false });
     assert.deepEqual(syncStates(), [false]);
-    assert.equal(sent[0]?.sessionId, sessionId);
+    assert.ok(sent.every((m) => m.sessionId === sessionId));
     framePaths.report(TAB, ["0"], 9);
-    assert.equal(await framePaths.lookup(TAB, ["0"], 10), undefined);
+    assert.equal(await framePaths.lookup(TAB, sessionId, ["0"], 10), undefined);
   });
 
   void test("a rejected AttachHints broadcasts nothing", async () => {
     attachFails = true;
     await assert.rejects(call("AttachHints"));
     assert.deepEqual(syncStates(), []);
+  });
+
+  void test("a rejected AttachHints keeps the live session's frame paths", async () => {
+    await call("AttachHints");
+    framePaths.report(TAB, ["0"], 9);
+    attachFails = true;
+    await assert.rejects(call("AttachHints"));
+    assert.equal(
+      await framePaths.lookup(TAB, liveSessionId ?? 0, ["0"], 10),
+      9,
+    );
+  });
+
+  void test("RemoveHints of an older session keeps the live session's frame paths", async () => {
+    const { sessionId: old } = (await call("AttachHints")) as {
+      sessionId: number;
+    };
+    await call("AttachHints");
+    framePaths.report(TAB, ["0"], 9);
+    await call("RemoveHints", { sessionId: old, options: {}, execute: false });
+    assert.equal(
+      await framePaths.lookup(TAB, liveSessionId ?? 0, ["0"], 10),
+      9,
+    );
+  });
+
+  void test("RemoveHints broadcasts false before content-root runs the action", async () => {
+    const { sessionId } = (await call("AttachHints")) as { sessionId: number };
+    sent.length = 0;
+    await call("RemoveHints", { sessionId, options: {}, execute: true });
+    assert.deepEqual(
+      sent.map((m) => m.type),
+      ["BeginRemoveHintsInTab", "SyncHintingState", "RemoveHintsInTab"],
+    );
+  });
+
+  void test("RemoveHints of an older session broadcasts nothing", async () => {
+    const { sessionId: old } = (await call("AttachHints")) as {
+      sessionId: number;
+    };
+    await call("AttachHints");
+    sent.length = 0;
+    await call("RemoveHints", { sessionId: old, options: {}, execute: false });
+    assert.deepEqual(syncStates(), []);
+  });
+
+  void test("a second RemoveHints of the same session broadcasts nothing", async () => {
+    const { sessionId } = (await call("AttachHints")) as { sessionId: number };
+    await call("RemoveHints", { sessionId, options: {}, execute: false });
+    sent.length = 0;
+    await call("RemoveHints", { sessionId, options: {}, execute: false });
+    assert.deepEqual(
+      sent.map((m) => m.type),
+      ["BeginRemoveHintsInTab"],
+    );
+  });
+
+  void test("RemoveHints broadcasts false when content-root cannot answer", async (t) => {
+    t.mock.method(console, "error", () => undefined);
+    const { sessionId } = (await call("AttachHints")) as { sessionId: number };
+    sent.length = 0;
+    beginRemoveFails = true;
+    await call("RemoveHints", { sessionId, options: {}, execute: false });
+    assert.deepEqual(syncStates(), [false]);
   });
 });

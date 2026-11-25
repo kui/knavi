@@ -20,7 +20,6 @@ function syncHintingState(
 export const router = Router.newRuntimeInstance()
   .add("AttachHints", async (_msg, sender) => {
     const tabId = requireTabId(sender);
-    framePaths.reset(tabId);
     /* WHY: a rejected attach (e.g. "already started hinting" while another
        frame's session is live) announced nothing, so it broadcasts nothing;
        a false here would end the live session in every frame. */
@@ -30,6 +29,10 @@ export const router = Router.newRuntimeInstance()
       undefined,
       { frameId: 0 },
     );
+    /* WHY: reset only once content-root has accepted, so a rejected attach
+       keeps the live session's table. Frames report their paths on the true
+       broadcast, which follows. */
+    framePaths.reset(tabId, sessionId);
     syncHintingState(tabId, true, sessionId);
     return { sessionId };
   })
@@ -51,8 +54,29 @@ export const router = Router.newRuntimeInstance()
   })
   .add("RemoveHints", async ({ sessionId, options, execute }, sender) => {
     const tabId = requireTabId(sender);
+    /* WHY: two steps. BeginRemoveHintsInTab first, because a frame that
+       still believes it owns an older session sends its id, and a false for
+       it would stop frames that have not seen the next session's true yet;
+       content-root also stops the session's input there, so letters that
+       reach it before RemoveHintsInTab cannot change the action's target.
+       Waiting for that answer keeps other frames swallowing keys for one
+       more tab message, longer while frame 0 is busy; that delay is
+       accepted. Then false is broadcast before RemoveHintsInTab runs the
+       action, because once the action settles the next session's
+       keystrokes can already be in flight. If content-root cannot answer,
+       broadcast anyway so no frame keeps swallowing keys. */
+    const live = await sendToTab(
+      tabId,
+      "BeginRemoveHintsInTab",
+      { sessionId },
+      { frameId: 0 },
+    ).catch((e: unknown) => {
+      printError(e);
+      return true;
+    });
+    if (!live) return;
     syncHintingState(tabId, false, sessionId);
-    framePaths.end(tabId);
+    framePaths.end(tabId, sessionId);
     return await sendToTab(
       tabId,
       "RemoveHintsInTab",

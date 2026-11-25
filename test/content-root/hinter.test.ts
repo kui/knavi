@@ -83,19 +83,17 @@ void describe("HinterContentRoot", () => {
   let view: ReturnType<typeof makeView>;
   let aggregator: InstanceType<typeof RectAggregatorClient>;
   let hinter: InstanceType<typeof HinterContentRoot>;
-  let requestId: number;
 
   beforeEach(() => {
     view = makeView();
     aggregator = new RectAggregatorClient();
     hinter = new HinterContentRoot(aggregator, view as never);
-    requestId = 0;
   });
 
   async function attachAndRender() {
     const id = hinter.attachHints();
     await tick();
-    aggregator.handleRects(++requestId, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
     await hinter.removeHints(id, OPTIONS, false);
   }
@@ -105,7 +103,7 @@ void describe("HinterContentRoot", () => {
     await tick();
     hinter.setup("asdf");
     await tick();
-    aggregator.handleRects(++requestId, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
 
     assert.equal(view.rendered, 1);
@@ -129,7 +127,7 @@ void describe("HinterContentRoot", () => {
     assert.ok(next > id);
     hinter.setup("asdf");
     await tick();
-    aggregator.handleRects(++requestId, RECTS);
+    aggregator.handleRects(next, RECTS);
     await tick();
     assert.equal(view.rendered, 1);
     await hinter.removeHints(next, OPTIONS, false);
@@ -171,7 +169,7 @@ void describe("HinterContentRoot", () => {
     hinter.hitHint(id, "a" as SingleLetter);
     hinter.setup("asdf");
     await tick();
-    aggregator.handleRects(++requestId, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
 
     assert.equal(view.batches[0][0].state, "hit");
@@ -191,7 +189,7 @@ void describe("HinterContentRoot", () => {
     hinter.setup("");
     await tick();
     assert.ok(!sentTypes.includes("AllRectsRequest"));
-    aggregator.handleRects(requestId + 1, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
     assert.equal(view.rendered, 0);
     assert.equal(view.isStarted(), false);
@@ -244,7 +242,7 @@ void describe("HinterContentRoot", () => {
       await tick();
       // WHY: starting the aggregation would leave it waiting for rects of an ended session.
       assert.ok(!sentTypes.includes("AllRectsRequest"));
-      aggregator.handleRects(requestId + 1, RECTS);
+      aggregator.handleRects(id, RECTS);
       await tick();
       assert.equal(view.rendered, 0);
       assert.equal(view.isStarted(), false);
@@ -268,9 +266,7 @@ void describe("HinterContentRoot", () => {
     await hinter.removeHints(old, OPTIONS, false);
     const id = hinter.attachHints();
     await tick();
-    // WHY: each session's aggregate() takes the next request id.
-    requestId += 2;
-    aggregator.handleRects(requestId, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
 
     hinter.hitHint(old, "a" as SingleLetter);
@@ -306,7 +302,7 @@ void describe("HinterContentRoot", () => {
     const id = hinter.attachHints();
     await tick();
     await hinter.removeHints(id, OPTIONS, true);
-    aggregator.handleRects(++requestId, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
 
     assert.equal(view.rendered, 0);
@@ -323,7 +319,7 @@ void describe("HinterContentRoot", () => {
     assert.doesNotThrow(() => hinter.hitHint(id, "a" as SingleLetter));
     assert.equal(view.hits.length, 0);
 
-    aggregator.handleRects(requestId + 1, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
 
     assert.equal(view.batches[0][0].state, "hit");
@@ -338,10 +334,10 @@ void describe("HinterContentRoot", () => {
     hinter.hitHint(id, "s" as SingleLetter);
 
     // WHY: the first batch holds hint "a", the second hint "s".
-    aggregator.handleRects(requestId + 1, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
     assert.equal(view.batches[0][0].state, "disabled");
-    aggregator.handleRects(requestId + 1, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
 
     assert.equal(view.batches[1][0].state, "hit");
@@ -356,10 +352,10 @@ void describe("HinterContentRoot", () => {
     await tick();
     hinter.hitHint(id, "a" as SingleLetter);
 
-    aggregator.handleRects(requestId + 1, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
     assert.equal(view.hits.length, 1);
-    aggregator.handleRects(requestId + 1, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
 
     assert.equal(view.hits.length, 1);
@@ -371,7 +367,7 @@ void describe("HinterContentRoot", () => {
     const id = hinter.attachHints();
     await tick();
     hinter.hitHint(id, "a" as SingleLetter);
-    aggregator.handleRects(requestId + 1, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
     const a = view.batches[0][0];
     const b = { ...a, hint: "zz", state: "candidate" } as HintedElement;
@@ -382,7 +378,7 @@ void describe("HinterContentRoot", () => {
     const calls = view.hits.length;
 
     view.setCycleSet([a, b, { ...a }, { ...a }] as HintedElement[]);
-    aggregator.handleRects(requestId + 1, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
 
     assert.equal(view.hits.length, calls);
@@ -394,13 +390,13 @@ void describe("HinterContentRoot", () => {
     hinter.setup("asdf");
     const id = hinter.attachHints();
     await tick();
-    aggregator.handleRects(requestId + 1, []);
+    aggregator.handleRects(id, []);
     await tick();
     assert.equal(view.isStarted(), true);
 
     hinter.hitHint(id, "a" as SingleLetter);
     assert.equal(view.hits.length, 1);
-    aggregator.handleRects(requestId + 1, RECTS);
+    aggregator.handleRects(id, RECTS);
     await tick();
 
     assert.equal(view.batches[0][0].state, "hit");
@@ -420,5 +416,122 @@ void describe("HinterContentRoot", () => {
 
     assert.equal(view.hits.length, 0);
     assert.ok(!sentTypes.includes("ExecuteAction"));
+  });
+
+  void test("a Hint Letters change during a session applies from the next session", async () => {
+    hinter.setup("asdf");
+    const id = hinter.attachHints();
+    await tick();
+    const four = [...RECTS, ...RECTS, ...RECTS, ...RECTS];
+    aggregator.handleRects(id, four);
+    await tick();
+    hinter.setup("jkl;");
+    aggregator.handleRects(id, RECTS);
+    await tick();
+    hinter.hitHint(id, "a" as SingleLetter);
+    hinter.hitHint(id, "a" as SingleLetter);
+
+    assert.deepEqual(
+      view.batches.map((b) => b.map((t) => t.hint)),
+      [["a", "s", "d", "f"], ["aa"]],
+    );
+    assert.equal(view.batches[1][0].state, "hit");
+    await hinter.removeHints(id, OPTIONS, false);
+
+    const next = hinter.attachHints();
+    await tick();
+    aggregator.handleRects(next, RECTS);
+    await tick();
+    assert.equal(view.batches[2][0].hint, "j");
+    await hinter.removeHints(next, OPTIONS, false);
+  });
+
+  void test("a Hint Letters change before the session starts rendering applies from the next session", async () => {
+    hinter.setup("asdf");
+    const id = hinter.attachHints();
+    hinter.setup("jkl;");
+    hinter.hitHint(id, "j" as SingleLetter);
+    hinter.hitHint(id, "a" as SingleLetter);
+    await tick();
+    aggregator.handleRects(id, RECTS);
+    await tick();
+
+    assert.equal(view.batches[0][0].hint, "a");
+    assert.equal(view.batches[0][0].state, "hit");
+    await hinter.removeHints(id, OPTIONS, false);
+  });
+
+  void test("input after beginRemoveHints does not change the target of the action", async () => {
+    hinter.setup("asdf");
+    const id = hinter.attachHints();
+    await tick();
+    aggregator.handleRects(id, RECTS);
+    await tick();
+    hinter.hitHint(id, "a" as SingleLetter);
+    const hits = view.hits.length;
+
+    assert.equal(hinter.beginRemoveHints(id), true);
+    hinter.hitHint(id, "s" as SingleLetter);
+    hinter.cycleHint(id);
+    assert.equal(view.hits.length, hits);
+    sentTypes.length = 0;
+    await hinter.removeHints(id, OPTIONS, true);
+
+    assert.ok(sentTypes.includes("ExecuteAction"));
+    assert.equal(hinter.beginRemoveHints(id), false);
+  });
+
+  void test("a batch that arrives after beginRemoveHints does not set the target of the action", async () => {
+    hinter.setup("asdf");
+    const id = hinter.attachHints();
+    await tick();
+    hinter.hitHint(id, "a" as SingleLetter);
+    assert.equal(hinter.beginRemoveHints(id), true);
+    aggregator.handleRects(id, RECTS);
+    await tick();
+    sentTypes.length = 0;
+    await hinter.removeHints(id, OPTIONS, true);
+
+    assert.equal(view.hits.length, 0);
+    assert.ok(!sentTypes.includes("ExecuteAction"));
+  });
+
+  void test("rects of an ended session's request are ignored", async () => {
+    hinter.setup("asdf");
+    const old = hinter.attachHints();
+    await tick();
+    await hinter.removeHints(old, OPTIONS, false);
+    const id = hinter.attachHints();
+    await tick();
+    aggregator.handleRects(old, RECTS);
+    await tick();
+    assert.equal(view.rendered, 0);
+    aggregator.handleRects(id, RECTS);
+    await tick();
+    assert.equal(view.rendered, 1);
+    await hinter.removeHints(id, OPTIONS, false);
+  });
+
+  void test("a letter outside the session's hint letters is not taken as input", async () => {
+    hinter.setup("asdf");
+    const id = hinter.attachHints();
+    await tick();
+    aggregator.handleRects(id, RECTS);
+    await tick();
+    hinter.hitHint(id, "j" as SingleLetter);
+    assert.equal(view.hits.length, 0);
+    assert.equal(view.batches[0][0].state, "init");
+    await hinter.removeHints(id, OPTIONS, false);
+  });
+
+  void test("a batch that arrives before any input keeps its targets init", async () => {
+    hinter.setup("asdf");
+    const id = hinter.attachHints();
+    await tick();
+    aggregator.handleRects(id, RECTS);
+    await tick();
+    assert.equal(view.batches[0][0].state, "init");
+    assert.equal(view.hits.length, 0);
+    await hinter.removeHints(id, OPTIONS, false);
   });
 });

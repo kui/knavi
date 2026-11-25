@@ -217,6 +217,31 @@ void describe("hint session ordering across frames", () => {
     assert.equal(actions, 2);
   });
 
+  void test("#195: RemoveHints from a frame that still thinks it owns the previous session broadcasts no false", async () => {
+    const C = new Frame();
+    A.client.attachHints().catch(() => undefined);
+    await settle();
+    B.deliver();
+    C.deliver();
+    await B.client.removeHints(OPTIONS, false);
+    B.deliver();
+    B.client.attachHints().catch(() => undefined);
+    await settle();
+    B.deliver();
+    // WHY: A and C still hold false(s1) and true(s2); C has seen only true(s1).
+    assert.equal(A.client.ownsSession, true);
+    const pending = C.take();
+
+    await A.client.removeHints(OPTIONS, false);
+    await settle();
+    C.deliver();
+    assert.equal(C.client.isHinting, true);
+
+    pending.forEach((m) => C.receive(m));
+    assert.equal(C.client.isHinting, true);
+    assert.equal(C.client.ownsSession, false);
+  });
+
   void test("(c) a rejected attach from another frame does not clear the live session", async () => {
     A.client.attachHints().catch(() => undefined);
     await settle();

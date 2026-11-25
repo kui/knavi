@@ -49,14 +49,14 @@ export interface RuntimeMessages {
   };
   ResponseRectsFragment: {
     payload: {
-      requestId: number;
+      sessionId: SessionId;
       rects: ElementRects[];
     };
     response: void;
   };
   AllRectsRequest: {
     payload: {
-      id: number;
+      sessionId: SessionId;
       targetPath: string[];
       viewport: RectJSON<"actual-viewport", "root-viewport">;
       offsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
@@ -89,6 +89,14 @@ export interface TabMessages {
     payload: { sessionId: SessionId };
     response: void;
   };
+  /**
+   * Answers without awaiting whether `sessionId` is the live session, and if
+   * so stops its input until RemoveHintsInTab ends it.
+   */
+  BeginRemoveHintsInTab: {
+    payload: { sessionId: SessionId };
+    response: boolean;
+  };
   RemoveHintsInTab: {
     payload: { sessionId: SessionId; options: ActionOptions; execute: boolean };
     response: void;
@@ -104,8 +112,9 @@ export interface TabMessages {
    * AttachHints, so frames drop one whose sessionId is older than the latest
    * they have seen.
    * INVARIANT: dispatch true as soon as content-root accepts the session and
-   * false when RemoveHints is received, not after the RPC settles: by then
-   * the next session's keystrokes can already be in flight.
+   * false once RemoveHints is confirmed for the live session, before its
+   * action runs (see RemoveHints in background/hinter.ts). A RemoveHints of
+   * an ended session broadcasts nothing.
    */
   SyncHintingState: {
     payload: { active: boolean; sessionId: SessionId };
@@ -118,14 +127,14 @@ export interface TabMessages {
   };
   ResponseRectsFragment: {
     payload: {
-      requestId: number;
+      sessionId: SessionId;
       rects: ElementRects[];
     };
     response: void;
   };
   AllRectsRequest: {
     payload: {
-      id: number;
+      sessionId: SessionId;
       targetPath: string[];
       viewport: RectJSON<"actual-viewport", "root-viewport">;
       offsets: CoordinatesJSON<"layout-viewport", "root-viewport">;
