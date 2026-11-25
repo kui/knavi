@@ -3,6 +3,7 @@ import { togglePattern } from "../lib/blacklist";
 import { AdditionalSelectors } from "../lib/additional-selectors";
 import { Router } from "../lib/chrome-messages";
 import { printError } from "../lib/errors";
+import { AREA_MARKER } from "../lib/settings-change";
 
 /* WHY: Serializes ToggleBlacklist read-modify-write so rapid toggles (e.g. quick
    clicks in the popup) do not lose updates. Note this does not guard against
@@ -18,7 +19,7 @@ export function onStorageChanged(
   changes: Record<string, chrome.storage.StorageChange>,
   area: chrome.storage.AreaName,
 ) {
-  if (area !== "local" || !("_area" in changes)) return;
+  if (area !== "local" || !(AREA_MARKER in changes)) return;
   settings
     .getStorage(true)
     .then(() => settings.backfillDefaults())
