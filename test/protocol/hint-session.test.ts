@@ -6,7 +6,9 @@ import fc from "fast-check";
  * Runs the hint session protocol of several frames, the background and
  * content-root in one process. Every message delivery and every reply is a
  * task of a fast-check scheduler, so each run delivers them in a different
- * order, interleaved with the user's key events.
+ * order, interleaved with the user's key events. Rects are collected through
+ * the background's AllRectsRequest routing and frame path table, from frames
+ * nested in one another.
  */
 
 type Message = { "@type": string } & Record<string, unknown>;
@@ -21,6 +23,8 @@ type Listener = (
 const NUM_RUNS = Number(process.env.KNAVI_PROTOCOL_RUNS ?? 3000);
 const TAB_ID = 1;
 const FRAME_COUNT = 3;
+/** Frame i has frameId i and is the only child of frame i - 1. */
+const framePathOf = (frameId: number) => Array<string>(frameId).fill("0");
 const SETTINGS = {
   magicKey: "Space",
   stickyKey: "KeyQ",
@@ -47,7 +51,7 @@ const currentWorld = () => {
 (globalThis as Record<string, unknown>).chrome = {
   runtime: {
     sendMessage: (message: Message) =>
-      currentWorld().deliver(backgroundListener, message),
+      currentWorld().deliver(backgroundListener, message, 0),
   },
   tabs: {
     sendMessage: (
@@ -56,38 +60,61 @@ const currentWorld = () => {
       options: chrome.tabs.MessageSendOptions = {},
     ) => {
       const w = currentWorld();
-      if (options.frameId === 0) return w.deliver(w.rootListener, message);
-      return Promise.all(w.frames.map((f) => w.deliver(f.listener, message)));
+      if (options.frameId === 0) return w.deliver(w.topListener, message, 0);
+      if (options.frameId != null) {
+        return w.deliver(w.frames[options.frameId].listener, message, 0);
+      }
+      if (message["@type"] === "SyncHintingState" && !message.active) {
+        w.countFalse(message.sessionId as number);
+      }
+      return Promise.all(
+        w.frames.map((f) => w.deliver(f.listener, message, 0)),
+      );
     },
   },
 };
 
 const errors: unknown[] = [];
 console.debug = () => undefined;
+// WHY: rects that reach content-root after their session ended are logged.
+console.warn = () => undefined;
 console.error = (e: unknown) => errors.push(e);
 
 const { Router } = await import("../../src/lib/chrome-messages.js");
+const { printError } = await import("../../src/lib/errors.js");
 const { default: HinterClient } =
   await import("../../src/lib/hinter-client.js");
 const { KeyboardHandlerContentAll } =
   await import("../../src/content-all/keyboard-handler.js");
 const { HinterContentRoot, buildHinterRouter } =
   await import("../../src/content-root/hinter.js");
+const { RectAggregatorClient } =
+  await import("../../src/content-root/rect-aggregator-client.js");
 const { router: backgroundRouter } =
   await import("../../src/background/hinter.js");
+const { router: backgroundRectRouter } =
+  await import("../../src/background/rect-aggregator.js");
+const framePaths = await import("../../src/background/frame-paths.js");
 
-const backgroundListener = backgroundRouter.buildListener() as Listener;
+const backgroundListener = Router.newRuntimeInstance()
+  .merge(backgroundRectRouter)
+  .merge(backgroundRouter)
+  .buildListener() as Listener;
 
 /** Mirrors HintView's preconditions: start() once, render() and hit() only after it. */
 class FakeView {
   started = false;
+  /** The frames whose rects were rendered since start(). */
+  readonly renderedFrames = new Set<number>();
   isStarted = () => this.started;
   start() {
     if (this.started) throw Error("view already started");
     this.started = true;
+    this.renderedFrames.clear();
   }
-  render() {
+  render(targets: HintedElement[]) {
     if (!this.started) throw Error("render before start");
+    for (const t of targets) this.renderedFrames.add(t.id.frameId);
   }
   hit() {
     if (!this.started) throw Error("hit before start");
@@ -99,18 +126,52 @@ class FakeView {
   computeCycleSet = (hit: HintedElement) => [hit];
 }
 
+/** The content-all side of a frame, wired as in content-all.ts. */
 class Frame {
   readonly client = new HinterClient();
   blacklisted = false;
   readonly keys = new KeyboardHandlerContentAll(null as never, this.client);
-  readonly listener = Router.newTabInstance()
-    .add("SyncHintingState", ({ active, sessionId }) => {
-      this.client.syncHinting(active, sessionId);
-    })
-    .buildListener() as Listener;
+  readonly path: string[];
+  readonly listener: Listener;
+  private readonly w: World;
+  readonly frameId: number;
 
-  constructor() {
+  constructor(w: World, frameId: number) {
+    this.w = w;
+    this.frameId = frameId;
+    this.path = framePathOf(frameId);
+    this.listener = Router.newTabInstance()
+      .add("ExecuteActionInFrame", () => undefined)
+      .add("SyncHintingState", ({ active, sessionId }) => {
+        if (this.client.syncHinting(active, sessionId) && active)
+          this.send({ "@type": "ReportFramePath", path: this.path });
+      })
+      .add("AllRectsRequest", (request) => {
+        if (request.targetPath.join() !== this.path.join()) return;
+        this.send({
+          "@type": "ResponseRectsFragment",
+          sessionId: request.sessionId,
+          rects: [
+            {
+              id: { frameId: this.frameId, index: 0 },
+              rects: [],
+              descriptions: { short: "link" },
+            },
+          ],
+        });
+        if (this.frameId + 1 < FRAME_COUNT)
+          this.send({
+            "@type": "AllRectsRequest",
+            ...request,
+            targetPath: framePathOf(this.frameId + 1),
+          });
+      })
+      .buildListener() as Listener;
     this.keys.setup(SETTINGS, [], this.keys.newBlacklistTicket());
+  }
+
+  private send(message: Message) {
+    this.w.deliver(backgroundListener, message, this.frameId).catch(printError);
   }
 
   setBlacklisted(blacklisted: boolean) {
@@ -124,41 +185,70 @@ class Frame {
 
 class World {
   readonly view = new FakeView();
-  readonly frames = Array.from({ length: FRAME_COUNT }, () => new Frame());
-  readonly rootListener: Listener;
+  readonly frames: Frame[];
+  /** content-root and content-all of the top frame, as one listener. */
+  readonly topListener: Listener;
+  /** How many times content-root confirmed each session live on removal. */
+  private readonly confirmed = new Map<number, number>();
+  private readonly falses = new Map<number, number>();
+  readonly unconfirmedFalses: number[] = [];
   private readonly scheduler: fc.Scheduler;
 
   constructor(scheduler: fc.Scheduler) {
     this.scheduler = scheduler;
-    const element = {
-      id: { frameId: 0, index: 0 },
-      rects: [],
-      descriptions: { short: "link" },
-    };
-    const aggregator = {
-      aggregate: async function* () {
-        await scheduler.schedule(Promise.resolve(), "rects");
-        yield [element];
-      },
-      action: () => scheduler.schedule(Promise.resolve(), "action"),
-    };
-    const hinter = new HinterContentRoot(
-      aggregator as never,
-      this.view as never,
+    // WHY: the table is module state and outlives the previous run's world.
+    framePaths.forgetTab(TAB_ID);
+    this.frames = Array.from(
+      { length: FRAME_COUNT },
+      (_, i) => new Frame(this, i),
     );
+    const aggregator = new RectAggregatorClient();
+    const hinter = new HinterContentRoot(aggregator, this.view as never);
     hinter.setup(SETTINGS.hints);
-    this.rootListener = buildHinterRouter(hinter).buildListener() as Listener;
+    const rootListener = Router.newTabInstance()
+      .add("ResponseRectsFragment", (m) => {
+        aggregator.handleRects(m.sessionId, m.rects);
+      })
+      .merge(buildHinterRouter(hinter))
+      .buildListener() as Listener;
+    const top = this.frames[0];
+    this.topListener = (message, sender, sendResponse) => {
+      let respond = sendResponse;
+      if (message["@type"] === "BeginRemoveHintsInTab") {
+        const id = message.sessionId as number;
+        respond = (arg) => {
+          if ((arg as { response?: unknown }).response === true)
+            this.confirmed.set(id, (this.confirmed.get(id) ?? 0) + 1);
+          sendResponse(arg);
+        };
+      }
+      return (
+        rootListener(message, sender, respond) ??
+        top.listener(message, sender, respond)
+      );
+    };
+  }
+
+  /** Records a SyncHintingState(false) broadcast of session `id`. */
+  countFalse(id: number) {
+    const count = (this.falses.get(id) ?? 0) + 1;
+    this.falses.set(id, count);
+    if (count > (this.confirmed.get(id) ?? 0)) this.unconfirmedFalses.push(id);
   }
 
   /** Delivers the message and its reply, each when the scheduler picks it. */
-  async deliver(listener: Listener, message: Message): Promise<unknown> {
+  async deliver(
+    listener: Listener,
+    message: Message,
+    frameId: number,
+  ): Promise<unknown> {
     const type = message["@type"];
     await this.scheduler.schedule(Promise.resolve(), `deliver ${type}`);
     const reply = await new Promise((resolve) => {
       let answered = false;
       const async = listener(
         message,
-        { tab: { id: TAB_ID }, frameId: 0 } as chrome.runtime.MessageSender,
+        { tab: { id: TAB_ID }, frameId } as chrome.runtime.MessageSender,
         (arg) => {
           answered = true;
           resolve(arg);
@@ -263,6 +353,18 @@ function assertSettled(w: World) {
     w.frames.some((f) => f.blacklisted && f.client.ownsSession),
     false,
     "a frame whose blacklist matches owns no session",
+  );
+  if (w.view.started) {
+    assert.deepEqual(
+      [...w.view.renderedFrames].sort(),
+      w.frames.map((f) => f.frameId),
+      "every frame's rects reach content-root",
+    );
+  }
+  assert.deepEqual(
+    w.unconfirmedFalses,
+    [],
+    "SyncHintingState(false) is broadcast only for a session content-root confirmed live",
   );
   assert.deepEqual(
     errors.filter((e) => !isExpectedError(e)),
