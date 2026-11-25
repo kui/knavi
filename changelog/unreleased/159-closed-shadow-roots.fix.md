@@ -1,0 +1,1 @@
+- Fix missing hints on elements and iframes inside closed shadow roots.

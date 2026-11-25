@@ -1,0 +1,28 @@
+<style>
+  #host {
+    padding: 20px;
+  }
+</style>
+
+<div id="host"></div>
+
+<script>
+  function closedRootWithButton(host, id) {
+    const root = host.attachShadow({ mode: "closed" });
+    const button = document.createElement("button");
+    button.id = id;
+    button.textContent = id;
+    button.onclick = () => (button.textContent = "clicked");
+    root.appendChild(button);
+    return root;
+  }
+  const root = closedRootWithButton(document.getElementById("host"), "outer");
+  const innerHost = document.createElement("div");
+  root.appendChild(innerHost);
+  const innerRoot = closedRootWithButton(innerHost, "inner");
+  // WHY: Playwright cannot select into closed shadow roots, so the test reaches the buttons through this.
+  window.closedButtons = {
+    outer: root.getElementById("outer"),
+    inner: innerRoot.getElementById("inner"),
+  };
+</script>

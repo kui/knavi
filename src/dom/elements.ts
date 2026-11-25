@@ -1,5 +1,6 @@
 import { map } from "../lib/iters";
 import { Coordinates, Rect } from "./rects";
+import { assignedSlotOf, shadowRootOf } from "./shadow-roots";
 
 export const Z_INDEX_OFFSET = 2147483647;
 
@@ -74,8 +75,7 @@ export function* traverseParent(
 /**
  * Like `traverseParent()`, but walks the flat tree, as `containsComposed()`
  * does: a slotted node steps to the `<slot>` it is assigned to, and a shadow
- * root steps to its host. `assignedSlot` is null for a node slotted into a
- * closed shadow root, so the walk goes up the light DOM there instead.
+ * root steps to its host.
  */
 export function* traverseComposedParent(
   element: Element,
@@ -89,11 +89,9 @@ export function* traverseComposedParent(
 }
 
 function composedParent(element: Element): Element | null {
-  const slot = (element as Partial<Slottable>).assignedSlot;
-  if (slot) return slot;
-  if (element.parentElement) return element.parentElement;
-  const parent = element.parentNode;
-  return parent instanceof ShadowRoot ? parent.host : null;
+  const parent = flatParent(element);
+  const p = parent instanceof ShadowRoot ? parent.host : parent;
+  return p instanceof Element ? p : null;
 }
 
 /**
@@ -111,7 +109,7 @@ export function containsComposed(ancestor: Node, node: Node | null): boolean {
 
 function flatParent(node: Node): Node | null {
   if (node instanceof ShadowRoot) return node.host;
-  const slot = (node as Partial<Slottable>).assignedSlot;
+  const slot = assignedSlotOf(node);
   if (slot) return slot;
   return node.parentNode;
 }
@@ -327,24 +325,7 @@ export function* listAll(d: ParentNode = document): Generator<Element> {
   if (d instanceof Document) d = d.body;
   for (const e of d.querySelectorAll("*")) {
     yield e;
-    if (e.shadowRoot) yield* listAll(e.shadowRoot);
-  }
-}
-
-/**
- * Yields iframes that live inside open shadow roots reachable from `d`.
- * Skips light-DOM iframes — callers should combine this with
- * `document.getElementsByTagName("iframe")` for the cheap light-DOM pass.
- * Walking every element is unavoidable here: there is no DOM API to
- * enumerate shadow roots directly.
- */
-export function* listIframesInShadowRoots(
-  d: ParentNode = document,
-): Generator<HTMLIFrameElement> {
-  for (const host of d.querySelectorAll("*")) {
-    const root = host.shadowRoot;
-    if (!root) continue;
-    for (const iframe of root.querySelectorAll("iframe")) yield iframe;
-    yield* listIframesInShadowRoots(root);
+    const root = shadowRootOf(e);
+    if (root) yield* listAll(root);
   }
 }

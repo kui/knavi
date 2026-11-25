@@ -1,5 +1,6 @@
 import { Timers } from "../lib/metrics";
 import { Rect } from "../dom/rects";
+import { shadowRootOf } from "../dom/shadow-roots";
 
 const MIN_POINT_SPACING_PX = 4;
 const EDGE_INSET_PX = 1;
@@ -72,8 +73,9 @@ function elementFromPointComposed(x: number, y: number): Element | null {
   if (pointedElement == null) return null;
 
   const stack = [pointedElement];
-  while (pointedElement.shadowRoot) {
-    const elemementInShadow = pointedElement.shadowRoot.elementFromPoint(x, y);
+  let root: ShadowRoot | null;
+  while ((root = shadowRootOf(pointedElement))) {
+    const elemementInShadow = root.elementFromPoint(x, y);
     if (elemementInShadow && !stack.includes(elemementInShadow)) {
       stack.push(elemementInShadow);
       pointedElement = elemementInShadow;
