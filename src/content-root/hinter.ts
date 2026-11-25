@@ -79,6 +79,11 @@ export class HinterContentRoot {
     return context.id;
   }
 
+  /** The live session's hint letters; null until setup(). */
+  get sessionHintLetters(): string | null {
+    return this.context?.hintLetters ?? null;
+  }
+
   private async render(context: HintContext) {
     /* WHY: the session may end at any await; rendering after that would
        leave hints no session can remove. */
@@ -233,7 +238,10 @@ export class HinterContentRoot {
 
 export function buildHinterRouter(hinter: HinterContentRoot) {
   return Router.newTabInstance()
-    .add("AttachHintsInTab", () => ({ sessionId: hinter.attachHints() }))
+    .add("AttachHintsInTab", () => {
+      const sessionId = hinter.attachHints();
+      return { sessionId, hintLetters: hinter.sessionHintLetters };
+    })
     .add("HitHintInTab", ({ sessionId, key }) => hinter.hitHint(sessionId, key))
     .add("CycleHintInTab", ({ sessionId }) => hinter.cycleHint(sessionId))
     .add("BeginRemoveHintsInTab", ({ sessionId }) =>

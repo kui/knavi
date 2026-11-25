@@ -25,7 +25,9 @@ let nextSessionId = 1;
         // WHY: the real AttachHints is answered once content-root starts the session.
         await new Promise<void>((resolve) => (releaseAttach = resolve));
         if (fail) return { error: new Error("attach failed") };
-        return { response: { sessionId: nextSessionId++ } };
+        return {
+          response: { sessionId: nextSessionId++, hintLetters: "asdf" },
+        };
       }
       return { response: undefined };
     },
@@ -44,25 +46,47 @@ const options = {
 };
 
 void describe("TabSession", () => {
+  void test("keeps the live session's hint letters", () => {
+    const s = new TabSession();
+    s.apply({ active: true, sessionId: 1, hintLetters: "asdf" });
+    assert.equal(s.hintLetters, "asdf");
+    s.apply({ active: false, sessionId: 1 });
+    assert.equal(s.hintLetters, null);
+    s.apply({ active: true, sessionId: 2, hintLetters: "jkl;" });
+    assert.equal(s.hintLetters, "jkl;");
+  });
+
   void test("drops updates older than the latest id", () => {
     const s = new TabSession();
-    assert.equal(s.apply(true, 2), true);
-    assert.equal(s.apply(false, 1), false);
-    assert.equal(s.apply(true, 1), false);
+    assert.equal(
+      s.apply({ active: true, sessionId: 2, hintLetters: null }),
+      true,
+    );
+    assert.equal(s.apply({ active: false, sessionId: 1 }), false);
+    assert.equal(
+      s.apply({ active: true, sessionId: 1, hintLetters: null }),
+      false,
+    );
     assert.equal(s.id, 2);
   });
 
   void test("a true after the false of the same id does not revive it", () => {
     const s = new TabSession();
-    assert.equal(s.apply(false, 3), true);
-    assert.equal(s.apply(true, 3), false);
+    assert.equal(s.apply({ active: false, sessionId: 3 }), true);
+    assert.equal(
+      s.apply({ active: true, sessionId: 3, hintLetters: null }),
+      false,
+    );
     assert.equal(s.id, null);
   });
 
   void test("a duplicate true is applied as a no-op", () => {
     const s = new TabSession();
-    s.apply(true, 1);
-    assert.equal(s.apply(true, 1), true);
+    s.apply({ active: true, sessionId: 1, hintLetters: null });
+    assert.equal(
+      s.apply({ active: true, sessionId: 1, hintLetters: null }),
+      true,
+    );
     assert.equal(s.id, 1);
   });
 });
@@ -79,7 +103,7 @@ void describe("HinterClient", () => {
   void test("keys typed while the previous RemoveHints is pending are sent in order after attach", async () => {
     nextSessionId = 2;
     const client = new HinterClient();
-    client.syncHinting(true, 1);
+    client.syncHinting({ active: true, sessionId: 1, hintLetters: null });
     const removing = client.removeHints(options, true);
     await flush();
 
@@ -136,7 +160,7 @@ void describe("HinterClient", () => {
   void test("cycleHint typed while the previous RemoveHints is pending is sent after attach", async () => {
     nextSessionId = 2;
     const client = new HinterClient();
-    client.syncHinting(true, 1);
+    client.syncHinting({ active: true, sessionId: 1, hintLetters: null });
     const removing = client.removeHints(options, true);
     await flush();
 
@@ -196,7 +220,7 @@ void describe("HinterClient", () => {
 
   void test("a removeHints typed while attach waits for the previous RemoveHints is sent after AttachHints", async () => {
     const client = new HinterClient();
-    client.syncHinting(true, 1);
+    client.syncHinting({ active: true, sessionId: 1, hintLetters: null });
     const first = client.removeHints(options, true);
     await flush();
     const attaching = client.attachHints();
@@ -220,25 +244,25 @@ void describe("HinterClient", () => {
   void test("a late false of the previous session while attach is pending keeps hinting", async () => {
     nextSessionId = 2;
     const client = new HinterClient();
-    client.syncHinting(true, 1);
+    client.syncHinting({ active: true, sessionId: 1, hintLetters: null });
     const removing = client.removeHints(options, true);
     const attaching = client.attachHints();
 
-    client.syncHinting(false, 1);
+    client.syncHinting({ active: false, sessionId: 1 });
     assert.equal(client.isHinting, true);
     await flush();
     releaseRemove();
     await removing;
     await flush();
-    client.syncHinting(false, 1);
+    client.syncHinting({ active: false, sessionId: 1 });
     assert.equal(client.isHinting, true);
     releaseAttach();
     await attaching;
-    client.syncHinting(false, 1);
+    client.syncHinting({ active: false, sessionId: 1 });
     assert.equal(client.isHinting, true);
     assert.equal(client.ownsSession, true);
 
-    client.syncHinting(false, 2);
+    client.syncHinting({ active: false, sessionId: 2 });
     assert.equal(client.isHinting, false);
   });
 
@@ -249,7 +273,7 @@ void describe("HinterClient", () => {
     releaseAttach();
     await attaching;
     assert.equal(client.ownsSession, true);
-    client.syncHinting(true, 1);
+    client.syncHinting({ active: true, sessionId: 1, hintLetters: null });
     assert.equal(client.ownsSession, true);
   });
 
@@ -261,7 +285,7 @@ void describe("HinterClient", () => {
     const removing = client.removeHints(options, false);
     assert.equal(client.isHinting, false);
 
-    client.syncHinting(true, 5);
+    client.syncHinting({ active: true, sessionId: 5, hintLetters: null });
     assert.equal(client.isHinting, true);
     assert.equal(client.ownsSession, false);
     const hit = client.hitHint("a" as SingleLetter);
@@ -316,8 +340,8 @@ void describe("HinterClient", () => {
     await flush();
     releaseAttach();
     await attaching;
-    client.syncHinting(false, 1);
-    client.syncHinting(true, 2);
+    client.syncHinting({ active: false, sessionId: 1 });
+    client.syncHinting({ active: true, sessionId: 2, hintLetters: null });
     assert.equal(client.isHinting, true);
     assert.equal(client.ownsSession, false);
   });
@@ -330,7 +354,7 @@ void describe("HinterClient", () => {
     releaseAttach();
     await assert.rejects(attaching, /attach failed/);
 
-    client.syncHinting(true, 1);
+    client.syncHinting({ active: true, sessionId: 1, hintLetters: null });
     assert.equal(client.ownsSession, false);
   });
 });

@@ -1,5 +1,5 @@
 import { Router, sendToTab } from "../lib/chrome-messages";
-import type { SessionId } from "../lib/chrome-messages";
+import type { TabMessages } from "../lib/chrome-messages";
 import { printError } from "../lib/errors";
 import * as framePaths from "./frame-paths";
 import { requireTabId } from "./sender-guards";
@@ -8,10 +8,9 @@ import { requireTabId } from "./sender-guards";
    frame awaits. */
 function syncHintingState(
   tabId: number,
-  active: boolean,
-  sessionId: SessionId,
+  state: TabMessages["SyncHintingState"]["payload"],
 ) {
-  sendToTab(tabId, "SyncHintingState", { active, sessionId }).catch(printError);
+  sendToTab(tabId, "SyncHintingState", state).catch(printError);
 }
 
 /* WHY: the session state lives in content-root, not here, because this
@@ -23,7 +22,7 @@ export const router = Router.newRuntimeInstance()
     /* WHY: a rejected attach (e.g. "already started hinting" while another
        frame's session is live) announced nothing, so it broadcasts nothing;
        a false here would end the live session in every frame. */
-    const { sessionId } = await sendToTab(
+    const { sessionId, hintLetters } = await sendToTab(
       tabId,
       "AttachHintsInTab",
       undefined,
@@ -33,8 +32,8 @@ export const router = Router.newRuntimeInstance()
        keeps the live session's table. Frames report their paths on the true
        broadcast, which follows. */
     framePaths.reset(tabId, sessionId);
-    syncHintingState(tabId, true, sessionId);
-    return { sessionId };
+    syncHintingState(tabId, { active: true, sessionId, hintLetters });
+    return { sessionId, hintLetters };
   })
   .add("HitHint", async ({ sessionId, key }, sender) => {
     return await sendToTab(
@@ -75,7 +74,7 @@ export const router = Router.newRuntimeInstance()
       return true;
     });
     if (!live) return;
-    syncHintingState(tabId, false, sessionId);
+    syncHintingState(tabId, { active: false, sessionId });
     framePaths.end(tabId, sessionId);
     return await sendToTab(
       tabId,

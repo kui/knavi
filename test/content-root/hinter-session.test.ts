@@ -86,10 +86,7 @@ class Frame {
   receive(m: Msg) {
     /* WHY: the same call shape as the SyncHintingState router entry in
        content-all.ts. */
-    (this.client.syncHinting as (active: boolean, sessionId: unknown) => void)(
-      m.active ?? false,
-      m.sessionId,
-    );
+    (this.client.syncHinting as (state: unknown) => void)(m);
   }
   /** Removes and returns the messages held in the inbox. */
   take(): Msg[] {

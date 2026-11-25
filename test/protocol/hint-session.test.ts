@@ -34,6 +34,8 @@ const SETTINGS = {
   blurKey: "",
   hints: "asdf",
 };
+/** Differs from SETTINGS.hints in both directions: it lacks "a" and adds "g". */
+const OTHER_HINTS = "sdfg";
 
 let world: World | null = null;
 const currentWorld = () => {
@@ -142,8 +144,8 @@ class Frame {
     this.path = framePathOf(frameId);
     this.listener = Router.newTabInstance()
       .add("ExecuteActionInFrame", () => undefined)
-      .add("SyncHintingState", ({ active, sessionId }) => {
-        if (this.client.syncHinting(active, sessionId) && active)
+      .add("SyncHintingState", (state) => {
+        if (this.client.syncHinting(state) && state.active)
           this.send({ "@type": "ReportFramePath", path: this.path });
       })
       .add("AllRectsRequest", (request) => {
@@ -167,7 +169,16 @@ class Frame {
           });
       })
       .buildListener() as Listener;
-    this.keys.setup(SETTINGS, [], this.keys.newBlacklistTicket());
+    this.setHints(SETTINGS.hints);
+  }
+
+  /** A settings load of this frame finishes; it may be mid-session (#212). */
+  setHints(hints: string) {
+    this.keys.setup(
+      { ...SETTINGS, hints },
+      this.blacklisted ? ["example.com"] : [],
+      this.keys.newBlacklistTicket(),
+    );
   }
 
   private send(message: Message) {
@@ -193,6 +204,10 @@ class World {
   private readonly falses = new Map<number, number>();
   readonly unconfirmedFalses: number[] = [];
   private readonly scheduler: fc.Scheduler;
+  private readonly hinter: InstanceType<typeof HinterContentRoot>;
+  private rootHints = SETTINGS.hints;
+  /** The hint letters content-root had when it accepted the latest session. */
+  sessionHints = "";
 
   constructor(scheduler: fc.Scheduler) {
     this.scheduler = scheduler;
@@ -204,7 +219,8 @@ class World {
     );
     const aggregator = new RectAggregatorClient();
     const hinter = new HinterContentRoot(aggregator, this.view as never);
-    hinter.setup(SETTINGS.hints);
+    this.hinter = hinter;
+    hinter.setup(this.rootHints);
     const rootListener = Router.newTabInstance()
       .add("ResponseRectsFragment", (m) => {
         aggregator.handleRects(m.sessionId, m.rects);
@@ -214,6 +230,12 @@ class World {
     const top = this.frames[0];
     this.topListener = (message, sender, sendResponse) => {
       let respond = sendResponse;
+      if (message["@type"] === "AttachHintsInTab") {
+        respond = (arg) => {
+          if (!("error" in (arg as object))) this.sessionHints = this.rootHints;
+          sendResponse(arg);
+        };
+      }
       if (message["@type"] === "BeginRemoveHintsInTab") {
         const id = message.sessionId as number;
         respond = (arg) => {
@@ -260,7 +282,16 @@ class World {
   }
 
   press(action: Action) {
+    if (action.type === "rootHints") {
+      this.rootHints = action.hints;
+      this.hinter.setup(action.hints);
+      return;
+    }
     const f = this.frames[action.frame];
+    if (action.type === "hints") {
+      f.setHints(action.hints);
+      return;
+    }
     if (action.type === "blacklist") {
       f.setBlacklisted(action.match);
       return;
@@ -289,12 +320,26 @@ interface BlacklistAction {
   match: boolean;
 }
 
-type Action = KeyAction | BlacklistAction;
+/** A frame applies a Hint Letters change, whenever its reload finishes. */
+interface HintsAction {
+  frame: number;
+  type: "hints";
+  hints: string;
+}
+
+/** Content-root applies a Hint Letters change. */
+interface RootHintsAction {
+  type: "rootHints";
+  hints: string;
+}
+
+type Action = KeyAction | BlacklistAction | HintsAction | RootHintsAction;
 
 const KEYS = {
   Space: " ",
   KeyQ: "q",
   KeyA: "a",
+  KeyG: "g",
   Escape: "Escape",
   Enter: "Enter",
   Tab: "Tab",
@@ -324,9 +369,24 @@ const blacklistAction: fc.Arbitrary<BlacklistAction> = fc.record({
   match: fc.boolean(),
 });
 
+const hints = fc.constantFrom(SETTINGS.hints, OTHER_HINTS);
+
+const hintsAction: fc.Arbitrary<HintsAction> = fc.record({
+  frame: fc.integer({ min: 0, max: FRAME_COUNT - 1 }),
+  type: fc.constant("hints"),
+  hints,
+});
+
+const rootHintsAction: fc.Arbitrary<RootHintsAction> = fc.record({
+  type: fc.constant("rootHints"),
+  hints,
+});
+
 const action: fc.Arbitrary<Action> = fc.oneof(
   { arbitrary: keyAction, weight: 4 },
   { arbitrary: blacklistAction, weight: 1 },
+  { arbitrary: hintsAction, weight: 1 },
+  { arbitrary: rootHintsAction, weight: 1 },
 );
 
 /** Errors the protocol reports by design, not bugs. */
@@ -372,6 +432,38 @@ function assertSettled(w: World) {
   );
 }
 
+/** Types letters, so call it once the session has settled. */
+async function assertHintLetters(w: World, s: fc.Scheduler) {
+  if (!w.view.started) return;
+  for (const f of w.frames) {
+    if (f.blacklisted) continue;
+    for (const code of ["KeyA", "KeyG"] as const) {
+      // WHY: a key left held by the actions would match another binding.
+      f.keys.handleBlur();
+      assert.equal(
+        f.keys.handleKeydown(keyEvent("keydown", code)),
+        w.sessionHints.includes(KEYS[code]),
+        `frame ${f.frameId} takes ${code} iff it is a hint letter of the session`,
+      );
+    }
+    f.keys.handleBlur();
+  }
+  await s.waitIdle();
+}
+
+function labelOf(a: Action): string {
+  switch (a.type) {
+    case "blacklist":
+      return `blacklist ${a.match} in frame ${a.frame}`;
+    case "hints":
+      return `hints ${a.hints} in frame ${a.frame}`;
+    case "rootHints":
+      return `hints ${a.hints} in content-root`;
+    default:
+      return `${a.type} ${a.code} in frame ${a.frame}`;
+  }
+}
+
 void test("frames, the background and content-root settle on one session state in any delivery order", async () => {
   await fc.assert(
     fc.asyncProperty(
@@ -383,10 +475,7 @@ void test("frames, the background and content-root settle on one session state i
         world = w;
         s.scheduleSequence(
           actions.map((a) => ({
-            label:
-              a.type === "blacklist"
-                ? `blacklist ${a.match} in frame ${a.frame}`
-                : `${a.type} ${a.code} in frame ${a.frame}`,
+            label: labelOf(a),
             builder: () => {
               w.press(a);
               return Promise.resolve();
@@ -395,6 +484,7 @@ void test("frames, the background and content-root settle on one session state i
         );
         await s.waitIdle();
         assertSettled(w);
+        await assertHintLetters(w, s);
 
         /* WHY: whatever state the actions left, the user can still end the
            session from any frame. */
@@ -415,6 +505,7 @@ void test("frames, the background and content-root settle on one session state i
         assertSettled(w);
         assert.equal(w.view.started, true, "the sticky key starts a session");
         assert.equal(g.client.ownsSession, true);
+        await assertHintLetters(w, s);
 
         /* WHY: a frame that does not own the session can still end it after
            its page starts matching the blacklist (#196). */

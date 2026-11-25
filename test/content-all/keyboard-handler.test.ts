@@ -8,13 +8,17 @@ interface Sent {
 }
 const sent: Sent[] = [];
 let lastSessionId = 0;
+/** The letters content-root fixes for the next session; null before its setup(). */
+let rootLetters: string | null = null;
 
 (globalThis as Record<string, unknown>).chrome = {
   runtime: {
     sendMessage: (msg: Sent) => {
       sent.push(msg);
       if (msg["@type"] === "AttachHints")
-        return Promise.resolve({ response: { sessionId: ++lastSessionId } });
+        return Promise.resolve({
+          response: { sessionId: ++lastSessionId, hintLetters: rootLetters },
+        });
       return Promise.resolve({ response: undefined });
     },
   },
@@ -23,6 +27,8 @@ let lastSessionId = 0;
 
 const { KeyboardHandlerContentAll } =
   await import("../../src/content-all/keyboard-handler.js");
+const { SettingsWatcher } =
+  await import("../../src/content-all/settings-watcher.js");
 const { default: HinterClient } =
   await import("../../src/lib/hinter-client.js");
 
@@ -314,7 +320,7 @@ void describe("KeyboardHandlerContentAll with the real HinterClient", () => {
 
     handler.handleKeydown(keyEvent("keydown", " ", "Space"));
     await flush();
-    hinter.syncHinting(true, first);
+    hinter.syncHinting({ active: true, sessionId: first, hintLetters: null });
     sent.length = 0;
     assert.equal(handler.handleKeyup(keyEvent("keyup", " ", "Space")), true);
     await flush();
@@ -323,5 +329,101 @@ void describe("KeyboardHandlerContentAll with the real HinterClient", () => {
       sent.map((m) => [m["@type"], m.execute]),
       [["RemoveHints", true]],
     );
+  });
+
+  const typeLetter = (
+    handler: InstanceType<typeof KeyboardHandlerContentAll>,
+    key: string,
+  ) => {
+    const code = `Key${key.toUpperCase()}`;
+    const handled = handler.handleKeydown(keyEvent("keydown", key, code));
+    handler.handleKeyup(keyEvent("keyup", key, code));
+    return handled;
+  };
+
+  function setUp() {
+    const hinter = new HinterClient();
+    const handler = new KeyboardHandlerContentAll(null as never, hinter);
+    const settings = { ...SETTINGS, stickyKey: "KeyQ", cancelKey: "Escape" };
+    const load = (hints: string) =>
+      handler.setup({ ...settings, hints }, [], handler.newBlacklistTicket());
+    return { hinter, handler, settings, load };
+  }
+
+  void test("a settings read that resolves mid-session does not change the session's hint letters", async () => {
+    const { hinter, handler, settings } = setUp();
+    const reads: ((hints: string) => void)[] = [];
+    const watcher = new SettingsWatcher({
+      hinterClient: hinter,
+      keyboardHandler: handler,
+      settingsClient: {
+        getWithBlacklistMatch: () =>
+          new Promise((resolve) => {
+            reads.push((hints) =>
+              resolve([{ ...settings, hints }, []] as never),
+            );
+          }),
+        matchBlacklist: () => Promise.resolve([]),
+      },
+      url: () => "https://example.com/",
+      onLoaded: () => undefined,
+      wait: () => Promise.resolve(),
+      activeArea: () => Promise.resolve("sync"),
+    });
+    const first = watcher.load();
+    reads[0]("asdf");
+    await first;
+    const reload = watcher.handleStorageChange({ hints: {} }, "sync");
+    await flush();
+    assert.equal(reads.length, 2, "the reload is reading storage");
+
+    rootLetters = "asdf";
+    typeLetter(handler, "q");
+    await flush();
+    reads[1]("jkl;");
+    await reload;
+
+    assert.equal(typeLetter(handler, "a"), true);
+    assert.equal(typeLetter(handler, "j"), false);
+
+    handler.handleKeydown(keyEvent("keydown", "Escape", "Escape"));
+    await flush();
+    rootLetters = "jkl;";
+    typeLetter(handler, "q");
+    await flush();
+    assert.equal(typeLetter(handler, "j"), true);
+    assert.equal(typeLetter(handler, "a"), false);
+  });
+
+  void test("a session started before the pending reload uses the letters content-root already applied", async () => {
+    const { handler, load } = setUp();
+    load("asdf");
+    rootLetters = "jkl;";
+    typeLetter(handler, "q");
+    await flush();
+
+    assert.equal(typeLetter(handler, "j"), true);
+    assert.equal(typeLetter(handler, "a"), false);
+  });
+
+  void test("a frame that did not start the session takes its letters from the broadcast", () => {
+    const { hinter, handler, load } = setUp();
+    load("asdf");
+    hinter.syncHinting({ active: true, sessionId: 1, hintLetters: "jkl;" });
+
+    assert.equal(typeLetter(handler, "j"), true);
+    assert.equal(typeLetter(handler, "a"), false);
+  });
+
+  void test("the frame's own letters are used while the session's are unknown", async () => {
+    const { handler, load } = setUp();
+    load("asdf");
+    rootLetters = null;
+    typeLetter(handler, "q");
+    assert.equal(typeLetter(handler, "a"), true, "before the reply");
+    await flush();
+
+    assert.equal(typeLetter(handler, "a"), true, "before content-root's setup");
+    assert.equal(typeLetter(handler, "j"), false);
   });
 });

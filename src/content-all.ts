@@ -68,9 +68,9 @@ chrome.runtime.onMessage.addListener(
     .add("BlurRelay", ({ targetPath, childSegment, rect }) => {
       blurer.handleBlurRelay(targetPath, childSegment, rect);
     })
-    .add("SyncHintingState", ({ active, sessionId }) => {
-      if (hinterClient.syncHinting(active, sessionId))
-        framePath.handleHintingState(active);
+    .add("SyncHintingState", (state) => {
+      if (hinterClient.syncHinting(state))
+        framePath.handleHintingState(state.active);
     })
     .buildListener(),
 );
