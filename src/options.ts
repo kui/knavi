@@ -1,9 +1,9 @@
 import * as storageForm from "storage-form";
 import * as keyInput from "key-input-elements";
 import settings from "./lib/settings";
-import { keyCodeToChars } from "./lib/key-chars";
 import { waitUntil } from "./dom/animations";
 import { printError } from "./lib/errors";
+import { KEY_LABELS, computeKeyConflicts } from "./lib/key-conflicts";
 
 async function init() {
   await waitUntil(() => Boolean(document.body));
@@ -20,94 +20,6 @@ async function init() {
   initKeyConflictValidation(body);
 }
 
-/* WHY: "magicKey" is the legacy storage key; see src/types/settings.d.ts for why
-   the UI label diverges from it. */
-const KEY_LABELS: Record<string, string> = {
-  magicKey: "Peek Key",
-  stickyKey: "Sticky Key",
-  blurKey: "Blur Key",
-  actionKey: "Action Key",
-  cancelKey: "Cancel Key",
-  cycleKey: "Cycle Key",
-  hints: "Hint Letters",
-};
-
-/* WHY: Key-pattern pairs that must not be bound to the same key.
-
-   Keys are split by the phase in which they fire:
-     - while NOT hinting: Peek Key, Sticky Key, Blur Key
-     - while hinting:     Action Key, Cancel Key, hint letters
-       (the Peek Key is also held throughout a hold session, so it overlaps
-        the hinting phase too)
-   Keys that only ever fire in different phases can safely share a binding.
-   Hence Blur Key may share with Action/Cancel/hints, and Sticky Key may share
-   with Action/Cancel/hints. */
-const KEY_PAIR_CONFLICTS: [string, string][] = [
-  ["magicKey", "stickyKey"],
-  ["magicKey", "blurKey"],
-  ["magicKey", "actionKey"],
-  ["magicKey", "cancelKey"],
-  ["stickyKey", "blurKey"],
-  ["actionKey", "cancelKey"],
-];
-
-/* WHY: Key patterns that must not coincide with a hint letter: only keys that fire
-   during the hinting phase. (Sticky Key and Blur Key fire only while not
-   hinting, so they are excluded.) */
-const HINTS_VS_KEYS = ["magicKey", "actionKey", "cancelKey", "cycleKey"];
-
-/** Normalize a key-input pattern string (e.g. "Ctrl + KeyA") for comparison. */
-function normalizeKeyPattern(value: string): string {
-  return value
-    .split("+")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0)
-    .join(" + ");
-}
-
-/**
- * Return the hint letter that a bare single-key pattern (no modifiers/history)
- * would type, or null. Covers letters, digits, and punctuation across common
- * keyboard layouts via `keyCodeToChars`.
- */
-function conflictingHintChar(value: string, hints: string): string | null {
-  const n = normalizeKeyPattern(value);
-  if (n === "" || n.includes(" + ")) return null;
-  return keyCodeToChars(n).find((c) => hints.includes(c.toLowerCase())) ?? null;
-}
-
-function computeKeyConflicts(values: Record<string, string>): {
-  messages: string[];
-  invalid: Set<string>;
-} {
-  const messages: string[] = [];
-  const invalid = new Set<string>();
-
-  for (const [a, b] of KEY_PAIR_CONFLICTS) {
-    const va = normalizeKeyPattern(values[a] ?? "");
-    const vb = normalizeKeyPattern(values[b] ?? "");
-    if (va !== "" && va === vb) {
-      messages.push(
-        `${KEY_LABELS[a]} and ${KEY_LABELS[b]} are both bound to "${va}".`,
-      );
-      invalid.add(a);
-      invalid.add(b);
-    }
-  }
-
-  const hints = (values.hints ?? "").toLowerCase();
-  for (const name of HINTS_VS_KEYS) {
-    const ch = conflictingHintChar(values[name] ?? "", hints);
-    if (ch) {
-      messages.push(`${KEY_LABELS[name]} ("${ch}") is also a Hint Letter.`);
-      invalid.add(name);
-      invalid.add("hints");
-    }
-  }
-
-  return { messages, invalid };
-}
-
 function initKeyConflictValidation(body: HTMLElement) {
   const inputs = new Map<string, HTMLInputElement>();
   for (const name of Object.keys(KEY_LABELS)) {
@@ -119,15 +31,23 @@ function initKeyConflictValidation(body: HTMLElement) {
   const validate = () => {
     const values: Record<string, string> = {};
     for (const [name, el] of inputs) values[name] = el.value;
-    const { messages, invalid } = computeKeyConflicts(values);
+    const { messages, invalid, hintsError } = computeKeyConflicts(values);
 
     for (const [name, el] of inputs) {
       el.setCustomValidity(
-        invalid.has(name) ? "This key conflicts with another setting." : "",
+        name === "hints" && hintsError
+          ? hintsError
+          : invalid.has(name)
+            ? "This key conflicts with another setting."
+            : "",
       );
     }
 
-    if (!summary) return;
+    if (summary) renderSummary(summary, messages);
+    return hintsError;
+  };
+
+  const renderSummary = (summary: HTMLElement, messages: string[]) => {
     summary.replaceChildren();
     summary.hidden = messages.length === 0;
     if (messages.length === 0) return;
@@ -143,8 +63,16 @@ function initKeyConflictValidation(body: HTMLElement) {
     summary.append(title, ul);
   };
 
-  body.addEventListener("input", validate);
-  body.addEventListener("change", validate);
+  /* WHY: storage-form saves every control on each input/change event without
+     looking at validity, and it saves all controls whose value differs from
+     the stored one. A capturing listener runs before storage-form's, so
+     stopping the event while Hint Letters is invalid keeps the last valid
+     value in storage; no edit is saved until Hint Letters is fixed. */
+  const onEdit = (event: Event) => {
+    if (validate()) event.stopPropagation();
+  };
+  body.addEventListener("input", onEdit, true);
+  body.addEventListener("change", onEdit, true);
   validate();
 }
 
